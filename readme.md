@@ -9,7 +9,7 @@
 **PPanel is a pure, professional, and perfect open-source proxy panel tool, designed to be your ideal choice for
 learning and practical use.**
 
-[English](README.md) | [中文](readme_zh.md) | [Report Bug](https://github.com/perfect-panel/ppanel-server/issues/new) | [Request Feature](https://github.com/perfect-panel/ppanel-server/issues/new)
+[English](README.md) | [中文](readme_zh.md) | [Report Bug](https://github.com/perfect-panel/server/issues/new) | [Request Feature](https://github.com/perfect-panel/server/issues/new)
 
 </div>
 
@@ -43,7 +43,7 @@ PPanel system. It's built with Go and designed with performance, security, and s
 1. Clone the repository
 
 ```bash
-git clone https://github.com/perfect-panel/ppanel-server.git
+git clone https://github.com/perfect-panel/server.git
 cd ppanel-server
 ```
 

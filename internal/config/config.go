@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/orm"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/orm"
 )
 
 type Config struct {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/lang"
+	"github.com/perfect-panel/server/pkg/lang"
 )
 
 // errTimeout indicates a timeout.

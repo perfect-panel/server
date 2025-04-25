@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 func Int64SliceToStringSlice(slice []int64) []string {

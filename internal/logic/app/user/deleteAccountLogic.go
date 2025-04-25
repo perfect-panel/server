@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/perfect-panel/ppanel-server/internal/config"
-	"github.com/perfect-panel/ppanel-server/internal/logic/common"
-	"github.com/perfect-panel/ppanel-server/internal/model/user"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/common"
+	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 

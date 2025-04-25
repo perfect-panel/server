@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/lang"
+	"github.com/perfect-panel/server/pkg/lang"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/general"
+	"github.com/perfect-panel/server/pkg/adapter/general"
 
 	"encoding/base64"
 
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/proxy"
-	"github.com/perfect-panel/ppanel-server/pkg/traffic"
+	"github.com/perfect-panel/server/pkg/adapter/proxy"
+	"github.com/perfect-panel/server/pkg/traffic"
 )
 
 type UserInfo struct {

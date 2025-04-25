@@ -3,8 +3,8 @@ package singbox
 import (
 	"encoding/json"
 
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/proxy"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/adapter/proxy"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 func BuildSingbox(adapter proxy.Adapter, uuid string) ([]byte, error) {

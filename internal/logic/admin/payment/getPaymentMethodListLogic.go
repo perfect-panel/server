@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 
-	paymentPlatform "github.com/perfect-panel/ppanel-server/pkg/payment"
+	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/payment"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 

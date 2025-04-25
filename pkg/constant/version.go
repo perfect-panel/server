@@ -1,7 +1,7 @@
 package constant
 
 // Version PPanel version
-const (
-	Version     = "unknown"
-	BuildNumber = "unknown"
+var (
+	Version   = "unknown version"
+	BuildTime = "unknown time"
 )

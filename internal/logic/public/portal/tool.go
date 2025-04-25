@@ -1,9 +1,9 @@
 package portal
 
 import (
-	"github.com/perfect-panel/ppanel-server/internal/model/coupon"
-	"github.com/perfect-panel/ppanel-server/internal/model/payment"
-	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/server/internal/model/coupon"
+	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/types"
 )
 
 func getDiscount(discounts []types.SubscribeDiscount, inputMonths int64) float64 {

@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type Buffer struct {

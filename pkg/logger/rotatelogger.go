@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/fs"
-	"github.com/perfect-panel/ppanel-server/pkg/lang"
+	"github.com/perfect-panel/server/pkg/fs"
+	"github.com/perfect-panel/server/pkg/lang"
 )
 
 const (

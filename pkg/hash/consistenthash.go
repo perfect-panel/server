@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/perfect-panel/ppanel-server/pkg/lang"
+	"github.com/perfect-panel/server/pkg/lang"
 )
 
 const (

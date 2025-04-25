@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/random"
+	"github.com/perfect-panel/server/pkg/random"
 
-	"github.com/perfect-panel/ppanel-server/pkg/fs"
+	"github.com/perfect-panel/server/pkg/fs"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -3,7 +3,7 @@ package surfboard
 import (
 	"testing"
 
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/proxy"
+	"github.com/perfect-panel/server/pkg/adapter/proxy"
 )
 
 func createTrojan() proxy.Proxy {

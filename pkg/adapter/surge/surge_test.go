@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/proxy"
+	"github.com/perfect-panel/server/pkg/adapter/proxy"
 )
 
 func TestSurgeBuild(t *testing.T) {

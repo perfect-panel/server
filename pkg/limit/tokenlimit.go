@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/errorx"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/errorx"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/redis/go-redis/v9"
 	xrate "golang.org/x/time/rate"
 )

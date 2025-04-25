@@ -7,21 +7,21 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/ppanel-server/internal/config"
-	"github.com/perfect-panel/ppanel-server/internal/logic/telegram"
-	"github.com/perfect-panel/ppanel-server/internal/model/order"
-	"github.com/perfect-panel/ppanel-server/internal/model/user"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
-	"github.com/perfect-panel/ppanel-server/pkg/uuidx"
-	"github.com/perfect-panel/ppanel-server/queue/types"
+	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/telegram"
+	"github.com/perfect-panel/server/internal/model/order"
+	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/tool"
+	"github.com/perfect-panel/server/pkg/uuidx"
+	"github.com/perfect-panel/server/queue/types"
 	"gorm.io/gorm"
 )
 

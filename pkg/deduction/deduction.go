@@ -3,7 +3,7 @@ package deduction
 import (
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
+	"github.com/perfect-panel/server/pkg/tool"
 )
 
 const (

@@ -2,7 +2,7 @@ package svc
 
 import (
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/ppanel-server/internal/config"
+	"github.com/perfect-panel/server/internal/config"
 )
 
 func NewAsynqClient(c config.Config) *asynq.Client {

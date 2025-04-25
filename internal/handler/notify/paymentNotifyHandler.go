@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/internal/logic/notify"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/payment"
-	"github.com/perfect-panel/ppanel-server/pkg/result"
+	"github.com/perfect-panel/server/internal/logic/notify"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/payment"
+	"github.com/perfect-panel/server/pkg/result"
 )
 
 // PaymentNotifyHandler Payment Notify

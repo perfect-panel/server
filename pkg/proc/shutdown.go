@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/threading"
+	"github.com/perfect-panel/server/pkg/threading"
 )
 
 const (

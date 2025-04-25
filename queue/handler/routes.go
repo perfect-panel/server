@@ -2,15 +2,15 @@ package handler
 
 import (
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	countrylogic "github.com/perfect-panel/ppanel-server/queue/logic/country"
-	orderLogic "github.com/perfect-panel/ppanel-server/queue/logic/order"
-	smslogic "github.com/perfect-panel/ppanel-server/queue/logic/sms"
-	"github.com/perfect-panel/ppanel-server/queue/logic/subscription"
-	"github.com/perfect-panel/ppanel-server/queue/logic/traffic"
-	"github.com/perfect-panel/ppanel-server/queue/types"
+	"github.com/perfect-panel/server/internal/svc"
+	countrylogic "github.com/perfect-panel/server/queue/logic/country"
+	orderLogic "github.com/perfect-panel/server/queue/logic/order"
+	smslogic "github.com/perfect-panel/server/queue/logic/sms"
+	"github.com/perfect-panel/server/queue/logic/subscription"
+	"github.com/perfect-panel/server/queue/logic/traffic"
+	"github.com/perfect-panel/server/queue/types"
 
-	emailLogic "github.com/perfect-panel/ppanel-server/queue/logic/email"
+	emailLogic "github.com/perfect-panel/server/queue/logic/email"
 )
 
 func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {

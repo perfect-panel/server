@@ -3,7 +3,7 @@ package logger
 import (
 	"errors"
 
-	"github.com/perfect-panel/ppanel-server/pkg/syncx"
+	"github.com/perfect-panel/server/pkg/syncx"
 )
 
 const (

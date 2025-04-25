@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/cache"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/internal/model/cache"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type ServerPushStatusLogic struct {

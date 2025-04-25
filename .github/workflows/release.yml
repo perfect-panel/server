@@ -1,8 +1,6 @@
-name: Build and Publish Docker Image
+name: Build and Publish Docker Image and Release
 
 on:
-  # release:
-  #   types: [published]
   push:
     tags:
       - 'v*'
@@ -15,7 +13,9 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for git describe --tags
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -24,21 +24,17 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract version from pkg/constant/types.go
+      - name: Extract version from git tag
         id: version
         run: |
-          # 提取版本号 0.1.3
-          VERSION=$(grep -oP '(?<=const Version = ")[0-9]+\.[0-9]+\.[0-9]+' pkg/constant/version.go)
+          # Extract version from git tag (e.g., v1.2.3)
+          VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
           echo "VERSION=$VERSION"
-          
-          # 提取构建号 01300
-          BUILD_NUMBER=$(grep -oP 'const Version = "[0-9]+\.[0-9]+\.[0-9]+\(\K[0-9]+' pkg/constant/version.go)
-          echo "BUILD_NUMBER=$BUILD_NUMBER"
           
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
@@ -52,73 +48,144 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.BUILD_NUMBER }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.GIT_SHA }}
 
       - name: Build and push Docker image for beta release
         if: contains(github.ref_name, 'beta')
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:beta
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.BUILD_NUMBER }}-beta
-
-
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-beta
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.GIT_SHA }}-beta
 
   release-notes:
     runs-on: ubuntu-latest
-
+    needs: build-docker  # Ensure Docker image is built first
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Required for changelog generation
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23
+          go-version: '1.21'  # Match Dockerfile
 
       - name: Install GoReleaser
         run: |
-          go install github.com/goreleaser/goreleaser@latest
+          go install github.com/goreleaser/goreleaser/v2@latest
 
       - name: Run GoReleaser
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          goreleaser check 
+          goreleaser check
           goreleaser release --clean
+
   releases-matrix:
     name: Release ppanel-server binary
     runs-on: ubuntu-latest
-    needs: release-notes  # wait for release-notes job to finish
+    needs: release-notes  # Wait for release-notes job
     strategy:
       matrix:
-        # build and publish in parallel: linux/386, linux/amd64, linux/arm64,
-        # windows/386, windows/amd64, windows/arm64, darwin/amd64, darwin/arm64
-        goos: [ linux, windows, darwin ]
+        goos: [ linux, windows, darwin, freebsd ]
         goarch: [ '386', amd64, arm64 ]
         exclude:
-          - goarch: '386'
-            goos: darwin
+          - goos: darwin
+            goarch: '386'
+          - goos: freebsd
+            goarch: '386'  # FreeBSD 386 not in Makefile
+        include:
+          - goos: linux
+            goarch: arm
+            goarm: 5
+          - goos: linux
+            goarch: arm
+            goarm: 6
+          - goos: linux
+            goarch: arm
+            goarm: 7
+          - goos: windows
+            goarch: arm
+            goarm: 7
+          - goos: linux
+            goarch: mips
+            gomips: softfloat
+          - goos: linux
+            goarch: mips
+            gomips: hardfloat
+          - goos: linux
+            goarch: mipsle
+            gomips: softfloat
+          - goos: linux
+            goarch: mipsle
+            gomips: hardfloat
+          - goos: linux
+            goarch: mips64
+          - goos: linux
+            goarch: mips64le
+          - goos: linux
+            goarch: riscv64
+          - goos: linux
+            goarch: loong64
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: wangyoucao577/go-release-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          asset_name: "ppanel-server-${{ matrix.goos }}-${{ matrix.goarch }}"
-          goversion: "https://dl.google.com/go/go1.23.3.linux-amd64.tar.gz"
-          project_path: "."
-          binary_name: "ppanel-server"
-          extra_files: LICENSE etc
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'  # Match Dockerfile
+
+      - name: Build binary with Makefile
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          GOMIPS: ${{ matrix.gomips }}
+        run: |
+          make BINDIR=bin ${GOOS}-${GOARCH}${GOARM}${GOMIPS}
+          mv bin/ppanel-server-${GOOS}-${GOARCH}${GOARM}${GOMIPS}* ppanel-server${GOOS}-${GOARCH}${GOARM}${GOMIPS}
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ppanel-server${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}${{ matrix.gomips }}
+          asset_name: ppanel-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm }}${{ matrix.gomips }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload additional files
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: etc/ppanel.yaml
+          asset_name: ppanel.yaml
+          asset_content_type: text/yaml
+
+      - name: Upload LICENSE
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: LICENSE
+          asset_name: LICENSE
+          asset_content_type: text/plain

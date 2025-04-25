@@ -1,8 +1,8 @@
 package svc
 
 import (
-	"github.com/perfect-panel/ppanel-server/internal/config"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 func NewLogger(c config.Config) *logger.Logger {

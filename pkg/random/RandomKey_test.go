@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/snowflake"
+	"github.com/perfect-panel/server/pkg/snowflake"
 
 	"github.com/stretchr/testify/assert"
 )

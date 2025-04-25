@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/orm"
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"gorm.io/plugin/soft_delete"

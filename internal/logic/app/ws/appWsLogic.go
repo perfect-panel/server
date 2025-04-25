@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/user"
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/xerr"
 
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type AppWsLogic struct {

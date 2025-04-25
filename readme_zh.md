@@ -8,7 +8,7 @@
 
 **PPanel 是一个纯净、专业、完美的开源代理面板工具，旨在成为您学习和实际使用的理想选择。**
 
-[English](README.md) | [中文](readme_zh.md) | [报告问题](https://github.com/perfect-panel/ppanel-server/issues/new) | [功能请求](https://github.com/perfect-panel/ppanel-server/issues/new)
+[English](README.md) | [中文](readme_zh.md) | [报告问题](https://github.com/perfect-panel/server/issues/new) | [功能请求](https://github.com/perfect-panel/server/issues/new)
 
 </div>
 
@@ -41,7 +41,7 @@ PPanel 服务端是 PPanel 项目的后端组件，为 PPanel 系统提供强大
 1. 克隆仓库
 
 ```bash
-git clone https://github.com/perfect-panel/ppanel-server.git
+git clone https://github.com/perfect-panel/server.git
 cd ppanel-server
 ```
 

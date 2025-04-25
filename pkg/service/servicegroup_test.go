@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/perfect-panel/ppanel-server/pkg/proc"
+	"github.com/perfect-panel/server/pkg/proc"
 
 	"github.com/stretchr/testify/assert"
 )

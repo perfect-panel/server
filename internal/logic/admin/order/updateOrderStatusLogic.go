@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	queue "github.com/perfect-panel/ppanel-server/queue/types"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
+	queue "github.com/perfect-panel/server/queue/types"
 )
 
 type UpdateOrderStatusLogic struct {

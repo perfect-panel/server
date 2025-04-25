@@ -3,7 +3,7 @@ package tool
 import (
 	"testing"
 
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 )
 
 func TestExtractVersionNumber(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"log"
 	"runtime/debug"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 // Recover is used with defer to do cleanup on panics.

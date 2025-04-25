@@ -18,8 +18,8 @@ import (
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/perfect-panel/ppanel-server/pkg/lang"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/lang"
+	"github.com/perfect-panel/server/pkg/logger"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 

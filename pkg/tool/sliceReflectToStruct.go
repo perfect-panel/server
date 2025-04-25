@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/goccy/go-json"
-	"github.com/perfect-panel/ppanel-server/internal/model/system"
+	"github.com/perfect-panel/server/internal/model/system"
 )
 
 func SystemConfigSliceReflectToStruct(slice []*system.System, structType any) {

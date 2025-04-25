@@ -3,7 +3,7 @@ package system
 import (
 	"context"
 
-	"github.com/perfect-panel/ppanel-server/internal/config"
+	"github.com/perfect-panel/server/internal/config"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

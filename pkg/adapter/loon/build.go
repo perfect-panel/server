@@ -1,7 +1,7 @@
 package loon
 
 import (
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/proxy"
+	"github.com/perfect-panel/server/pkg/adapter/proxy"
 )
 
 func BuildLoon(servers []proxy.Proxy, uuid string) []byte {

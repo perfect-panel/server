@@ -1,7 +1,7 @@
 package order
 
 import (
-	"github.com/perfect-panel/ppanel-server/internal/model/coupon"
+	"github.com/perfect-panel/server/internal/model/coupon"
 )
 
 func calculateCoupon(amount int64, couponInfo *coupon.Coupon) int64 {

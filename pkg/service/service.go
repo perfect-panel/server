@@ -3,8 +3,8 @@ package service
 import (
 	"sync"
 
-	"github.com/perfect-panel/ppanel-server/pkg/proc"
-	"github.com/perfect-panel/ppanel-server/pkg/threading"
+	"github.com/perfect-panel/server/pkg/proc"
+	"github.com/perfect-panel/server/pkg/threading"
 )
 
 type (

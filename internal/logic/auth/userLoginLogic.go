@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 
-	"github.com/perfect-panel/ppanel-server/internal/config"
-	"github.com/perfect-panel/ppanel-server/internal/model/user"
-	"github.com/perfect-panel/ppanel-server/pkg/jwt"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
-	"github.com/perfect-panel/ppanel-server/pkg/uuidx"
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/pkg/jwt"
+	"github.com/perfect-panel/server/pkg/tool"
+	"github.com/perfect-panel/server/pkg/uuidx"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
 )
 
 type UserLoginLogic struct {

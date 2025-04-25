@@ -1,15 +1,15 @@
 package adapter
 
 import (
-	"github.com/perfect-panel/ppanel-server/internal/model/server"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/clash"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/general"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/loon"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/proxy"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/quantumultx"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/shadowrocket"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/singbox"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/surfboard"
+	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/pkg/adapter/clash"
+	"github.com/perfect-panel/server/pkg/adapter/general"
+	"github.com/perfect-panel/server/pkg/adapter/loon"
+	"github.com/perfect-panel/server/pkg/adapter/proxy"
+	"github.com/perfect-panel/server/pkg/adapter/quantumultx"
+	"github.com/perfect-panel/server/pkg/adapter/shadowrocket"
+	"github.com/perfect-panel/server/pkg/adapter/singbox"
+	"github.com/perfect-panel/server/pkg/adapter/surfboard"
 )
 
 type Adapter struct {

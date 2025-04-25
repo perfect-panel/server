@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/perfect-panel/ppanel-server/pkg/sms/abosend"
-	"github.com/perfect-panel/ppanel-server/pkg/sms/alibabacloud"
-	"github.com/perfect-panel/ppanel-server/pkg/sms/smsbao"
-	"github.com/perfect-panel/ppanel-server/pkg/sms/twilio"
+	"github.com/perfect-panel/server/pkg/sms/abosend"
+	"github.com/perfect-panel/server/pkg/sms/alibabacloud"
+	"github.com/perfect-panel/server/pkg/sms/smsbao"
+	"github.com/perfect-panel/server/pkg/sms/twilio"
 )
 
 type Sender interface {

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/perfect-panel/ppanel-server/cmd"
+import "github.com/perfect-panel/server/cmd"
 
 func main() {
 	cmd.Execute()

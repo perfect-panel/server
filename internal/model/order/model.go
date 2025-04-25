@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/payment"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

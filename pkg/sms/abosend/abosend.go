@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/perfect-panel/ppanel-server/pkg/random"
-	"github.com/perfect-panel/ppanel-server/pkg/templatex"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
+	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/server/pkg/templatex"
+	"github.com/perfect-panel/server/pkg/tool"
 )
 
 const BaseURL = "https://smsapi.abosend.com"

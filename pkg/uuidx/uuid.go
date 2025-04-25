@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
-	"github.com/perfect-panel/ppanel-server/pkg/random"
+	"github.com/perfect-panel/server/pkg/random"
 )
 
 // NewUUID returns a new UUID.

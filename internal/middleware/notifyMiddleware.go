@@ -3,10 +3,10 @@ package middleware
 import (
 	"context"
 
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/server/internal/svc"
 )
 
 type PaymentParams struct {

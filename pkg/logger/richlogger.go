@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/internal/trace"
+	"github.com/perfect-panel/server/internal/trace"
 
-	"github.com/perfect-panel/ppanel-server/pkg/timex"
+	"github.com/perfect-panel/server/pkg/timex"
 )
 
 // WithCallerSkip returns a Logger with given caller skip.

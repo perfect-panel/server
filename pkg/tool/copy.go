@@ -10,7 +10,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
 
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 )
 
 func DeepCopy[T, K interface{}](destStruct T, srcStruct K) T {

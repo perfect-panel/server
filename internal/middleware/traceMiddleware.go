@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -15,9 +15,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/trace"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/trace"
 )
 
 // statusByWriter returns a span status code and message for an HTTP status code

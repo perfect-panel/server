@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/perfect-panel/ppanel-server/pkg/cache"
+	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

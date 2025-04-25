@@ -3,10 +3,10 @@ package migrate
 import (
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/user"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
-	"github.com/perfect-panel/ppanel-server/pkg/uuidx"
+	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
+	"github.com/perfect-panel/server/pkg/uuidx"
 	"gorm.io/gorm"
 )
 

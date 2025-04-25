@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/internal/config"
-	"github.com/perfect-panel/ppanel-server/internal/model/server"
-	"github.com/perfect-panel/ppanel-server/internal/model/subscribe"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
+	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

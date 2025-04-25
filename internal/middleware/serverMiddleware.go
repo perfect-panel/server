@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/server/internal/svc"
 )
 
 func ServerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {

@@ -8,18 +8,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 
-	"github.com/perfect-panel/ppanel-server/pkg/proc"
-	"github.com/perfect-panel/ppanel-server/pkg/trace"
+	"github.com/perfect-panel/server/pkg/proc"
+	"github.com/perfect-panel/server/pkg/trace"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/initialize"
-	"github.com/perfect-panel/ppanel-server/internal/handler"
-	"github.com/perfect-panel/ppanel-server/internal/middleware"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/server/initialize"
+	"github.com/perfect-panel/server/internal/handler"
+	"github.com/perfect-panel/server/internal/middleware"
+	"github.com/perfect-panel/server/internal/svc"
 )
 
 type Service struct {

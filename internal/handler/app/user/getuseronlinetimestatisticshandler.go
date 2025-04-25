@@ -2,9 +2,9 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/internal/logic/app/user"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/pkg/result"
+	"github.com/perfect-panel/server/internal/logic/app/user"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get user online time total

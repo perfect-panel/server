@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	dysmsapi "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"

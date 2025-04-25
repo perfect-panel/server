@@ -1,4 +1,4 @@
-module github.com/perfect-panel/ppanel-server
+module github.com/perfect-panel/server
 
 go 1.23.3
 

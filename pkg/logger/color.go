@@ -3,7 +3,7 @@ package logger
 import (
 	"sync/atomic"
 
-	"github.com/perfect-panel/ppanel-server/pkg/color"
+	"github.com/perfect-panel/server/pkg/color"
 )
 
 // WithColor is a helper function to add color to a string, only in plain encoding.

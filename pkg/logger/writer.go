@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 
 	fatihcolor "github.com/fatih/color"
-	"github.com/perfect-panel/ppanel-server/pkg/color"
-	"github.com/perfect-panel/ppanel-server/pkg/errorx"
+	"github.com/perfect-panel/server/pkg/color"
+	"github.com/perfect-panel/server/pkg/errorx"
 )
 
 type (

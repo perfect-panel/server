@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/internal/handler/notify"
-	"github.com/perfect-panel/ppanel-server/internal/middleware"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/server/internal/handler/notify"
+	"github.com/perfect-panel/server/internal/middleware"
+	"github.com/perfect-panel/server/internal/svc"
 )
 
 func RegisterNotifyHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {

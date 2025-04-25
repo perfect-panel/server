@@ -3,11 +3,11 @@ package scheduler
 import (
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/queue/types"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/queue/types"
 )
 
 type Service struct {

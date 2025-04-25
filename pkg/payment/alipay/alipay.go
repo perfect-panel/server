@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/pkg/errors"
 	"github.com/smartwalle/alipay/v3"
 )

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/server"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/surfboard"
+	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/pkg/adapter/surfboard"
 )
 
 func createTestServer() []*server.Server {

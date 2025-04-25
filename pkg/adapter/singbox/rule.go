@@ -3,8 +3,8 @@ package singbox
 import (
 	"strconv"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/rules"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/rules"
 )
 
 type Rule struct {

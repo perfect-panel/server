@@ -2,9 +2,9 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/internal/logic/admin/server"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/pkg/result"
+	"github.com/perfect-panel/server/internal/logic/admin/server"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get rule group list

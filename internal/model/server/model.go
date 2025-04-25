@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/ppanel-server/internal/config"
+	"github.com/perfect-panel/server/internal/config"
 	"gorm.io/gorm"
 )
 

@@ -3,7 +3,7 @@ package fs
 import (
 	"os"
 
-	"github.com/perfect-panel/ppanel-server/pkg/hash"
+	"github.com/perfect-panel/server/pkg/hash"
 )
 
 // TempFileWithText creates the temporary file with the given content,

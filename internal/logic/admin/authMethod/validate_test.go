@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/perfect-panel/ppanel-server/pkg/sms"
+	"github.com/perfect-panel/server/pkg/sms"
 )
 
 func TestValidate(t *testing.T) {

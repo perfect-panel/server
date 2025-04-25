@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
 

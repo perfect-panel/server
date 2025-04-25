@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/random"
-	"github.com/perfect-panel/ppanel-server/pkg/snowflake"
+	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/server/pkg/snowflake"
 
 	"github.com/gofrs/uuid/v5"
 )

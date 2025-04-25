@@ -3,7 +3,7 @@ package tool
 import (
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/logger"
 )
 
 func AddTime(unit string, quantity int64, baseTime ...time.Time) time.Time {

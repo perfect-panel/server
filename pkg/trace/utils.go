@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	ptrace "github.com/perfect-panel/ppanel-server/internal/trace"
+	ptrace "github.com/perfect-panel/server/internal/trace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"

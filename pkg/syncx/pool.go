@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/perfect-panel/ppanel-server/pkg/timex"
+	"github.com/perfect-panel/server/pkg/timex"
 )
 
 type (

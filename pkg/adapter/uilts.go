@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/server"
-	"github.com/perfect-panel/ppanel-server/pkg/adapter/proxy"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/random"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
+	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/pkg/adapter/proxy"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/server/pkg/tool"
 )
 
 func addNode(data *server.Server, host string, port int) *proxy.Proxy {

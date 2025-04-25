@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 
 	"log"
 	"os"
@@ -13,17 +13,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/perfect-panel/ppanel-server/initialize"
-	"github.com/perfect-panel/ppanel-server/internal"
-	"github.com/perfect-panel/ppanel-server/internal/config"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/pkg/conf"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/orm"
-	"github.com/perfect-panel/ppanel-server/pkg/service"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
-	"github.com/perfect-panel/ppanel-server/queue"
-	"github.com/perfect-panel/ppanel-server/scheduler"
+	"github.com/perfect-panel/server/initialize"
+	"github.com/perfect-panel/server/internal"
+	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/conf"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/server/pkg/service"
+	"github.com/perfect-panel/server/pkg/tool"
+	"github.com/perfect-panel/server/queue"
+	"github.com/perfect-panel/server/scheduler"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -40,7 +40,7 @@ var startCmd = &cobra.Command{
 	Use:   "run",
 	Short: "start PPanel",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("[PPanel version] v" + fmt.Sprintf("%s(%s)", constant.Version, constant.BuildNumber))
+		fmt.Println("[PPanel version] v" + fmt.Sprintf("%s(%s)", constant.Version, constant.BuildTime))
 		run()
 	},
 }

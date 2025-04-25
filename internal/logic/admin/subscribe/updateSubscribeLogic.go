@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/ppanel-server/pkg/device"
+	"github.com/perfect-panel/server/pkg/device"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/subscribe"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/tool"
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 

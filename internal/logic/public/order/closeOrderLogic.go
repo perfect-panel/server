@@ -4,16 +4,16 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/user"
-	"github.com/perfect-panel/ppanel-server/pkg/payment/stripe"
+	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/pkg/payment/stripe"
 	"gorm.io/gorm"
 
-	"github.com/perfect-panel/ppanel-server/internal/model/order"
-	"github.com/perfect-panel/ppanel-server/internal/model/payment"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/payment/alipay"
+	"github.com/perfect-panel/server/internal/model/order"
+	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/payment/alipay"
 )
 
 type CloseOrderLogic struct {

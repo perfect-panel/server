@@ -10,14 +10,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/result"
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/result"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	pkgaes "github.com/perfect-panel/ppanel-server/pkg/aes"
+	"github.com/perfect-panel/server/internal/svc"
+	pkgaes "github.com/perfect-panel/server/pkg/aes"
 )
 
 const (

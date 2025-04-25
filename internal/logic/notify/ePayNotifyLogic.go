@@ -4,21 +4,21 @@ import (
 	"encoding/json"
 	"net/url"
 
-	"github.com/perfect-panel/ppanel-server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/ppanel-server/internal/model/payment"
-	"github.com/perfect-panel/ppanel-server/internal/svc"
-	"github.com/perfect-panel/ppanel-server/internal/types"
-	"github.com/perfect-panel/ppanel-server/pkg/logger"
-	"github.com/perfect-panel/ppanel-server/pkg/payment/epay"
+	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/payment/epay"
 
-	queueType "github.com/perfect-panel/ppanel-server/queue/types"
+	queueType "github.com/perfect-panel/server/queue/types"
 )
 
 type EPayNotifyLogic struct {
