@@ -30,12 +30,15 @@ jobs:
 
       - name: Extract version from git tag
         id: version
-        run: |
-          VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+        run: echo "VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_ENV
 
       - name: Get short SHA
         id: sha
         run: echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+      - name: Set BUILD_TIME env
+        run: echo BUILD_TIME=$(date --iso-8601=seconds) >> ${GITHUB_ENV}
+
 
       - name: Build and push Docker image for main release
         if: "!contains(github.ref_name, 'beta')"
@@ -47,8 +50,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.BUILD_NUMBER }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.BUILD_TIME }}
 
       - name: Build and push Docker image for beta release
         if: contains(github.ref_name, 'beta')
@@ -60,8 +62,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:beta
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.GIT_SHA }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.BUILD_TIME }}
 
   release-notes:
     runs-on: ubuntu-latest
@@ -105,8 +106,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set APP_VERSION env
-        run: echo APP_VERSION=$(basename ${GITHUB_REF}) >> ${GITHUB_ENV}
+      - name: Extract version from git tag
+        id: version
+        run: echo "VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_ENV
+
       - name: Set BUILD_TIME env
         run: echo BUILD_TIME=$(date --iso-8601=seconds) >> ${GITHUB_ENV}
 
@@ -121,4 +124,4 @@ jobs:
           project_path: "."
           binary_name: "ppanel-server"
           extra_files: LICENSE etc
-          ldflags: -X "github.com/perfect-panel/server/pkg/constant.Version=${{env.APP_VERSION}}" -X "github.com/perfect-panel/server/pkg/constant.BuildTime=${{env.BUILD_TIME}}"
+          ldflags: -X "github.com/perfect-panel/server/pkg/constant.Version=${{env.VERSION}}" -X "github.com/perfect-panel/server/pkg/constant.BuildTime=${{env.BUILD_TIME}}"
