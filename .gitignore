@@ -8,7 +8,6 @@
 *_test_config.go
 *.log*
 /build/
-etc/ppanel.yaml
 *.p8
 *.crt
 *.key
