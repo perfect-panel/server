@@ -1,0 +1,40 @@
+syntax = "v1"
+
+info (
+	title:   "Log API"
+	desc:    "API for ppanel"
+	author:  "Tension"
+	email:   "tension@ppanel.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	GetMessageLogListRequest {
+		Page     int    `form:"page"`
+		Size     int    `form:"size"`
+		Type     string `form:"type"`
+		Platform string `form:"platform,omitempty"`
+		To       string `form:"to,omitempty"`
+		Subject  string `form:"subject,omitempty"`
+		Content  string `form:"content,omitempty"`
+		Status   int    `form:"status,omitempty"`
+	}
+	GetMessageLogListResponse {
+		Total int64        `json:"total"`
+		List  []MessageLog `json:"list"`
+	}
+)
+
+@server (
+	prefix:     v1/admin/log
+	group:      admin/log
+	middleware: AuthMiddleware
+)
+service ppanel {
+	@doc "Get message log list"
+	@handler GetMessageLogList
+	get /message/list (GetMessageLogListRequest) returns (GetMessageLogListResponse)
+}
+

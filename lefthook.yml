@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  commands:
+    go-fmt:
+      run: go fmt ./...
+    go-imports:
+      run: goimports -w .
+    go-lint:
+      run: golangci-lint run
+    go-vet:
+      run: go vet ./...
+    go-test:
+      run: go test -v ./...
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx --no -- commitlint --edit $1

@@ -1,0 +1,26 @@
+package ticket
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/ppanel-server/internal/logic/public/ticket"
+	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/ppanel-server/pkg/result"
+)
+
+// Create ticket follow
+func CreateUserTicketFollowHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var req types.CreateUserTicketFollowRequest
+		_ = c.ShouldBind(&req)
+		validateErr := svcCtx.Validate(&req)
+		if validateErr != nil {
+			result.ParamErrorResult(c, validateErr)
+			return
+		}
+
+		l := ticket.NewCreateUserTicketFollowLogic(c.Request.Context(), svcCtx)
+		err := l.CreateUserTicketFollow(&req)
+		result.HttpResult(c, nil, err)
+	}
+}

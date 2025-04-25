@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- 头部内容 -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPanel - Application Initialization</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS 配置 -->
+    <script>
+        tailwind.config = {
+            darkMode: ["class"],
+            theme: {
+                container: { center: true, padding: "2rem" },
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                        primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
+                        destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--destructive-foreground))" },
+                    },
+                    borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
+                },
+            },
+        }
+    </script>
+    <!-- 自定义样式 -->
+    <style>
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 222.2 84% 4.9%;
+            --border: 214.3 31.8% 91.4%;
+            --input: 214.3 31.8% 91.4%;
+            --ring: 221.2 83.2% 53.3%;
+            --radius: 0.5rem;
+            --primary: 221.2 83.2% 53.3%;
+            --primary-foreground: 210 40% 98%;
+            --destructive: 346.8 77.2% 49.8%;
+            --destructive-foreground: 355.7 100% 97.3%;
+        }
+        .dark {
+            --background: 222.2 84% 4.9%;
+            --foreground: 210 40% 98%;
+        }
+        body {
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<div id="appContainer" class="container mx-auto p-4 flex flex-col items-center min-h-screen">
+    <div class="w-full max-w-2xl space-y-6">
+        <!-- 设置卡片 -->
+        <div id="setupCard" class="p-6 space-y-6 bg-white rounded-lg border">
+            <div class="flex justify-between items-center">
+                <h1 id="title" class="text-3xl font-bold">Welcome to PPanel Setup</h1>
+                <button onclick="switchLanguage()" id="langSwitch" class="h-10 px-4 py-2 border rounded-md text-sm font-medium bg-background hover:bg-accent hover:text-accent-foreground">中文</button>
+            </div>
+            <p id="description" class="text-gray-600 !mt-0">Let's get your PPanel application up and running. Please provide the necessary information below.</p>
+
+            <form id="setupForm" class="space-y-6" onsubmit="handleSubmit(event)">
+                <!-- 管理员详情 -->
+                <div class="space-y-4">
+                    <h2 id="adminInfoTitle" class="font-bold text-xl">Administrator Details</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="adminEmail" id="labelAdminEmail" class="text-sm font-medium">Administrator Email</label>
+                            <input type="email" id="adminEmail" name="adminEmail" required class="input-field mt-1 block w-full rounded-md border px-3 py-2" placeholder="Enter administrator email" data-placeholder-en="Enter administrator email" data-placeholder-zh="请输入管理员邮箱" oninput="validateInput(this)">
+                            <span id="adminEmailError" class="text-red-500 text-sm mt-1 hidden">Invalid email address.</span>
+                        </div>
+                        <div>
+                            <label for="adminPassword" id="labelAdminPassword" class="text-sm font-medium">Administrator Password</label>
+                            <input type="password" id="adminPassword" name="adminPassword" required minlength="6" class="input-field mt-1 block w-full rounded-md border px-3 py-2" placeholder="Enter administrator password" data-placeholder-en="Enter administrator password" data-placeholder-zh="请输入管理员密码" oninput="validateInput(this)">
+                            <span id="adminPasswordError" class="text-red-500 text-sm mt-1 hidden">Password must be at least 6 characters.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MySQL 数据库设置 -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 id="mysqlInfoTitle" class="font-bold text-xl">MySQL Database Setup</h2>
+                        <button type="button" onclick="testConnection('mysql')" id="testMySQLButton" class="h-10 px-4 py-2 border rounded-md text-sm font-medium bg-background hover:bg-accent hover:text-accent-foreground">Test MySQL Connection</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="mysqlHost" id="labelMysqlHost" class="text-sm font-medium">Database Host</label>
+                            <input type="text" id="mysqlHost" name="mysqlHost" required class="input-field mt-1 block w-full rounded-md border px-3 py-2" value="localhost" placeholder="Enter database host" data-placeholder-en="Enter database host" data-placeholder-zh="请输入数据库主机">
+                            <span id="mysqlHostError" class="text-red-500 text-sm mt-1 hidden">Please enter a valid host.</span>
+                        </div>
+                        <div>
+                            <label for="mysqlPort" id="labelMysqlPort" class="text-sm font-medium">Database Port</label>
+                            <input type="number" id="mysqlPort" name="mysqlPort" required min="1" max="65535" class="input-field mt-1 block w-full rounded-md border px-3 py-2" value="3306" placeholder="Enter database port" data-placeholder-en="Enter database port" data-placeholder-zh="请输入数据库端口">
+                            <span id="mysqlPortError" class="text-red-500 text-sm mt-1 hidden">Please enter a valid port number.</span>
+                        </div>
+                        <div>
+                            <label for="mysqlUser" id="labelMysqlUser" class="text-sm font-medium">Database User</label>
+                            <input type="text" id="mysqlUser" name="mysqlUser" required class="input-field mt-1 block w-full rounded-md border px-3 py-2" value="root" placeholder="Enter database user" data-placeholder-en="Enter database user" data-placeholder-zh="请输入数据库用户名">
+                            <span id="mysqlUserError" class="text-red-500 text-sm mt-1 hidden">Please enter a username.</span>
+                        </div>
+                        <div>
+                            <label for="mysqlPassword" id="labelMysqlPassword" class="text-sm font-medium">Database Password</label>
+                            <input type="password" id="mysqlPassword" name="mysqlPassword" class="input-field mt-1 block w-full rounded-md border px-3 py-2" placeholder="Enter database password" data-placeholder-en="Enter database password" data-placeholder-zh="请输入数据库密码">
+                        </div>
+                        <div>
+                            <label for="mysqlDatabase" id="labelMysqlDatabase" class="text-sm font-medium">Database Name</label>
+                            <input type="text" id="mysqlDatabase" name="mysqlDatabase" required class="input-field mt-1 block w-full rounded-md border px-3 py-2" value="ppanel_db" placeholder="Enter database name" data-placeholder-en="Enter database name" data-placeholder-zh="请输入数据库名称">
+                            <span id="mysqlDatabaseError" class="text-red-500 text-sm mt-1 hidden">Please enter a database name.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Redis 缓存设置 -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 id="redisInfoTitle" class="font-bold text-xl">Redis Cache Setup</h2>
+                        <button type="button" onclick="testConnection('redis')" id="testRedisButton" class="h-10 px-4 py-2 border rounded-md text-sm font-medium bg-background hover:bg-accent hover:text-accent-foreground">Test Redis Connection</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="redisHost" id="labelRedisHost" class="text-sm font-medium">Redis Host</label>
+                            <input type="text" id="redisHost" name="redisHost" required class="input-field mt-1 block w-full rounded-md border px-3 py-2" value="127.0.0.1" placeholder="Enter Redis host" data-placeholder-en="Enter Redis host" data-placeholder-zh="请输入 Redis 主机">
+                            <span id="redisHostError" class="text-red-500 text-sm mt-1 hidden">Please enter a valid host.</span>
+                        </div>
+                        <div>
+                            <label for="redisPort" id="labelRedisPort" class="text-sm font-medium">Redis Port</label>
+                            <input type="number" id="redisPort" name="redisPort" required min="1" max="65535" class="input-field mt-1 block w-full rounded-md border px-3 py-2" value="6379" placeholder="Enter Redis port" data-placeholder-en="Enter Redis port" data-placeholder-zh="请输入 Redis 端口">
+                            <span id="redisPortError" class="text-red-500 text-sm mt-1 hidden">Please enter a valid port number.</span>
+                        </div>
+                        <div>
+                            <label for="redisPassword" id="labelRedisPassword" class="text-sm font-medium">Redis Password</label>
+                            <input type="password" id="redisPassword" name="redisPassword" class="input-field mt-1 block w-full rounded-md border px-3 py-2" placeholder="Enter Redis password (optional)" data-placeholder-en="Enter Redis password (optional)" data-placeholder-zh="请输入 Redis 密码（可选）">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <button type="submit" id="submitButton" disabled class="w-full h-10 px-4 py-2 bg-primary text-white rounded-md opacity-50 cursor-not-allowed">Start Initialization</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 安装中卡片 -->
+<div id="installingCard" class="fixed inset-0 flex items-center justify-center bg-white p-6 hidden">
+    <div class="w-full max-w-md space-y-6 text-center">
+        <h1 id="installingTitle" class="text-3xl font-bold">Installing...</h1>
+        <p id="installingMessage">Please wait while we initialize your application.</p>
+        <div class="flex justify-center">
+            <svg class="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<!-- 安装完成卡片 -->
+<div id="installationCompleteCard" class="fixed inset-0 flex items-center justify-center bg-white p-6 hidden">
+    <div class="w-full max-w-md space-y-6 text-center">
+        <h1 id="installationCompleteTitle" class="text-3xl font-bold">Installation Complete</h1>
+        <p id="installationCompleteMessage">You can now close this page.</p>
+    </div>
+</div>
+
+<!-- 已初始化页面 -->
+<div id="alreadyInitializedCard" class="fixed inset-0 flex items-center justify-center bg-white p-6 hidden">
+    <div class="w-full max-w-md space-y-6 text-center">
+        <h1 id="alreadyInitializedTitle" class="text-3xl font-bold">Already Initialized</h1>
+        <p id="alreadyInitializedMessage">Your PPanel application has already been initialized.</p>
+    </div>
+</div>
+
+<!-- 对话框 -->
+<div id="dialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h2 id="dialogTitle" class="text-xl font-bold mb-4"></h2>
+        <p id="dialogMessage" class="mb-4"></p>
+        <div class="flex justify-end">
+            <button onclick="closeDialog()" class="h-10 px-4 py-2 bg-primary text-white rounded-md">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    let currentLang = 'en';
+    const translations = {
+        en: {
+            // 英文翻译内容
+            title: 'Welcome to PPanel Setup',
+            description: "Let's get your PPanel application up and running. Please provide the necessary information below.",
+            adminInfoTitle: 'Administrator Details',
+            mysqlInfoTitle: 'MySQL Database Setup',
+            redisInfoTitle: 'Redis Cache Setup',
+            adminEmail: 'Administrator Email',
+            adminPassword: 'Administrator Password',
+            mysqlHost: 'Database Host',
+            mysqlPort: 'Database Port',
+            mysqlUser: 'Database User',
+            mysqlPassword: 'Database Password',
+            mysqlDatabase: 'Database Name',
+            redisHost: 'Redis Host',
+            redisPort: 'Redis Port',
+            redisPassword: 'Redis Password',
+            submit: 'Start Initialization',
+            switchLang: '中文',
+            testMySQLConnection: 'Test MySQL Connection',
+            testRedisConnection: 'Test Redis Connection',
+            connectionSuccess: 'Connection Successful',
+            connectionError: 'Connection Failed',
+            initializationError: 'Initialization Error',
+            initializationErrorMessage: 'An error occurred during initialization. Please try again.',
+            installingTitle: 'Installing...',
+            installingMessage: 'Please wait while we initialize your application.',
+            installationCompleteTitle: 'Installation Complete',
+            installationCompleteMessage: 'You can now close this page.',
+            proceedButton: 'Go to Application',
+            mysqlConnectionSuccess: 'Successfully connected to the MySQL database.',
+            mysqlConnectionError: 'Failed to connect to the MySQL database. Please check your settings.',
+            redisConnectionSuccess: 'Successfully connected to the Redis server.',
+            redisConnectionError: 'Failed to connect to the Redis server. Please check your settings.',
+            alreadyInitializedTitle: 'Already Initialized',
+            alreadyInitializedMessage: 'Your PPanel application has already been initialized.',
+            invalidEmail: 'Invalid email address.',
+            invalidPassword: 'Password must be at least 6 characters.',
+        },
+        zh: {
+            // 中文翻译内容
+            title: '欢迎使用 PPanel 设置向导',
+            description: '让我们一起启动您的 PPanel 应用程序。请提供以下必要信息。',
+            adminInfoTitle: '管理员详情',
+            mysqlInfoTitle: 'MySQL 数据库设置',
+            redisInfoTitle: 'Redis 缓存设置',
+            adminEmail: '管理员邮箱',
+            adminPassword: '管理员密码',
+            mysqlHost: '数据库主机',
+            mysqlPort: '数据库端口',
+            mysqlUser: '数据库用户',
+            mysqlPassword: '数据库密码',
+            mysqlDatabase: '数据库名称',
+            redisHost: 'Redis 主机',
+            redisPort: 'Redis 端口',
+            redisPassword: 'Redis 密码',
+            submit: '开始初始化',
+            switchLang: 'English',
+            testMySQLConnection: '测试 MySQL 连接',
+            testRedisConnection: '测试 Redis 连接',
+            connectionSuccess: '连接成功',
+            connectionError: '连接失败',
+            initializationError: '初始化错误',
+            initializationErrorMessage: '初始化过程中发生错误。请重试。',
+            installingTitle: '正在安装...',
+            installingMessage: '请稍候，我们正在初始化您的应用程序。',
+            installationCompleteTitle: '安装完成',
+            installationCompleteMessage: '您现在可以关闭此页面。',
+            proceedButton: '前往应用程序',
+            mysqlConnectionSuccess: '成功连接到 MySQL 数据库。',
+            mysqlConnectionError: '无法连接到 MySQL 数据库。请检查您的设置。',
+            redisConnectionSuccess: '成功连接到 Redis 服务器。',
+            redisConnectionError: '无法连接到 Redis 服务器。请检查您的设置。',
+            alreadyInitializedTitle: '已初始化',
+            alreadyInitializedMessage: '您的 PPanel 应用程序已被初始化。',
+            invalidEmail: '无效的邮箱地址。',
+            invalidPassword: '密码至少需要6个字符。',
+        }
+    };
+
+    function switchLanguage() {
+        currentLang = currentLang === 'en' ? 'zh' : 'en';
+        updateTexts();
+    }
+
+    function updateTexts() {
+        const t = translations[currentLang];
+        document.getElementById('title').textContent = t.title;
+        document.getElementById('description').textContent = t.description;
+        document.getElementById('adminInfoTitle').textContent = t.adminInfoTitle;
+        document.getElementById('mysqlInfoTitle').textContent = t.mysqlInfoTitle;
+        document.getElementById('redisInfoTitle').textContent = t.redisInfoTitle;
+        document.getElementById('labelAdminEmail').textContent = t.adminEmail;
+        document.getElementById('labelAdminPassword').textContent = t.adminPassword;
+        document.getElementById('labelMysqlHost').textContent = t.mysqlHost;
+        document.getElementById('labelMysqlPort').textContent = t.mysqlPort;
+        document.getElementById('labelMysqlUser').textContent = t.mysqlUser;
+        document.getElementById('labelMysqlPassword').textContent = t.mysqlPassword;
+        document.getElementById('labelMysqlDatabase').textContent = t.mysqlDatabase;
+        document.getElementById('labelRedisHost').textContent = t.redisHost;
+        document.getElementById('labelRedisPort').textContent = t.redisPort;
+        document.getElementById('labelRedisPassword').textContent = t.redisPassword;
+        document.getElementById('submitButton').textContent = t.submit;
+        document.getElementById('langSwitch').textContent = t.switchLang;
+        document.getElementById('testMySQLButton').textContent = t.testMySQLConnection;
+        document.getElementById('testRedisButton').textContent = t.testRedisConnection;
+        document.getElementById('installingTitle').textContent = t.installingTitle;
+        document.getElementById('installingMessage').textContent = t.installingMessage;
+        document.getElementById('installationCompleteTitle').textContent = t.installationCompleteTitle;
+        document.getElementById('installationCompleteMessage').textContent = t.installationCompleteMessage;
+        document.getElementById('alreadyInitializedTitle').textContent = t.alreadyInitializedTitle;
+        document.getElementById('alreadyInitializedMessage').textContent = t.alreadyInitializedMessage;
+
+        // 更新 placeholder 文本
+        const inputs = document.querySelectorAll('.input-field');
+        inputs.forEach((input) => {
+            const placeholder = input.getAttribute(`data-placeholder-${currentLang}`);
+            if (placeholder) {
+                input.setAttribute('placeholder', placeholder);
+            }
+        });
+    }
+
+    function checkInitialization() {
+        const isInitialized = false; // 需要从服务器获取实际状态
+        if (isInitialized) {
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('alreadyInitializedCard').classList.remove('hidden');
+        }
+    }
+
+    function testConnection(type) {
+        const t = translations[currentLang];
+        let data = {};
+        let url = '';
+        if (type === 'mysql') {
+            data = {
+                host: document.getElementById('mysqlHost').value,
+                port: document.getElementById('mysqlPort').value,
+                user: document.getElementById('mysqlUser').value,
+                password: document.getElementById('mysqlPassword').value,
+                database: document.getElementById('mysqlDatabase').value,
+            };
+            url = '/init/mysql/test';
+        } else if (type === 'redis') {
+            data = {
+                host: document.getElementById('redisHost').value,
+                port: document.getElementById('redisPort').value,
+                password: document.getElementById('redisPassword').value,
+            };
+            url = '/init/redis/test';
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+            .then(response => response.json())
+            .then(result => {
+                console.log(result);
+                if (result.code === 200 && result.status) {
+                    showDialog(t.connectionSuccess, result.msg || (type === 'mysql' ? t.mysqlConnectionSuccess : t.redisConnectionSuccess));
+                } else {
+                    showDialog(t.connectionError, result.msg || (type === 'mysql' ? t.mysqlConnectionError : t.redisConnectionError));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showDialog(t.connectionError, t.initializationErrorMessage);
+            });
+    }
+
+    function handleSubmit(event) {
+        event.preventDefault();
+        const form = document.getElementById('setupForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        const t = translations[currentLang];
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // 显示安装中界面
+        document.getElementById('setupCard').classList.add('hidden');
+        document.getElementById('installingCard').classList.remove('hidden');
+
+        // 发送初始化请求
+        fetch('/init/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('installingCard').classList.add('hidden');
+                if (result.code === 200 && result.status) {
+                    document.getElementById('installationCompleteCard').classList.remove('hidden');
+                } else {
+                    showDialog(t.initializationError, result.msg || t.initializationErrorMessage);
+                    document.getElementById('setupCard').classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('installingCard').classList.add('hidden');
+                showDialog(t.initializationError, t.initializationErrorMessage);
+                document.getElementById('setupCard').classList.remove('hidden');
+            });
+    }
+
+    function showDialog(title, message) {
+        document.getElementById('dialogTitle').textContent = title;
+        document.getElementById('dialogMessage').textContent = message;
+        document.getElementById('dialog').classList.remove('hidden');
+    }
+
+    function closeDialog() {
+        document.getElementById('dialog').classList.add('hidden');
+    }
+
+    // 实时表单校验
+    function validateInput(input) {
+        const errorSpan = document.getElementById(input.id + 'Error');
+
+        if (input.type === 'email') {
+            // 邮箱格式验证
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(input.value)) {
+                errorSpan.textContent = translations[currentLang].invalidEmail;
+                errorSpan.classList.remove('hidden');
+                input.setCustomValidity(translations[currentLang].invalidEmail);
+            } else {
+                input.setCustomValidity('');
+                errorSpan.classList.add('hidden');
+            }
+        } else if (input.validity.valid) {
+            errorSpan.classList.add('hidden');
+            input.setCustomValidity('');
+        } else {
+            errorSpan.classList.remove('hidden');
+        }
+
+        updateSubmitButtonState();
+    }
+
+    function updateSubmitButtonState() {
+        const form = document.getElementById('setupForm');
+        const submitButton = document.getElementById('submitButton');
+        if (form.checkValidity()) {
+            submitButton.disabled = false;
+            submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            submitButton.disabled = true;
+            submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    // 添加事件监听器
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputs = document.querySelectorAll('.input-field');
+        inputs.forEach((input) => {
+            input.addEventListener('input', () => validateInput(input));
+        });
+        updateSubmitButtonState();
+        updateTexts();
+        checkInitialization();
+    });
+</script>
+</body>
+</html>

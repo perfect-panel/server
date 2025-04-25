@@ -1,0 +1,17 @@
+.idea/
+.vscode/
+*-dev.yaml
+*.local.yaml
+/test/
+*.log
+.DS_Store
+*_test_config.go
+*.log*
+/build/
+etc/ppanel.yaml
+*.p8
+*.crt
+*.key
+node_modules
+package-lock.json
+package.json

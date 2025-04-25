@@ -1,0 +1,69 @@
+package server
+
+import (
+	"context"
+	"strings"
+
+	"github.com/perfect-panel/ppanel-server/pkg/rules"
+
+	"github.com/perfect-panel/ppanel-server/internal/model/server"
+	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/ppanel-server/pkg/tool"
+	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/pkg/errors"
+)
+
+type CreateRuleGroupLogic struct {
+	logger.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+// Create rule group
+func NewCreateRuleGroupLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateRuleGroupLogic {
+	return &CreateRuleGroupLogic{
+		Logger: logger.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+func parseAndValidateRules(ruleText, ruleName string) ([]string, error) {
+	var rs []string
+	ruleArr := strings.Split(ruleText, "\n")
+	if len(ruleArr) == 0 {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "rules is empty")
+	}
+
+	for _, s := range ruleArr {
+		r := rules.NewRule(s, ruleName)
+		if r == nil {
+			continue
+		}
+		if err := r.Validate(); err != nil {
+			continue
+		}
+		rs = append(rs, r.String())
+	}
+	return rs, nil
+}
+func (l *CreateRuleGroupLogic) CreateRuleGroup(req *types.CreateRuleGroupRequest) error {
+	rs, err := parseAndValidateRules(req.Rules, req.Name)
+	if err != nil {
+		return err
+	}
+
+	err = l.svcCtx.ServerModel.InsertRuleGroup(l.ctx, &server.RuleGroup{
+		Name:   req.Name,
+		Icon:   req.Icon,
+		Tags:   tool.StringSliceToString(req.Tags),
+		Rules:  strings.Join(rs, "\n"),
+		Enable: req.Enable,
+	})
+	if err != nil {
+		l.Errorw("[CreateRuleGroup] Insert Database Error: ", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create server rule group error: %v", err)
+	}
+	return nil
+}

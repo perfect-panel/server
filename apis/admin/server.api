@@ -1,0 +1,190 @@
+syntax = "v1"
+
+info (
+	title:   "Node API"
+	desc:    "API for ppanel"
+	author:  "Tension"
+	email:   "tension@ppanel.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	GetNodeServerListRequest {
+		Page    int    `form:"page" validate:"required"`
+		Size    int    `form:"size" validate:"required"`
+		Tag     string `form:"tag,omitempty"`
+		GroupId int64  `form:"group_id,omitempty"`
+		Search  string `form:"search,omitempty"`
+	}
+	GetNodeServerListResponse {
+		Total int64    `json:"total"`
+		List  []Server `json:"list"`
+	}
+	UpdateNodeRequest {
+		Id           int64       `json:"id" validate:"required"`
+		Tags         []string    `json:"tags"`
+		Country      string      `json:"country"`
+		City         string      `json:"city"`
+		Name         string      `json:"name" validate:"required"`
+		ServerAddr   string      `json:"server_addr" validate:"required"`
+		RelayMode    string      `json:"relay_mode"`
+		RelayNode    []NodeRelay `json:"relay_node"`
+		SpeedLimit   int         `json:"speed_limit"`
+		TrafficRatio float32     `json:"traffic_ratio"`
+		GroupId      int64       `json:"group_id"`
+		Protocol     string      `json:"protocol" validate:"required"`
+		Config       interface{} `json:"config" validate:"required"`
+		Enable       *bool       `json:"enable"`
+		Sort         int64       `json:"sort"`
+	}
+	CreateNodeRequest {
+		Name         string      `json:"name" validate:"required"`
+		Tags         []string    `json:"tags"`
+		Country      string      `json:"country"`
+		City         string      `json:"city"`
+		ServerAddr   string      `json:"server_addr" validate:"required"`
+		RelayMode    string      `json:"relay_mode"`
+		RelayNode    []NodeRelay `json:"relay_node"`
+		SpeedLimit   int         `json:"speed_limit"`
+		TrafficRatio float32     `json:"traffic_ratio"`
+		GroupId      int64       `json:"group_id"`
+		Protocol     string      `json:"protocol" validate:"required"`
+		Config       interface{} `json:"config" validate:"required"`
+		Enable       *bool       `json:"enable"`
+		Sort         int64       `json:"sort"`
+	}
+	DeleteNodeRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	GetNodeGroupListResponse {
+		Total int64         `json:"total"`
+		List  []ServerGroup `json:"list"`
+	}
+	CreateNodeGroupRequest {
+		Name        string `json:"name" validate:"required"`
+		Description string `json:"description"`
+	}
+	UpdateNodeGroupRequest {
+		Id          int64  `json:"id" validate:"required"`
+		Name        string `json:"name" validate:"required"`
+		Description string `json:"description"`
+	}
+	DeleteNodeGroupRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	BatchDeleteNodeRequest {
+		Ids []int64 `json:"ids" validate:"required"`
+	}
+	BatchDeleteNodeGroupRequest {
+		Ids []int64 `json:"ids" validate:"required"`
+	}
+	GetNodeDetailRequest {
+		Id int64 `form:"id" validate:"required"`
+	}
+	NodeSortRequest {
+		Sort []SortItem `json:"sort"`
+	}
+	CreateRuleGroupRequest {
+		Name   string   `json:"name" validate:"required"`
+		Icon string `json:"icon"`
+		Tags   []string `json:"tags"`
+		Rules  string   `json:"rules"`
+		Enable bool     `json:"enable"`
+	}
+	UpdateRuleGroupRequest {
+		Id     int64    `json:"id" validate:"required"`
+		Icon string `json:"icon"`
+		Name   string   `json:"name" validate:"required"`
+		Tags   []string `json:"tags"`
+		Rules  string   `json:"rules"`
+		Enable bool     `json:"enable"`
+	}
+	DeleteRuleGroupRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	GetRuleGroupResponse {
+		Total int64             `json:"total"`
+		List  []ServerRuleGroup `json:"list"`
+	}
+	GetNodeTagListResponse {
+		Tags []string `json:"tags"`
+	}
+)
+
+@server (
+	prefix:     v1/admin/server
+	group:      admin/server
+	middleware: AuthMiddleware
+)
+service ppanel {
+	@doc "Get node tag list"
+	@handler GetNodeTagList
+	get /tag/list returns (GetNodeTagListResponse)
+
+	@doc "Get node list"
+	@handler GetNodeList
+	get /list (GetNodeServerListRequest) returns (GetNodeServerListResponse)
+
+	@doc "Get node detail"
+	@handler GetNodeDetail
+	get /detail (GetNodeDetailRequest) returns (Server)
+
+	@doc "Update node"
+	@handler UpdateNode
+	put / (UpdateNodeRequest)
+
+	@doc "Create node"
+	@handler CreateNode
+	post / (CreateNodeRequest)
+
+	@doc "Delete node"
+	@handler DeleteNode
+	delete / (DeleteNodeRequest)
+
+	@doc "Batch delete node"
+	@handler BatchDeleteNode
+	delete /batch (BatchDeleteNodeRequest)
+
+	@doc "Get node group list"
+	@handler GetNodeGroupList
+	get /group/list returns (GetNodeGroupListResponse)
+
+	@doc "Create node group"
+	@handler CreateNodeGroup
+	post /group (CreateNodeGroupRequest)
+
+	@doc "Update node group"
+	@handler UpdateNodeGroup
+	put /group (UpdateNodeGroupRequest)
+
+	@doc "Delete node group"
+	@handler DeleteNodeGroup
+	delete /group (DeleteNodeGroupRequest)
+
+	@doc "Batch delete node group"
+	@handler BatchDeleteNodeGroup
+	delete /group/batch (BatchDeleteNodeGroupRequest)
+
+	@doc "Node sort "
+	@handler NodeSort
+	post /sort (NodeSortRequest)
+
+	@doc "Create rule group"
+	@handler CreateRuleGroup
+	post /rule_group (CreateRuleGroupRequest)
+
+	@doc "Update rule group"
+	@handler UpdateRuleGroup
+	put /rule_group (UpdateRuleGroupRequest)
+
+	@doc "Delete rule group"
+	@handler DeleteRuleGroup
+	delete /rule_group (DeleteRuleGroupRequest)
+
+	@doc "Get rule group list"
+	@handler GetRuleGroupList
+	get /rule_group_list returns (GetRuleGroupResponse)
+}
+

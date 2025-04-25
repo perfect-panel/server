@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  ppanel:
+    container_name: ppanel-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./etc/ppanel.yaml:/app/etc/ppanel.yaml
+    restart: always

@@ -1,0 +1,26 @@
+package user
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/ppanel-server/internal/logic/public/user"
+	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/ppanel-server/pkg/result"
+)
+
+// Update User Notify
+func UpdateUserNotifyHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var req types.UpdateUserNotifyRequest
+		_ = c.ShouldBind(&req)
+		validateErr := svcCtx.Validate(&req)
+		if validateErr != nil {
+			result.ParamErrorResult(c, validateErr)
+			return
+		}
+
+		l := user.NewUpdateUserNotifyLogic(c.Request.Context(), svcCtx)
+		err := l.UpdateUserNotify(&req)
+		result.HttpResult(c, nil, err)
+	}
+}

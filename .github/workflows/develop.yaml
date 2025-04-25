@@ -1,0 +1,50 @@
+name: Deploy
+
+on:
+  push:
+    branches: ["develop"]
+  pull_request:
+    branches: ["develop"]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get short Git commit ID
+        id: vars
+        run: echo "COMMIT_ID=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }} .
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            if [ $(docker ps -q -f name=ppanel-server-dev) ]; then
+              echo "Stopping and removing existing ppanel-server container..."
+              docker stop ppanel-server-dev
+              docker rm ppanel-server-dev
+            else
+              echo "No existing ppanel-server-dev container running."
+            fi
+            
+            docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+            docker run -d --restart=always --log-driver=journald --name ppanel-server-dev -p 8080:8080 -v /www/wwwroot/api/etc:/app/etc --restart=always -d ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}

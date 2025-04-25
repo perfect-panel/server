@@ -1,0 +1,26 @@
+package user
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/ppanel-server/internal/logic/admin/user"
+	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/ppanel-server/pkg/result"
+)
+
+// Get user auth method
+func GetUserAuthMethodHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var req types.GetUserAuthMethodRequest
+		_ = c.ShouldBind(&req)
+		validateErr := svcCtx.Validate(&req)
+		if validateErr != nil {
+			result.ParamErrorResult(c, validateErr)
+			return
+		}
+
+		l := user.NewGetUserAuthMethodLogic(c.Request.Context(), svcCtx)
+		resp, err := l.GetUserAuthMethod(&req)
+		result.HttpResult(c, resp, err)
+	}
+}

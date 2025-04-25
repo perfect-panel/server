@@ -1,0 +1,40 @@
+package announcement
+
+import (
+	"context"
+
+	"github.com/perfect-panel/ppanel-server/internal/model/announcement"
+	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/ppanel-server/pkg/logger"
+	"github.com/perfect-panel/ppanel-server/pkg/xerr"
+	"github.com/pkg/errors"
+)
+
+type CreateAnnouncementLogic struct {
+	logger.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+// Create announcement
+func NewCreateAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateAnnouncementLogic {
+	return &CreateAnnouncementLogic{
+		Logger: logger.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *CreateAnnouncementLogic) CreateAnnouncement(req *types.CreateAnnouncementRequest) error {
+
+	if err := l.svcCtx.AnnouncementModel.Insert(l.ctx, &announcement.Announcement{
+		Title:   req.Title,
+		Content: req.Content,
+	}); err != nil {
+		l.Errorw("[CreateAnnouncement] Database Error", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create announcement failed: %v", err.Error())
+	}
+
+	return nil
+}

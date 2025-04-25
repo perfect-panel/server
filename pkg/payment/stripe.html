@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <button id="payment">提交</button>
+    <script>
+        const stripe = Stripe('pk_test_51L4gYuHqdC7TVcHRMpjoxpdlNM3MwlcWHFYHmSSUjkjzE9x0IlKqxcYvSxnPXD5ahxdxSxVf6kJf7AEwpwmTqATx005M6v5QDe');
+        const btn = document.getElementById('payment');
+        btn.addEventListener('click',async ()=>{
+            try {
+                // wechat：pi_3Q8kM5HqdC7TVcHR10ESkDJD_secret_sEJxtzWruoYEPjLbpKIC4Z0Ae
+                // alipay：pi_3Q8kTxHqdC7TVcHR08NCtdE5_secret_wpc54Pa1EXxoccznERFjKvxHr
+               const {error, paymentIntent}= await stripe.confirmAlipayPayment('',
+                   {
+                        payment_method_options: {
+                            wechat_pay: {
+                            client: 'web',
+                            },
+                        },
+                    },
+                   {
+                       handleActions: false,
+                   }
+               )
+                if (error) {
+                    console.error(error)
+                } else {
+                    console.log(paymentIntent)
+                }
+            }catch (e) {
+                console.log(e)
+            }
+        })
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+syntax = "v1"
+
+
+info(
+    title: "App Node Api"
+    desc:    "API for ppanel"
+    author:  "Tension"
+    email:   "tension@ppanel.com"
+    version: "0.0.1"
+)
+
+import "../types.api"
+
+type(
+
+
+    AppRuleGroupListResponse {
+        Total int64         `json:"total"`
+        List  []ServerRuleGroup `json:"list"`
+    }
+
+    AppUserSubscbribeNodeRequest {
+        Id int64   `form:"id"  validate:"required"`
+    }
+
+    AppUserSubscbribeNodeResponse{
+        List []AppUserSubscbribeNode    `json:"list"`
+    }
+)
+
+@server (
+    prefix:     v1/app/node
+    group:      app/node
+    middleware: AppMiddleware,AuthMiddleware
+)
+
+service ppanel {
+
+
+
+    @doc "Get Node list"
+    @handler GetNodeList
+    get /list (AppUserSubscbribeNodeRequest) returns(AppUserSubscbribeNodeResponse)
+
+    @doc "Get rule group list"
+    @handler GetRuleGroupList
+    get /rule_group_list   returns (AppRuleGroupListResponse)
+
+}

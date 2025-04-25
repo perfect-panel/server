@@ -1,0 +1,23 @@
+syntax = "v1"
+
+info(
+    title: "App Heartbeat Api"
+    desc:    "API for ppanel"
+    author:  "Tension"
+    email:   "tension@ppanel.com"
+    version: "0.0.1"
+)
+
+
+@server(
+    prefix:     v1/app/ws
+    group:      app/ws
+    middleware: AuthMiddleware
+)
+
+
+service ppanel {
+    @doc "App heartbeat"
+    @handler AppWs
+    get /:userid/:identifier
+}

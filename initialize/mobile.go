@@ -1,0 +1,32 @@
+package initialize
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/perfect-panel/ppanel-server/pkg/logger"
+
+	"github.com/perfect-panel/ppanel-server/internal/config"
+	"github.com/perfect-panel/ppanel-server/internal/model/auth"
+	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/ppanel-server/pkg/tool"
+)
+
+func Mobile(ctx *svc.ServiceContext) {
+	logger.Debug("Mobile config initialization")
+	method, err := ctx.AuthModel.FindOneByMethod(context.Background(), "mobile")
+	if err != nil {
+		panic(err)
+	}
+	var cfg config.MobileConfig
+	var mobileConfig auth.MobileAuthConfig
+	if err := mobileConfig.Unmarshal(method.Config); err != nil {
+		panic(fmt.Sprintf("failed to unmarshal mobile auth config: %v", err.Error()))
+	}
+	tool.DeepCopy(&cfg, mobileConfig)
+	cfg.Enable = *method.Enabled
+	value, _ := json.Marshal(mobileConfig.PlatformConfig)
+	cfg.PlatformConfig = string(value)
+	ctx.Config.Mobile = cfg
+}

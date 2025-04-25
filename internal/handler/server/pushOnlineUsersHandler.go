@@ -1,0 +1,27 @@
+package server
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/ppanel-server/internal/logic/server"
+	"github.com/perfect-panel/ppanel-server/internal/svc"
+	"github.com/perfect-panel/ppanel-server/internal/types"
+	"github.com/perfect-panel/ppanel-server/pkg/result"
+)
+
+// Push online users
+func PushOnlineUsersHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var req types.OnlineUsersRequest
+		_ = c.ShouldBind(&req)
+		_ = c.ShouldBindQuery(&req.ServerCommon)
+		validateErr := svcCtx.Validate(&req)
+		if validateErr != nil {
+			result.ParamErrorResult(c, validateErr)
+			return
+		}
+
+		l := server.NewPushOnlineUsersLogic(c.Request.Context(), svcCtx)
+		err := l.PushOnlineUsers(&req)
+		result.HttpResult(c, nil, err)
+	}
+}
