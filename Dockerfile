@@ -4,6 +4,7 @@ FROM golang:alpine AS builder
 LABEL stage=gobuilder
 
 ARG TARGETARCH
+ARG VERSION
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH}
 
 # Combine apk commands into one to reduce layer size
@@ -18,8 +19,9 @@ RUN go mod download
 # Copy the rest of the application code
 COPY . .
 
-# Build the binary with optimization flags to reduce binary size
-RUN go build -ldflags="-s -w" -o /app/ppanel ppanel.go
+# Build the binary with version and build time
+RUN BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
+    go build -ldflags="-s -w -X 'github.com/perfect-panel/server/pkg/constant.Version=${VERSION}' -X 'github.com/perfect-panel/server/pkg/constant.BuildTime=${BUILD_TIME}'" -o /app/ppanel ppanel.go
 
 # Final minimal image
 FROM scratch
@@ -34,7 +36,7 @@ ENV TZ=Asia/Shanghai
 WORKDIR /app
 
 COPY --from=builder /app/ppanel /app/ppanel
-COPY --from=builder /etc /app/etc
+COPY --from=builder /build/etc /app/etc
 
 # Expose the port (optional)
 EXPOSE 8080
