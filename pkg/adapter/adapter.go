@@ -11,7 +11,6 @@ import (
 	"github.com/perfect-panel/server/pkg/adapter/singbox"
 	"github.com/perfect-panel/server/pkg/adapter/surfboard"
 	"github.com/perfect-panel/server/pkg/adapter/v2rayn"
-	"github.com/perfect-panel/server/pkg/adapter/vproxy"
 )
 
 type Config struct {
@@ -84,8 +83,4 @@ func (m *Adapter) BuildSurfboard(siteName string, user surfboard.UserInfo) []byt
 }
 func (m *Adapter) BuildV2rayN(uuid string) []byte {
 	return v2rayn.NewV2rayN(m.Adapter).Build(uuid)
-}
-
-func (m *Adapter) BuildVproxy(uuid string, userInfo vproxy.UserInfo) []byte {
-	return vproxy.BuildVproxy(m.Proxies, uuid, userInfo)
 }
