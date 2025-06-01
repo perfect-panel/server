@@ -9,6 +9,7 @@ import (
 	"github.com/perfect-panel/server/pkg/adapter"
 	"github.com/perfect-panel/server/pkg/adapter/shadowrocket"
 	"github.com/perfect-panel/server/pkg/adapter/surfboard"
+	"github.com/perfect-panel/server/pkg/adapter/vproxy"
 
 	"github.com/perfect-panel/server/internal/model/server"
 
@@ -248,7 +249,13 @@ func (l *SubscribeLogic) buildClientConfig(req *types.SubscribeRequest, userSub 
 		l.setSurfboardHeaders()
 	case "v2rayn":
 		resp = proxyManager.BuildV2rayN(userSub.UUID)
-
+	case "vproxy":
+		resp = proxyManager.BuildVproxy(userSub.UUID, vproxy.UserInfo{
+			Upload:       userSub.Upload,
+			Download:     userSub.Download,
+			TotalTraffic: userSub.Traffic,
+			ExpiredDate:  userSub.ExpireTime,
+		})
 	default:
 		resp = proxyManager.BuildGeneral(userSub.UUID)
 	}
