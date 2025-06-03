@@ -60,6 +60,7 @@ func parseVless(data proxy.Proxy, uuid string) (*Proxy, error) {
 		Port:   data.Port,
 		UUID:   uuid,
 		Flow:   vless.Flow,
+		UDP:    true,
 	}
 	setSecurityOptions(p, vless.Security, vless.SecurityConfig)
 	clashTransport(p, vless.Transport, vless.TransportConfig)
