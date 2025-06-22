@@ -545,6 +545,7 @@ CREATE TABLE IF NOT EXISTS `server_rule_group`
     `id`          bigint                                                        NOT NULL AUTO_INCREMENT,
     `name`        varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'Rule Group Name',
     `icon`        text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'Rule Group Icon',
+    `tags`        text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'Selected Node Tags',
     `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci          DEFAULT '' COMMENT 'Rule Group Description',
     `enable`      tinyint(1)                                                    NOT NULL DEFAULT '1' COMMENT 'Rule Group Enable',
     `created_at`  datetime(3)                                                            DEFAULT NULL COMMENT 'Creation Time',
