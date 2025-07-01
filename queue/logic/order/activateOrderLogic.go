@@ -369,7 +369,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 	}
 
 	// Check whether traffic reset on renewal is enabled
-	if !*sub.RenewalReset {
+	if *sub.RenewalReset {
 		userSub.Download = 0
 		userSub.Upload = 0
 	}
