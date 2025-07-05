@@ -33,12 +33,10 @@ type (
 		Method string `json:"method" validate:"required" validate:"required,oneof=email telephone device"`
 		Code   string `json:"code"`
 	}
-
 	GetUserOnlineTimeStatisticsResponse {
 		WeeklyStats       []WeeklyStat      `json:"weekly_stats"`
 		ConnectionRecords ConnectionRecords `json:"connection_records"`
 	}
-
 	WeeklyStat {
 		Day     int     `json:"day"`
 		DayName string  `json:"day_name"`
@@ -84,5 +82,5 @@ service ppanel {
 	@doc "Query User Affiliate Count"
 	@handler QueryUserAffiliate
 	get /affiliate/count returns (QueryUserAffiliateCountResponse)
-
 }
+

@@ -1,9 +1,10 @@
 syntax = "v1"
 
-info(
+info (
 	title:   "Device API"
 	desc:    "API for ppanel"
 	author:  "Tension"
 	email:   "tension@ppanel.com"
 	version: "0.0.1"
 )
+

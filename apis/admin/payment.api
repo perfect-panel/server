@@ -78,3 +78,4 @@ service ppanel {
 	@handler GetPaymentPlatform
 	get /platform returns (PlatformResponse)
 }
+

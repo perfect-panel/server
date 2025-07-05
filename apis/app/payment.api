@@ -20,3 +20,4 @@ service ppanel {
 	@handler GetAvailablePaymentMethods
 	get /methods returns (GetAvailablePaymentMethodsResponse)
 }
+

@@ -78,7 +78,6 @@ type (
 		ServerCommon
 		Traffic []UserTraffic `json:"traffic"`
 	}
-
 	ServerPushStatusRequest {
 		ServerCommon
 		Cpu       float64 `json:"cpu"`
@@ -93,8 +92,8 @@ type (
 )
 
 @server (
-	prefix: v1/server
-	group:  server
+	prefix:     v1/server
+	group:      server
 	middleware: ServerMiddleware
 )
 service ppanel {
@@ -118,3 +117,4 @@ service ppanel {
 	@handler PushOnlineUsers
 	post /online (OnlineUsersRequest)
 }
+

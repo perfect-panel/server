@@ -75,7 +75,6 @@ type (
 		Code    string `json:"code" validate:"required"`
 		Type    uint8  `json:"type" validate:"required"`
 	}
-
 	CheckVerificationCodeRespone {
 		Status bool `json:"status"`
 	}
@@ -122,3 +121,4 @@ service ppanel {
 	@handler CheckVerificationCode
 	post /check_verification_code (CheckVerificationCodeRequest) returns (CheckVerificationCodeRespone)
 }
+

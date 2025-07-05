@@ -246,11 +246,15 @@ type (
 		SecurityConfig SecurityConfig `json:"security_config"`
 	}
 	Tuic {
+		Port                 int            `json:"port" validate:"required"`
+		DisableSNI           bool           `json:"disable_sni"`
+		ReduceRtt            bool           `json:"reduce_rtt"`
+		UDPRelayMode         string         `json:"udp_relay_mode"`
+		CongestionController string         `json:"congestion_controller"`
+		SecurityConfig       SecurityConfig `json:"security_config"`
+	}
+	AnyTLS {
 		Port           int            `json:"port" validate:"required"`
-		DisableSNI  bool   `json:"disable_sni"`
-		ReduceRtt   bool   `json:"reduce_rtt"`
-		UDPRelayMode string `json:"udp_relay_mode"`
-		CongestionController string `json:"congestion_controller"`
 		SecurityConfig SecurityConfig `json:"security_config"`
 	}
 	SecurityConfig {
@@ -711,12 +715,10 @@ type (
 		Telephone string `json:"telephone"`
 		Address   string `json:"address"`
 	}
-
 	QueryUserAffiliateCountResponse {
 		Registers       int64 `json:"registers"`
 		TotalCommission int64 `json:"total_commission"`
 	}
-
 	AppUserSubcbribe {
 		Id          int64                   `json:"id"`
 		Name        string                  `json:"name"`
@@ -728,7 +730,6 @@ type (
 		ExpireTime  string                  `json:"expire_time"`
 		List        []AppUserSubscbribeNode `json:"list"`
 	}
-
 	AppUserSubscbribeNode {
 		Id           int64    `json:"id"`
 		Name         string   `json:"name"`
@@ -751,3 +752,4 @@ type (
 		Download     int64    `json:"download"`
 	}
 )
+

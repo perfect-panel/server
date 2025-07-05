@@ -54,12 +54,10 @@ type (
 	OAuthLoginResponse {
 		Redirect string `json:"redirect"`
 	}
-
 	OAuthLoginGetTokenRequest {
 		Method   string      `json:"method" validate:"required"` // google, facebook, apple, telegram, github etc.
 		Callback interface{} `json:"callback" validate:"required"`
 	}
-
 	// login request
 	TelephoneLoginRequest {
 		Telephone         string `json:"telephone" validate:"required"`
@@ -163,3 +161,4 @@ service ppanel {
 	@handler AppleLoginCallback
 	post /callback/apple (AppleLoginCallbackRequest)
 }
+

@@ -1,7 +1,7 @@
 syntax = "v1"
 
-info(
-	title: "Tools Api"
+info (
+	title:   "Tools Api"
 	desc:    "API for ppanel"
 	author:  "Tension"
 	email:   "tension@ppanel.com"
@@ -21,7 +21,6 @@ type (
 	group:      admin/tool
 	middleware: AuthMiddleware
 )
-
 service ppanel {
 	@doc "Get System Log"
 	@handler GetSystemLog
@@ -31,3 +30,4 @@ service ppanel {
 	@handler RestartSystem
 	get /restart
 }
+

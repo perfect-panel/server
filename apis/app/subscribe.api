@@ -1,10 +1,10 @@
 syntax = "v1"
 
-info(
-	title: "Subscribe API"
-	desc: "API for ppanel"
-	author: "Tension"
-	email: "tension@ppanel.com"
+info (
+	title:   "Subscribe API"
+	desc:    "API for ppanel"
+	author:  "Tension"
+	email:   "tension@ppanel.com"
 	version: "0.0.1"
 )
 
@@ -14,35 +14,29 @@ type (
 	QueryUserSubscribeResp {
 		Data []UserSubscribeData `json:"data"`
 	}
-
 	UserSubscribeData {
 		SubscribeId     int64 `json:"subscribe_id"`
 		UserSubscribeId int64 `json:"user_subscribe_id"`
 	}
-
 	UserSubscribeResetPeriodRequest {
 		UserSubscribeId int64 `json:"user_subscribe_id"`
 	}
-
 	UserSubscribeResetPeriodResponse {
 		Status bool `json:"status"`
 	}
-
 	AppUserSubscribeRequest {
 		ContainsNodes *bool `form:"contains_nodes"`
 	}
-
 	AppUserSubscbribeResponse {
 		List []AppUserSubcbribe `json:"list"`
 	}
 )
 
-@server(
+@server (
 	prefix:     v1/app/subscribe
 	group:      app/subscribe
 	middleware: AppMiddleware,AuthMiddleware
 )
-
 service ppanel {
 	@doc "Get subscribe list"
 	@handler QuerySubscribeList
@@ -68,3 +62,4 @@ service ppanel {
 	@handler ResetUserSubscribePeriod
 	post /reset/period (UserSubscribeResetPeriodRequest) returns (UserSubscribeResetPeriodResponse)
 }
+

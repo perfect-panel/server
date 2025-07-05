@@ -37,3 +37,4 @@ service ppanel {
 	@handler GetMessageLogList
 	get /message/list (GetMessageLogListRequest) returns (GetMessageLogListResponse)
 }
+

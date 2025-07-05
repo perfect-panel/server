@@ -187,3 +187,4 @@ service ppanel {
 	@handler GetRuleGroupList
 	get /rule_group_list returns (GetRuleGroupResponse)
 }
+

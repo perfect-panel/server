@@ -25,7 +25,6 @@ type (
 	GetAuthMethodListResponse {
 		List []AuthMethodConfig `json:"list"`
 	}
-
 	TestSmsSendRequest {
 		AreaCode  string `json:"area_code" validate:"required"`
 		Telephone string `json:"telephone" validate:"required"`
@@ -70,3 +69,4 @@ service ppanel {
 	@handler GetEmailPlatform
 	get /email_platform returns (PlatformResponse)
 }
+

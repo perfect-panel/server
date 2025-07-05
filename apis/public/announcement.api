@@ -20,3 +20,4 @@ service ppanel {
 	@handler QueryAnnouncement
 	get /list (QueryAnnouncementRequest) returns (QueryAnnouncementResponse)
 }
+

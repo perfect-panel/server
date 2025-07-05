@@ -88,13 +88,10 @@ type (
 		GroupId int64  `form:"group_id,omitempty"`
 		Search  string `form:"search,omitempty"`
 	}
-
 	SubscribeItem {
 		Subscribe
-
 		Sold int64 `json:"sold"`
 	}
-
 	GetSubscribeListResponse {
 		List  []SubscribeItem `json:"list"`
 		Total int64           `json:"total"`
@@ -161,3 +158,4 @@ service ppanel {
 	@handler SubscribeSort
 	post /sort (SubscribeSortRequest)
 }
+

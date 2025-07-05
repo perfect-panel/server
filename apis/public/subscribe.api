@@ -28,3 +28,4 @@ service ppanel {
 	@handler QueryApplicationConfig
 	get /application/config returns (ApplicationResponse)
 }
+
