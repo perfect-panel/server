@@ -57,6 +57,7 @@ func (c *Clash) parseProxy(p proxy.Proxy, uuid string) (*Proxy, error) {
 		"vmess":       parseVmess,
 		"hysteria2":   parseHysteria2,
 		"tuic":        parseTuic,
+		"anytls":      parseAnyTLS,
 	}
 
 	if parseFunc, exists := parseFuncs[p.Protocol]; exists {

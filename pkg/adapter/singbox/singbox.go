@@ -11,6 +11,7 @@ const (
 	VMess       = "vmess"
 	TUIC        = "tuic"
 	Hysteria2   = "hysteria2"
+	AnyTLS      = "anytls"
 	Shadowsocks = "shadowsocks"
 	Selector    = "selector"
 	URLTest     = "urltest"
@@ -27,6 +28,7 @@ type Proxy struct {
 	TrojanOptions      *TrojanOutboundOptions    `json:"-"`
 	VLESSOptions       *VLESSOutboundOptions     `json:"-"`
 	VMessOptions       *VMessOutboundOptions     `json:"-"`
+	AnyTLSOptions      *AnyTLSOutboundOptions    `json:"-"`
 	Hysteria2Options   *Hysteria2OutboundOptions `json:"-"`
 	SelectorOptions    *SelectorOutboundOptions  `json:"-"`
 	URLTestOptions     *URLTestOutboundOptions   `json:"-"`
@@ -86,6 +88,8 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 		return json.Marshal(p.VMessOptions)
 	case Hysteria2:
 		return json.Marshal(p.Hysteria2Options)
+	case AnyTLS:
+		return json.Marshal(p.AnyTLSOptions)
 	case Selector:
 		return json.Marshal(p.SelectorOptions)
 	case URLTest:

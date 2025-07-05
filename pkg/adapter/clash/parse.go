@@ -136,6 +136,35 @@ func parseTuic(data proxy.Proxy, uuid string) (*Proxy, error) {
 	return p, nil
 }
 
+func parseAnyTLS(data proxy.Proxy, uuid string) (*Proxy, error) {
+	anyTLS, ok := data.Option.(proxy.AnyTLS)
+	if !ok {
+		return nil, fmt.Errorf("invalid type for AnyTLS")
+	}
+
+	p := &Proxy{
+		Name:     data.Name,
+		Type:     "anytls",
+		Server:   data.Server,
+		Port:     data.Port,
+		Password: uuid,
+		UDP:      true,
+		ALPN: []string{
+			"h2",
+			"http/1.1",
+		},
+	}
+
+	if anyTLS.SecurityConfig.SNI != "" {
+		p.SNI = anyTLS.SecurityConfig.SNI
+	}
+	if anyTLS.SecurityConfig.AllowInsecure {
+		p.SkipCertVerify = anyTLS.SecurityConfig.AllowInsecure
+	}
+
+	return p, nil
+}
+
 func setSecurityOptions(p *Proxy, security string, config proxy.SecurityConfig) {
 	switch security {
 	case "tls":
