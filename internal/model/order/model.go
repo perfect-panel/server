@@ -50,6 +50,7 @@ type customOrderLogicModel interface {
 	QueryTotalOrders(ctx context.Context) (OrdersTotal, error)
 	QueryMonthlyUserCounts(ctx context.Context, date time.Time) (int64, int64, error)
 	QueryDateUserCounts(ctx context.Context, date time.Time) (int64, int64, error)
+	QueryTotalUserCounts(ctx context.Context) (int64, int64, error)
 	IsUserEligibleForNewOrder(ctx context.Context, userID int64) (bool, error)
 }
 
@@ -194,6 +195,20 @@ func (m *customOrderModel) QueryDateUserCounts(ctx context.Context, date time.Ti
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
 			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, start, end, "balance").
+			Select(
+				"COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) as new_users, "+
+					"COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) as renewal_users").
+			Row().Scan(&newUsers, &renewalUsers)
+	})
+	return newUsers, renewalUsers, err
+}
+
+func (m *customOrderModel) QueryTotalUserCounts(ctx context.Context) (int64, int64, error) {
+	var newUsers int64
+	var renewalUsers int64
+	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
+		return conn.Model(&Order{}).
+			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
 			Select(
 				"COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) as new_users, "+
 					"COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) as renewal_users").
