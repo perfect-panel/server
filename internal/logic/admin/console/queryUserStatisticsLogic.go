@@ -72,6 +72,15 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 	} else {
 		resp.All.Register = allUserCount
 	}
+
+	// query all user order counts
+	allNewOrderUsers, allRenewalOrderUsers, err := l.svcCtx.OrderModel.QueryTotalUserCounts(l.ctx)
+	if err != nil {
+		l.Errorw("[QueryUserStatisticsLogic] QueryTotalUserCounts error", logger.Field("error", err.Error()))
+	} else {
+		resp.All.NewOrderUsers = allNewOrderUsers
+		resp.All.RenewalOrderUsers = allRenewalOrderUsers
+	}
 	return
 }
 
