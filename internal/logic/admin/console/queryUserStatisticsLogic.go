@@ -31,6 +31,7 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 		return l.mockRevenueStatistics(), nil
 	}
 	resp = &types.UserStatisticsResponse{}
+	return resp, nil
 	now := time.Now()
 	// query today user register count
 	todayUserResisterCount, err := l.svcCtx.UserModel.QueryResisterUserTotalByDate(l.ctx, now)
