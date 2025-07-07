@@ -284,11 +284,21 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			return err
 		}
 
+		if o.GiftAmount != 0 {
+			if userInfo.GiftAmount < o.GiftAmount {
+				return errors.Wrapf(xerr.NewErrCode(xerr.InsufficientBalance), "Insufficient gift balance")
+			}
+			// deduct gift amount
+			userInfo.GiftAmount -= o.GiftAmount
+		}
+
 		if userInfo.Balance < o.Amount {
 			return errors.Wrapf(xerr.NewErrCode(xerr.InsufficientBalance), "Insufficient balance")
 		}
 		// deduct balance
 		userInfo.Balance -= o.Amount
+
+		userInfo.GiftAmount -= o.GiftAmount
 		err = l.svcCtx.UserModel.Update(l.ctx, &userInfo)
 		if err != nil {
 			return err
@@ -306,7 +316,9 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		if err != nil {
 			return err
 		}
-		return l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2)
+		return db.Model(&order.Order{}).Where("id = ?", o.Id).Updates(map[string]interface{}{
+			"status": 2, // 2 means paid
+		}).Error
 	})
 	if err != nil {
 		l.Errorw("[CheckoutOrderLogic] Transaction error", logger.Field("error", err.Error()), logger.Field("orderNo", o.OrderNo))
