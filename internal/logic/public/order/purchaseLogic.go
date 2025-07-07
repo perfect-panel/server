@@ -132,7 +132,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		if u.GiftAmount >= amount {
 			deductionAmount = amount
 			amount = 0
-			u.GiftAmount -= amount
+			u.GiftAmount -= deductionAmount
 		} else {
 			deductionAmount = u.GiftAmount
 			amount -= u.GiftAmount

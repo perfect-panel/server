@@ -93,7 +93,6 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 	}
 	// Calculate the handling fee
 	amount -= couponAmount
-	var deductionAmount int64
 	// find payment method
 	paymentConfig, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
 	if err != nil {
@@ -118,7 +117,7 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 		Price:          price,
 		Amount:         amount,
 		Discount:       discountAmount,
-		GiftAmount:     deductionAmount,
+		GiftAmount:     0,
 		Coupon:         req.Coupon,
 		CouponDiscount: couponAmount,
 		PaymentId:      req.Payment,

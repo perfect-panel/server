@@ -38,6 +38,7 @@ func CalculateRemainingAmount(ctx context.Context, svcCtx *svc.ServiceContext, u
 	orderQuantity := orderDetails.Quantity
 	// Calculate Order Amount
 	orderAmount := orderDetails.Amount + orderDetails.GiftAmount
+
 	if len(orderDetails.SubOrders) > 0 {
 		for _, subOrder := range orderDetails.SubOrders {
 			if subOrder.Status == 2 || subOrder.Status == 5 {
@@ -47,7 +48,7 @@ func CalculateRemainingAmount(ctx context.Context, svcCtx *svc.ServiceContext, u
 		}
 	}
 	// Calculate Remaining Amount
-	remainingAmount := deduction.CalculateRemainingAmount(
+	remainingAmount, err := deduction.CalculateRemainingAmount(
 		deduction.Subscribe{
 			StartTime:      userSubscribe.StartTime,
 			ExpireTime:     userSubscribe.ExpireTime,
@@ -64,5 +65,8 @@ func CalculateRemainingAmount(ctx context.Context, svcCtx *svc.ServiceContext, u
 			Quantity: orderQuantity,
 		},
 	)
+	if err != nil {
+		return 0, errors.Wrapf(xerr.NewErrCode(500), "CalculateRemainingAmount failed, userSubscribeId: %d, err: %v", userSubscribeId, err)
+	}
 	return remainingAmount, nil
 }
