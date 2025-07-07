@@ -41,6 +41,10 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 	if req.Avatar != "" && !tool.IsValidImageSize(req.Avatar, 1024) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Invalid Image Size")
 	}
+	userInfo.Balance = req.Balance
+	userInfo.GiftAmount = req.GiftAmount
+	userInfo.Commission = req.Commission
+
 	if req.Password != "" {
 		if userInfo.Id == 2 && isDemo {
 			return errors.Wrapf(xerr.NewErrCodeMsg(503, "Demo mode does not allow modification of the admin user password"), "UpdateUserBasicInfo failed: cannot update admin user password in demo mode")
