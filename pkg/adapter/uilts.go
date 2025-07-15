@@ -121,7 +121,7 @@ func adapterTags(tags map[string][]*server.Server, group []proxy.Group) (proxyGr
 	return group
 }
 
-func generateProxyGroup(servers []proxy.Proxy) (proxyGroup []proxy.Group, region []string) {
+func generateProxyGroup(servers []proxy.Proxy) (proxyGroup []proxy.Group, nodes []string) {
 	// 设置手动选择分组
 	proxyGroup = append(proxyGroup, []proxy.Group{
 		{
@@ -139,17 +139,13 @@ func generateProxyGroup(servers []proxy.Proxy) (proxyGroup []proxy.Group, region
 	}...)
 
 	for _, node := range servers {
-		if node.Country != "" {
-			proxyGroup = addProxyToGroup(node.Name, node.Country, proxyGroup)
-			region = append(region, node.Country)
-
-			proxyGroup = addProxyToGroup(node.Country, "智能线路", proxyGroup)
-		}
-
+		proxyGroup = addProxyToGroup(node.Name, "智能线路", proxyGroup)
 		proxyGroup = addProxyToGroup(node.Name, "手动选择", proxyGroup)
+		nodes = append(nodes, node.Name)
 	}
+
 	proxyGroup = addProxyToGroup("DIRECT", "手动选择", proxyGroup)
-	return proxyGroup, tool.RemoveDuplicateElements(region...)
+	return proxyGroup, tool.RemoveDuplicateElements(nodes...)
 }
 
 func adapterProxies(servers []*server.Server) []proxy.Proxy {

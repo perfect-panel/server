@@ -89,16 +89,20 @@ type (
 	CreateRuleGroupRequest {
 		Name   string   `json:"name" validate:"required"`
 		Icon   string   `json:"icon"`
+		Type   string   `json:"type"`
 		Tags   []string `json:"tags"`
 		Rules  string   `json:"rules"`
+		Default bool    `json:"default"`
 		Enable bool     `json:"enable"`
 	}
 	UpdateRuleGroupRequest {
 		Id     int64    `json:"id" validate:"required"`
 		Icon   string   `json:"icon"`
+		Type   string   `json:"type"`
 		Name   string   `json:"name" validate:"required"`
 		Tags   []string `json:"tags"`
 		Rules  string   `json:"rules"`
+		Default bool    `json:"default"`
 		Enable bool     `json:"enable"`
 	}
 	DeleteRuleGroupRequest {
