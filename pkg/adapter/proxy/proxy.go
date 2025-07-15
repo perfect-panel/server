@@ -4,8 +4,9 @@ package proxy
 type Adapter struct {
 	Proxies []Proxy
 	Group   []Group
-	Rules   []string
-	Region  []string
+	Rules   []string // rule
+	Nodes   []string // all node
+	Default string   // Default Node
 }
 
 // Proxy represents a proxy server

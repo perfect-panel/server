@@ -27,7 +27,7 @@ func NewAdapter(cfg *Config) *Adapter {
 	// 转换服务器列表
 	proxies := adapterProxies(cfg.Nodes)
 	// 生成代理组
-	proxyGroup, region := generateProxyGroup(proxies)
+	proxyGroup, nodes := generateProxyGroup(proxies)
 
 	// 转换规则组
 	g, r := adapterRules(cfg.Rules)
@@ -35,7 +35,8 @@ func NewAdapter(cfg *Config) *Adapter {
 	// 加入兜底节点
 	for i, group := range g {
 		if len(group.Proxies) == 0 {
-			g[i].Proxies = append([]string{"DIRECT"}, region...)
+			p := append([]string{"智能线路"}, nodes...)
+			g[i].Proxies = append(p, "REJECT", "DIRECT")
 		}
 	}
 
@@ -48,7 +49,7 @@ func NewAdapter(cfg *Config) *Adapter {
 			Proxies: proxies,
 			Group:   proxyGroup,
 			Rules:   r,
-			Region:  region,
+			Nodes:   nodes,
 		},
 	}
 }

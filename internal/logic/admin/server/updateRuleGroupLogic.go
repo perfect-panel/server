@@ -36,12 +36,14 @@ func (l *UpdateRuleGroupLogic) UpdateRuleGroup(req *types.UpdateRuleGroupRequest
 		return err
 	}
 	err = l.svcCtx.ServerModel.UpdateRuleGroup(l.ctx, &server.RuleGroup{
-		Id:     req.Id,
-		Icon:   req.Icon,
-		Name:   req.Name,
-		Tags:   tool.StringSliceToString(req.Tags),
-		Rules:  strings.Join(rs, "\n"),
-		Enable: req.Enable,
+		Id:      req.Id,
+		Icon:    req.Icon,
+		Type:    req.Type,
+		Name:    req.Name,
+		Tags:    tool.StringSliceToString(req.Tags),
+		Rules:   strings.Join(rs, "\n"),
+		Default: req.Default,
+		Enable:  req.Enable,
 	})
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), err.Error())

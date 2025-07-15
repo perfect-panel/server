@@ -55,11 +55,13 @@ func (l *CreateRuleGroupLogic) CreateRuleGroup(req *types.CreateRuleGroupRequest
 	}
 
 	err = l.svcCtx.ServerModel.InsertRuleGroup(l.ctx, &server.RuleGroup{
-		Name:   req.Name,
-		Icon:   req.Icon,
-		Tags:   tool.StringSliceToString(req.Tags),
-		Rules:  strings.Join(rs, "\n"),
-		Enable: req.Enable,
+		Name:    req.Name,
+		Icon:    req.Icon,
+		Type:    req.Type,
+		Tags:    tool.StringSliceToString(req.Tags),
+		Rules:   strings.Join(rs, "\n"),
+		Default: req.Default,
+		Enable:  req.Enable,
 	})
 	if err != nil {
 		l.Errorw("[CreateRuleGroup] Insert Database Error: ", logger.Field("error", err.Error()))

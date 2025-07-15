@@ -12,6 +12,8 @@ const (
 	RelayModeNone   = "none"
 	RelayModeAll    = "all"
 	RelayModeRandom = "random"
+	RuleGroupType   = "ban"
+	RuleGroupAuto   = "auto"
 )
 
 type ServerFilter struct {
@@ -178,9 +180,11 @@ type RuleGroup struct {
 	Id        int64     `gorm:"primary_key"`
 	Icon      string    `gorm:"type:MEDIUMTEXT;comment:Rule Group Icon"`
 	Name      string    `gorm:"type:varchar(100);not null;default:'';comment:Rule Group Name"`
+	Type      string    `gorm:"type:varchar(100);not null;default:'';comment:Rule Group Type"`
 	Tags      string    `gorm:"type:text;comment:Selected Node Tags"`
 	Rules     string    `gorm:"type:MEDIUMTEXT;comment:Rules"`
 	Enable    bool      `gorm:"type:tinyint(1);not null;default:1;comment:Rule Group Enable"`
+	Default   bool      `gorm:"type:tinyint(1);not null;default:0;comment:Rule Group is Default"`
 	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
 	UpdatedAt time.Time `gorm:"comment:Update Time"`
 }

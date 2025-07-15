@@ -32,6 +32,11 @@ type Announcement struct {
 	UpdatedAt int64  `json:"updated_at"`
 }
 
+type AnyTLS struct {
+	Port           int            `json:"port" validate:"required"`
+	SecurityConfig SecurityConfig `json:"security_config"`
+}
+
 type AppAuthCheckRequest struct {
 	Method     string `json:"method" validate:"required" validate:"required,oneof=device email mobile"`
 	Account    string `json:"account"`
@@ -441,11 +446,13 @@ type CreatePaymentMethodRequest struct {
 }
 
 type CreateRuleGroupRequest struct {
-	Name   string   `json:"name" validate:"required"`
-	Icon   string   `json:"icon"`
-	Tags   []string `json:"tags"`
-	Rules  string   `json:"rules"`
-	Enable bool     `json:"enable"`
+	Name    string   `json:"name" validate:"required"`
+	Icon    string   `json:"icon"`
+	Type    string   `json:"type"`
+	Tags    []string `json:"tags"`
+	Rules   string   `json:"rules"`
+	Default bool     `json:"default"`
+	Enable  bool     `json:"enable"`
 }
 
 type CreateSubscribeGroupRequest struct {
@@ -1955,12 +1962,14 @@ type UpdatePaymentMethodRequest struct {
 }
 
 type UpdateRuleGroupRequest struct {
-	Id     int64    `json:"id" validate:"required"`
-	Icon   string   `json:"icon"`
-	Name   string   `json:"name" validate:"required"`
-	Tags   []string `json:"tags"`
-	Rules  string   `json:"rules"`
-	Enable bool     `json:"enable"`
+	Id      int64    `json:"id" validate:"required"`
+	Icon    string   `json:"icon"`
+	Type    string   `json:"type"`
+	Name    string   `json:"name" validate:"required"`
+	Tags    []string `json:"tags"`
+	Rules   string   `json:"rules"`
+	Default bool     `json:"default"`
+	Enable  bool     `json:"enable"`
 }
 
 type UpdateSubscribeGroupRequest struct {

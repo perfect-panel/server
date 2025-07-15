@@ -8,7 +8,7 @@ import (
 	"github.com/perfect-panel/server/pkg/result"
 )
 
-// Create rule group
+// CreateRuleGroupHandler Create rule group
 func CreateRuleGroupHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var req types.CreateRuleGroupRequest
