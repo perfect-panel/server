@@ -122,6 +122,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 		if err = l.balancePayment(userInfo, orderInfo); err != nil {
 			return nil, err
 		}
+
 		resp = &types.CheckoutOrderResponse{
 			Type: "balance", // Payment completed immediately
 		}
@@ -325,13 +326,27 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 // balancePayment processes balance payment with gift amount priority logic
 // It prioritizes using gift amount first, then regular balance, and creates proper audit logs
 func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) error {
+	var userInfo user.User
+	var err error
 	if o.Amount == 0 {
 		// No payment required for zero-amount orders
-		return nil
+		l.Logger.Info(
+			"[PurchaseCheckout] No payment required for zero-amount order",
+			logger.Field("orderNo", o.OrderNo),
+			logger.Field("userId", u.Id),
+		)
+		err := l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2)
+		if err != nil {
+			l.Errorw("[PurchaseCheckout] Update order status error",
+				logger.Field("error", err.Error()),
+				logger.Field("orderNo", o.OrderNo),
+				logger.Field("userId", u.Id))
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Update order status error: %s", err.Error())
+		}
+		goto activation
 	}
 
-	var userInfo user.User
-	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
+	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Retrieve latest user information with row-level locking
 		err := db.Model(&user.User{}).Where("id = ?", u.Id).First(&userInfo).Error
 		if err != nil {
@@ -420,6 +435,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		return err
 	}
 
+activation:
 	// Enqueue order activation task for immediate processing
 	payload := queueType.ForthwithActivateOrderPayload{
 		OrderNo: o.OrderNo,

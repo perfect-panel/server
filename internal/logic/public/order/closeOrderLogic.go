@@ -82,7 +82,7 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 				return err
 			}
 			deduction := userInfo.GiftAmount + orderInfo.GiftAmount
-			err = tx.Model(&user.User{}).Where("id = ?", orderInfo.UserId).Update("deduction", deduction).Error
+			err = tx.Model(&user.User{}).Where("id = ?", orderInfo.UserId).Update("gift_amount", deduction).Error
 			if err != nil {
 				l.Errorw("[CloseOrder] Refund deduction amount failed",
 					logger.Field("error", err.Error()),

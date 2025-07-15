@@ -248,7 +248,6 @@ func (l *SubscribeLogic) buildClientConfig(req *types.SubscribeRequest, userSub 
 		l.setSurfboardHeaders()
 	case "v2rayn":
 		resp = proxyManager.BuildV2rayN(userSub.UUID)
-
 	default:
 		resp = proxyManager.BuildGeneral(userSub.UUID)
 	}
