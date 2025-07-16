@@ -245,7 +245,7 @@ func FindDefaultGroup(groups []*server.RuleGroup) string {
 			return group.Name
 		}
 	}
-	return "智能线路"
+	return AutoSelect
 }
 
 // SortGroups sorts the provided slice of proxy groups by their names.
@@ -254,6 +254,9 @@ func SortGroups(groups []proxy.Group, defaultName string) []proxy.Group {
 	var selectedGroup proxy.Group
 	// 在所有分组找到默认分组并将他放到第一个
 	for _, group := range groups {
+		if group.Name == "" || group.Name == "DIRECT" || group.Name == "REJECT" {
+			continue
+		}
 		if group.Name == defaultName {
 			group.Proxies = tool.RemoveStringElement(group.Proxies, defaultName, "REJECT")
 			sortedGroups = append([]proxy.Group{group}, sortedGroups...)
@@ -275,18 +278,4 @@ func SortGroups(groups []proxy.Group, defaultName string) []proxy.Group {
 	}
 	return sortedGroups
 
-}
-
-// RemoveElementByName removes elements from the slice of proxy groups by their names.
-func RemoveElementByName(groups []proxy.Group, names ...string) []proxy.Group {
-	for i := 0; i < len(groups); i++ {
-		for _, name := range names {
-			if groups[i].Name == name {
-				groups = append(groups[:i], groups[i+1:]...)
-				i--   // Adjust index after removal
-				break // Exit inner loop to avoid index out of range
-			}
-		}
-	}
-	return groups
 }
