@@ -13,6 +13,11 @@ import (
 	"github.com/perfect-panel/server/pkg/adapter/v2rayn"
 )
 
+var (
+	AutoSelect = "Auto - UrlTest"
+	Selection  = "Selection"
+)
+
 type Config struct {
 	Nodes []*server.Server
 	Rules []*server.RuleGroup
@@ -39,7 +44,7 @@ func NewAdapter(cfg *Config) *Adapter {
 			continue
 		}
 		if len(group.Proxies) == 0 {
-			p := append([]string{"Auto Select", "Selection"}, nodes...)
+			p := append([]string{AutoSelect, Selection}, nodes...)
 			g[i].Proxies = append(p, "DIRECT")
 		}
 	}

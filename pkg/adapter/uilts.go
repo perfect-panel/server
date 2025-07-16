@@ -141,7 +141,7 @@ func adapterTags(tags map[string][]*server.Server, group []proxy.Group) (proxyGr
 
 func generateProxyGroup(servers []proxy.Proxy) (proxyGroup []proxy.Group, nodes []string) {
 	proxyGroup = append(proxyGroup, proxy.Group{
-		Name:     "Auto Select",
+		Name:     AutoSelect,
 		Type:     proxy.GroupTypeURLTest,
 		Proxies:  make([]string, 0),
 		URL:      "https://www.gstatic.com/generate_204",
@@ -150,14 +150,14 @@ func generateProxyGroup(servers []proxy.Proxy) (proxyGroup []proxy.Group, nodes 
 
 	// 设置手动选择分组
 	proxyGroup = append(proxyGroup, proxy.Group{
-		Name:    "Selection",
+		Name:    Selection,
 		Type:    proxy.GroupTypeSelect,
-		Proxies: []string{"Auto Select"},
+		Proxies: []string{AutoSelect},
 	})
 
 	for _, node := range servers {
-		proxyGroup = addProxyToGroup(node.Name, "Auto Select", proxyGroup)
-		proxyGroup = addProxyToGroup(node.Name, "Selection", proxyGroup)
+		proxyGroup = addProxyToGroup(node.Name, AutoSelect, proxyGroup)
+		proxyGroup = addProxyToGroup(node.Name, Selection, proxyGroup)
 		nodes = append(nodes, node.Name)
 	}
 	return proxyGroup, tool.RemoveDuplicateElements(nodes...)
@@ -258,11 +258,11 @@ func SortGroups(groups []proxy.Group, defaultName string) []proxy.Group {
 			group.Proxies = tool.RemoveStringElement(group.Proxies, defaultName, "REJECT")
 			sortedGroups = append([]proxy.Group{group}, sortedGroups...)
 			continue
-		} else if group.Name == "Selection" {
+		} else if group.Name == Selection {
 			group.Proxies = tool.RemoveStringElement(group.Proxies, defaultName)
 			selectedGroup = group
 			continue
-		} else if group.Name == "Auto Select" {
+		} else if group.Name == AutoSelect {
 			group.Proxies = tool.RemoveStringElement(group.Proxies, defaultName, group.Name)
 			sortedGroups = append([]proxy.Group{group}, sortedGroups...)
 			continue
