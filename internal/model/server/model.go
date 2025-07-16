@@ -32,6 +32,8 @@ type customServerLogicModel interface {
 	QueryAllRuleGroup(ctx context.Context) ([]*RuleGroup, error)
 	FindServersByTag(ctx context.Context, tag string) ([]*Server, error)
 	FindServerTags(ctx context.Context) ([]string, error)
+
+	SetDefaultRuleGroup(ctx context.Context, id int64) error
 }
 
 var (
@@ -274,4 +276,17 @@ func (m *customServerModel) FindServersByTag(ctx context.Context, tag string) ([
 		return conn.Model(&Server{}).Where("FIND_IN_SET(?, tags)", tag).Order("sort ASC").Find(v).Error
 	})
 	return data, err
+}
+
+// SetDefaultRuleGroup sets the default rule group.
+
+func (m *customServerModel) SetDefaultRuleGroup(ctx context.Context, id int64) error {
+	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		// Reset all groups to not default
+		if err := conn.Model(&RuleGroup{}).Update("default", false).Error; err != nil {
+			return err
+		}
+		// Set the specified group as default
+		return conn.Model(&RuleGroup{}).Where("id = ?", id).Update("default", true).Error
+	}, cacheServerRuleGroupAllKeys, fmt.Sprintf("cache:serverRuleGroup:%v", id))
 }
