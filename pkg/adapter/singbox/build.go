@@ -79,7 +79,7 @@ func BuildSingbox(adapter proxy.Adapter, uuid string) ([]byte, error) {
 
 	rawConfig["outbounds"] = proxies
 	route := RouteOptions{
-		Final: "手动选择",
+		Final: adapter.Default,
 		Rules: []Rule{
 			{
 				Inbound: []string{
@@ -114,7 +114,7 @@ func BuildSingbox(adapter proxy.Adapter, uuid string) ([]byte, error) {
 			},
 			{
 				ClashMode: "global",
-				Outbound:  "手动选择",
+				Outbound:  adapter.Default,
 			},
 			{
 				IPIsPrivate: true,
