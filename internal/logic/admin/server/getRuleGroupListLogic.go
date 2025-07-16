@@ -38,9 +38,11 @@ func (l *GetRuleGroupListLogic) GetRuleGroupList() (resp *types.GetRuleGroupResp
 			Id:        v.Id,
 			Icon:      v.Icon,
 			Name:      v.Name,
+			Type:      v.Type,
 			Tags:      strings.Split(v.Tags, ","),
 			Rules:     v.Rules,
 			Enable:    v.Enable,
+			Default:   v.Default,
 			CreatedAt: v.CreatedAt.UnixMilli(),
 			UpdatedAt: v.UpdatedAt.UnixMilli(),
 		}

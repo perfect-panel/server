@@ -1560,9 +1560,11 @@ type ServerRuleGroup struct {
 	Id        int64    `json:"id"`
 	Icon      string   `json:"icon"`
 	Name      string   `json:"name" validate:"required"`
+	Type      string   `json:"type"`
 	Tags      []string `json:"tags"`
 	Rules     string   `json:"rules"`
 	Enable    bool     `json:"enable"`
+	Default   bool     `json:"default"`
 	CreatedAt int64    `json:"created_at"`
 	UpdatedAt int64    `json:"updated_at"`
 }
