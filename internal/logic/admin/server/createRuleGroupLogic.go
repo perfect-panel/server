@@ -53,8 +53,7 @@ func (l *CreateRuleGroupLogic) CreateRuleGroup(req *types.CreateRuleGroupRequest
 	if err != nil {
 		return err
 	}
-
-	err = l.svcCtx.ServerModel.InsertRuleGroup(l.ctx, &server.RuleGroup{
+	info := &server.RuleGroup{
 		Name:    req.Name,
 		Icon:    req.Icon,
 		Type:    req.Type,
@@ -62,10 +61,18 @@ func (l *CreateRuleGroupLogic) CreateRuleGroup(req *types.CreateRuleGroupRequest
 		Rules:   strings.Join(rs, "\n"),
 		Default: req.Default,
 		Enable:  req.Enable,
-	})
+	}
+	err = l.svcCtx.ServerModel.InsertRuleGroup(l.ctx, info)
 	if err != nil {
 		l.Errorw("[CreateRuleGroup] Insert Database Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create server rule group error: %v", err)
 	}
+	if req.Default {
+		if err = l.svcCtx.ServerModel.SetDefaultRuleGroup(l.ctx, info.Id); err != nil {
+			l.Errorw("[CreateRuleGroup] Set Default Rule Group Error: ", logger.Field("error", err.Error()))
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "set default rule group error: %v", err)
+		}
+	}
+
 	return nil
 }

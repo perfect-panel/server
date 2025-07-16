@@ -48,5 +48,11 @@ func (l *UpdateRuleGroupLogic) UpdateRuleGroup(req *types.UpdateRuleGroupRequest
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), err.Error())
 	}
+	if req.Default {
+		if err = l.svcCtx.ServerModel.SetDefaultRuleGroup(l.ctx, req.Id); err != nil {
+			l.Errorf("SetDefaultRuleGroup error: %v", err.Error())
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), err.Error())
+		}
+	}
 	return nil
 }
