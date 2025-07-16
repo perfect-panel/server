@@ -99,11 +99,29 @@ func addProxyToGroup(proxyName, groupName string, groups []proxy.Group) []proxy.
 
 func adapterRules(groups []*server.RuleGroup) (proxyGroup []proxy.Group, rules []string) {
 	for _, group := range groups {
-		proxyGroup = append(proxyGroup, proxy.Group{
-			Name:    group.Name,
-			Type:    proxy.GroupTypeSelect,
-			Proxies: RemoveEmptyString(strings.Split(group.Tags, ",")),
-		})
+		switch group.Type {
+		case server.RuleGroupTypeBan:
+			proxyGroup = append(proxyGroup, proxy.Group{
+				Name:    group.Name,
+				Type:    proxy.GroupTypeSelect,
+				Proxies: []string{"REJECT", "DIRECT"},
+				Direct:  true,
+			})
+		case server.RuleGroupTypeAuto:
+			proxyGroup = append(proxyGroup, proxy.Group{
+				Name:    group.Name,
+				Type:    proxy.GroupTypeURLTest,
+				URL:     "https://www.gstatic.com/generate_204",
+				Proxies: RemoveEmptyString(strings.Split(group.Tags, ",")),
+			})
+		default:
+			proxyGroup = append(proxyGroup, proxy.Group{
+				Name:    group.Name,
+				Type:    proxy.GroupTypeSelect,
+				Proxies: RemoveEmptyString(strings.Split(group.Tags, ",")),
+			})
+		}
+
 		rules = append(rules, strings.Split(group.Rules, "\n")...)
 	}
 	return
@@ -122,29 +140,26 @@ func adapterTags(tags map[string][]*server.Server, group []proxy.Group) (proxyGr
 }
 
 func generateProxyGroup(servers []proxy.Proxy) (proxyGroup []proxy.Group, nodes []string) {
+	proxyGroup = append(proxyGroup, proxy.Group{
+		Name:     "Auto Select",
+		Type:     proxy.GroupTypeURLTest,
+		Proxies:  make([]string, 0),
+		URL:      "https://www.gstatic.com/generate_204",
+		Interval: 300,
+	})
+
 	// 设置手动选择分组
-	proxyGroup = append(proxyGroup, []proxy.Group{
-		{
-			Name:     "智能线路",
-			Type:     proxy.GroupTypeURLTest,
-			Proxies:  make([]string, 0),
-			URL:      "https://www.gstatic.com/generate_204",
-			Interval: 300,
-		},
-		{
-			Name:    "手动选择",
-			Type:    proxy.GroupTypeSelect,
-			Proxies: []string{"智能线路"},
-		},
-	}...)
+	proxyGroup = append(proxyGroup, proxy.Group{
+		Name:    "Selection",
+		Type:    proxy.GroupTypeSelect,
+		Proxies: []string{"Auto Select"},
+	})
 
 	for _, node := range servers {
-		proxyGroup = addProxyToGroup(node.Name, "智能线路", proxyGroup)
-		proxyGroup = addProxyToGroup(node.Name, "手动选择", proxyGroup)
+		proxyGroup = addProxyToGroup(node.Name, "Auto Select", proxyGroup)
+		proxyGroup = addProxyToGroup(node.Name, "Selection", proxyGroup)
 		nodes = append(nodes, node.Name)
 	}
-
-	proxyGroup = addProxyToGroup("DIRECT", "手动选择", proxyGroup)
 	return proxyGroup, tool.RemoveDuplicateElements(nodes...)
 }
 
@@ -206,6 +221,7 @@ func RemoveEmptyString(arr []string) []string {
 	return result
 }
 
+// RemoveEmptyGroup removes empty groups from the provided slice of proxy groups.
 func RemoveEmptyGroup(arr []proxy.Group) []proxy.Group {
 	var result []proxy.Group
 	var removeNames []string
@@ -220,4 +236,57 @@ func RemoveEmptyGroup(arr []proxy.Group) []proxy.Group {
 		}
 	}
 	return result
+}
+
+// FindDefaultGroup finds the default rule group from a list of rule groups.
+func FindDefaultGroup(groups []*server.RuleGroup) string {
+	for _, group := range groups {
+		if group.Default {
+			return group.Name
+		}
+	}
+	return "智能线路"
+}
+
+// SortGroups sorts the provided slice of proxy groups by their names.
+func SortGroups(groups []proxy.Group, defaultName string) []proxy.Group {
+	var sortedGroups []proxy.Group
+	var selectedGroup proxy.Group
+	// 在所有分组找到默认分组并将他放到第一个
+	for _, group := range groups {
+		if group.Name == defaultName {
+			group.Proxies = tool.RemoveStringElement(group.Proxies, defaultName, "REJECT")
+			sortedGroups = append([]proxy.Group{group}, sortedGroups...)
+			continue
+		} else if group.Name == "Selection" {
+			group.Proxies = tool.RemoveStringElement(group.Proxies, defaultName)
+			selectedGroup = group
+			continue
+		} else if group.Name == "Auto Select" {
+			group.Proxies = tool.RemoveStringElement(group.Proxies, defaultName, group.Name)
+			sortedGroups = append([]proxy.Group{group}, sortedGroups...)
+			continue
+		}
+		sortedGroups = append(sortedGroups, group)
+	}
+	// 将手动选择分组放到最后
+	if selectedGroup.Name != "" {
+		sortedGroups = append(sortedGroups, selectedGroup)
+	}
+	return sortedGroups
+
+}
+
+// RemoveElementByName removes elements from the slice of proxy groups by their names.
+func RemoveElementByName(groups []proxy.Group, names ...string) []proxy.Group {
+	for i := 0; i < len(groups); i++ {
+		for _, name := range names {
+			if groups[i].Name == name {
+				groups = append(groups[:i], groups[i+1:]...)
+				i--   // Adjust index after removal
+				break // Exit inner loop to avoid index out of range
+			}
+		}
+	}
+	return groups
 }

@@ -26,6 +26,7 @@ type Group struct {
 	Proxies  []string
 	URL      string
 	Interval int
+	Direct   bool
 }
 
 type GroupType string

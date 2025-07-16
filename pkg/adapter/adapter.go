@@ -26,17 +26,21 @@ type Adapter struct {
 func NewAdapter(cfg *Config) *Adapter {
 	// 转换服务器列表
 	proxies := adapterProxies(cfg.Nodes)
-	// 生成代理组
-	proxyGroup, nodes := generateProxyGroup(proxies)
-
+	defaultGroup := FindDefaultGroup(cfg.Rules)
 	// 转换规则组
 	g, r := adapterRules(cfg.Rules)
 
+	// 生成代理组
+	proxyGroup, nodes := generateProxyGroup(proxies)
+
 	// 加入兜底节点
 	for i, group := range g {
+		if group.Direct {
+			continue
+		}
 		if len(group.Proxies) == 0 {
-			p := append([]string{"智能线路"}, nodes...)
-			g[i].Proxies = append(p, "REJECT", "DIRECT")
+			p := append([]string{"Auto Select", "Selection"}, nodes...)
+			g[i].Proxies = append(p, "DIRECT")
 		}
 	}
 
@@ -44,12 +48,14 @@ func NewAdapter(cfg *Config) *Adapter {
 	proxyGroup = RemoveEmptyGroup(append(proxyGroup, g...))
 	// 处理标签
 	proxyGroup = adapterTags(cfg.Tags, proxyGroup)
+
 	return &Adapter{
 		Adapter: proxy.Adapter{
 			Proxies: proxies,
-			Group:   proxyGroup,
+			Group:   SortGroups(proxyGroup, defaultGroup),
 			Rules:   r,
 			Nodes:   nodes,
+			Default: defaultGroup,
 		},
 	}
 }
