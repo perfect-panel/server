@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	RelayModeNone     = "none"
-	RelayModeAll      = "all"
-	RelayModeRandom   = "random"
-	RuleGroupTypeBan  = "ban"
-	RuleGroupTypeAuto = "auto"
+	RelayModeNone        = "none"
+	RelayModeAll         = "all"
+	RelayModeRandom      = "random"
+	RuleGroupTypeReject  = "reject"
+	RuleGroupTypeDefault = "default"
+	RuleGroupTypeDirect  = "direct"
 )
 
 type ServerFilter struct {
