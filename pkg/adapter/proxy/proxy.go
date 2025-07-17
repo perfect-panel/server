@@ -1,22 +1,26 @@
 package proxy
 
+import "embed"
+
 // Adapter represents a proxy adapter
 type Adapter struct {
-	Proxies []Proxy
-	Group   []Group
-	Rules   []string // rule
-	Nodes   []string // all node
-	Default string   // Default Node
+	Proxies    []Proxy
+	Group      []Group
+	Rules      []string  // rule
+	Nodes      []string  // all node
+	Default    string    // Default Node
+	TemplateFS *embed.FS // Template file system
 }
 
 // Proxy represents a proxy server
 type Proxy struct {
-	Name     string
-	Server   string
-	Port     int
-	Protocol string
-	Country  string
-	Option   any
+	Name     string   // Name of the proxy
+	Server   string   // Server address of the proxy
+	Port     int      // Port of the proxy server
+	Protocol string   // Protocol type (e.g., shadowsocks, vless, vmess, trojan, hysteria2, tuic, anytls)
+	Country  string   // Country of the proxy
+	Tags     []string // Tags for the proxy
+	Option   any      // Additional options for the proxy configuration
 }
 
 // Group represents a group of proxies
@@ -26,7 +30,10 @@ type Group struct {
 	Proxies  []string
 	URL      string
 	Interval int
-	Direct   bool
+	Reject   bool     // Reject group
+	Direct   bool     // Direct group
+	Tags     []string // Tags for the group
+	Default  bool     // Default group
 }
 
 type GroupType string

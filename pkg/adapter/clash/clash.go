@@ -1,8 +1,11 @@
 package clash
 
 import (
+	"bytes"
 	"fmt"
+	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/perfect-panel/server/pkg/adapter/proxy"
 	"github.com/perfect-panel/server/pkg/logger"
 	"gopkg.in/yaml.v3"
@@ -20,22 +23,16 @@ func NewClash(adapter proxy.Adapter) *Clash {
 
 func (c *Clash) Build(uuid string) ([]byte, error) {
 	var proxies []Proxy
-	for _, v := range c.Proxies {
-		p, err := c.parseProxy(v, uuid)
+	for _, proxied := range c.Adapter.Proxies {
+		p, err := c.parseProxy(proxied, uuid)
 		if err != nil {
-			logger.Errorf("Failed to parse proxy for %s: %s", v.Name, err.Error())
+			logger.Errorw("Failed to parse proxy", logger.Field("error", err), logger.Field("proxy", p.Name))
 			continue
 		}
 		proxies = append(proxies, *p)
 	}
-	var rawConfig RawConfig
-	if err := yaml.Unmarshal([]byte(DefaultTemplate), &rawConfig); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal template: %w", err)
-	}
-	rawConfig.Proxies = proxies
-	// generate proxy groups
 	var groups []ProxyGroup
-	for _, group := range c.Group {
+	for _, group := range c.Adapter.Group {
 		groups = append(groups, ProxyGroup{
 			Name:     group.Name,
 			Type:     string(group.Type),
@@ -44,9 +41,38 @@ func (c *Clash) Build(uuid string) ([]byte, error) {
 			Interval: group.Interval,
 		})
 	}
-	rawConfig.ProxyGroups = groups
-	rawConfig.Rules = append(c.Rules, fmt.Sprintf("MATCH,%s", c.Default))
-	return yaml.Marshal(&rawConfig)
+	var rules = append(c.Rules, fmt.Sprintf("MATCH,%s", c.Default))
+
+	tmplBytes, err := c.TemplateFS.ReadFile("template/clash.tpl")
+	if err != nil {
+		logger.Errorw("Failed to read template file", logger.Field("error", err))
+		return nil, fmt.Errorf("failed to read template file: %w", err)
+	}
+	tpl, err := template.New("clash.yaml").Funcs(sprig.FuncMap()).Funcs(template.FuncMap{
+		"toYaml": func(v interface{}) string {
+			out, err := yaml.Marshal(v)
+			if err != nil {
+				return fmt.Sprintf("# YAML encode error: %v", err.Error())
+			}
+			return string(out)
+		},
+	}).Parse(string(tmplBytes))
+	if err != nil {
+		logger.Errorw("[Clash] Failed to parse template", logger.Field("error", err))
+		return nil, fmt.Errorf("failed to parse template: %w", err)
+	}
+	var buf bytes.Buffer
+	err = tpl.Execute(&buf, map[string]interface{}{
+		"Proxies":     proxies,
+		"ProxyGroups": groups,
+		"Rules":       rules,
+	})
+	if err != nil {
+		logger.Errorw("[Clash] Failed to execute template", logger.Field("error", err))
+		return nil, fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func (c *Clash) parseProxy(p proxy.Proxy, uuid string) (*Proxy, error) {
