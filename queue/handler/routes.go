@@ -33,4 +33,7 @@ func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
 
 	// Schedule total server data
 	mux.Handle(types.SchedulerTotalServerData, traffic.NewServerDataLogic(serverCtx))
+
+	// Schedule reset traffic
+	mux.Handle(types.SchedulerResetTraffic, traffic.NewResetTrafficLogic(serverCtx))
 }
