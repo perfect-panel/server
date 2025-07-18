@@ -1,61 +1,79 @@
-#!MANAGED-CONFIG {{ .SubscribeURL }} interval=43200 strict=true
-# Surge 的规则配置手册: https://manual.nssurge.com/
+#!MANAGED-CONFIG {{.SubscribeURL}} interval=43200 strict=true
 
 [General]
 loglevel = notify
-# 从 Surge iOS 4 / Surge Mac 3.3.0 起，工具开始支持 DoH
-doh-server = https://doh.pub/dns-query
-# https://dns.alidns.com/dns-query, https://13800000000.rubyfish.cn/, https://dns.google/dns-query
-dns-server = 223.5.5.5, 114.114.114.114
-tun-excluded-routes = 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, 192.88.99.0/24, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 255.255.255.255/32
-skip-proxy = localhost, *.local, injections.adguard.org, local.adguard.org, captive.apple.com, guzzoni.apple.com, 0.0.0.0/8, 10.0.0.0/8, 17.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, 192.88.99.0/24, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4, 255.255.255.255/32
-
-wifi-assist = true
-allow-wifi-access = true
-wifi-access-http-port = 6152
-wifi-access-socks5-port = 6153
-http-listen = 0.0.0.0:6152
-socks5-listen = 0.0.0.0:6153
-
-external-controller-access = surgepasswd@0.0.0.0:6170
-replica = false
-
-tls-provider = openssl
-network-framework = false
+external-controller-access = purinio@0.0.0.0:6170
 exclude-simple-hostnames = true
+show-error-page-for-reject = true
+udp-priority = true
+udp-policy-not-supported-behaviour = reject
 ipv6 = true
-
-test-timeout = 4
+ipv6-vif = auto
 proxy-test-url = http://www.gstatic.com/generate_204
-geoip-maxmind-url = https://unpkg.zhimg.com/rulestatic@1.0.1/Country.mmdb
+internet-test-url = http://connectivitycheck.platform.hicloud.com/generate_204
+test-timeout = 5
+dns-server = system, 119.29.29.29, 223.5.5.5
+hijack-dns = 8.8.8.8:53, 8.8.4.4:53, 1.1.1.1:53, 1.0.0.1:53
+skip-proxy = 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 127.0.0.0/8, localhost, *.local
+always-real-ip = *.lan, lens.l.google.com, *.srv.nintendo.net, *.stun.playstation.net, *.xboxlive.com, xbox.*.*.microsoft.com, *.msftncsi.com, *.msftconnecttest.com
 
-[Replica]
-hide-apple-request = true
-hide-crashlytics-request = true
-use-keyword-filter = false
-hide-udp = false
+# > Surge Mac Parameters
+http-listen = 0.0.0.0:6088
+socks5-listen = 0.0.0.0:6089
+
+# > Surge iOS Parameters
+allow-wifi-access = true
+allow-hotspot-access = true
+wifi-access-http-port = 6088
+wifi-access-socks5-port = 6089
 
 [Panel]
-SubscribeInfo = {{ .SubscribeInfo }}, style=info
-
-# -----------------------------
-# Surge 的几种策略配置规范，请参考 https://manual.nssurge.com/policy/proxy.html
-# 不同的代理策略有*很多*可选参数，请参考上方连接的 Parameters 一段，根据需求自行添加参数。
-#
-# Surge 现已支持 UDP 转发功能，请参考: https://trello.com/c/ugOMxD3u/53-udp-%E8%BD%AC%E5%8F%91
-# Surge 现已支持 TCP-Fast-Open 技术，请参考: https://trello.com/c/ij65BU6Q/48-tcp-fast-open-troubleshooting-guide
-# Surge 现已支持 ss-libev 的全部加密方式和混淆，请参考: https://trello.com/c/BTr0vG1O/47-ss-libev-%E7%9A%84%E6%94%AF%E6%8C%81%E6%83%85%E5%86%B5
-# -----------------------------
+SubscribeInfo = {{.SubscribeInfo}}, style=info
 
 [Proxy]
-{{ .Proxies }}
+{{.Proxies}}
 
 [Proxy Group]
-# 代理组列表
-{{ .ProxyGroup }}
+🚀 Proxy = select, 🌏 Auto, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🍎 Apple = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🔍 Google = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🪟 Microsoft = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+📺 GlobalMedia = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🤖 AI = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🪙 Crypto = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🎮 Game = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+📟 Telegram = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🇨🇳 China = select, 🎯 Direct, 🚀 Proxy, include-other-group=🇺🇳 Nodes
+🐠 Final = select, 🚀 Proxy, 🎯 Direct, include-other-group=🇺🇳 Nodes
+🌏 Auto = smart, include-other-group=🇺🇳 Nodes
+🎯 Direct = select, DIRECT, hidden=1
+🇺🇳 Nodes = select, {{.ProxyGroup}}, hidden=1
 
 [Rule]
-{{ .Rules }}
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Apple/Apple_All.list, 🍎 Apple
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Google/Google.list, 🔍 Google
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/GitHub/GitHub.list, 🪟 Microsoft
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Microsoft/Microsoft.list, 🪟 Microsoft
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/HBO/HBO.list, 📺 GlobalMedia
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Disney/Disney.list, 📺 GlobalMedia
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/TikTok/TikTok.list, 📺 GlobalMedia
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Netflix/Netflix.list, 📺 GlobalMedia
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/GlobalMedia/GlobalMedia_All_No_Resolve.list, 📺 GlobalMedia
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Telegram/Telegram.list, 📟 Telegram
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/OpenAI/OpenAI.list, 🤖 AI
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Gemini/Gemini.list, 🤖 AI
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Copilot/Copilot.list, 🤖 AI
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Claude/Claude.list, 🤖 AI
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Crypto/Crypto.list, 🪙 Crypto
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Cryptocurrency/Cryptocurrency.list, 🪙 Crypto
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Game/Game.list, 🎮 Game
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Global/Global_All_No_Resolve.list, 🚀 Proxy
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/ChinaMax/ChinaMax_All_No_Resolve.list, 🇨🇳 China
+RULE-SET, https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Surge/Lan/Lan.list, 🎯 Direct
+
+GEOIP, CN, 🇨🇳 China
+FINAL, 🐠 Final, dns-failed
 
 [URL Rewrite]
-^https?://(www.)?(g|google).cn https://www.google.com 302
+^https?:\/\/(www.)?g\.cn https://www.google.com 302
+^https?:\/\/(www.)?google\.cn https://www.google.com 302
