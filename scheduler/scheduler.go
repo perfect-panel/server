@@ -34,6 +34,11 @@ func (m *Service) Start() {
 	if _, err := m.server.Register("@every 180s", totalServerDataTask); err != nil {
 		logger.Errorf("register total server data task failed: %s", err.Error())
 	}
+	// schedule reset traffic task: every 24 hours
+	resetTrafficTask := asynq.NewTask(types.SchedulerResetTraffic, nil)
+	if _, err := m.server.Register("@every 24h", resetTrafficTask); err != nil {
+		logger.Errorf("register reset traffic task failed: %s", err.Error())
+	}
 
 	if err := m.server.Run(); err != nil {
 		logger.Errorf("run scheduler failed: %s", err.Error())
