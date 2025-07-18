@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"github.com/perfect-panel/server/pkg/tool"
-	"net/url"
 	"strings"
 	"text/template"
 	"time"
 
 	"github.com/perfect-panel/server/pkg/adapter/proxy"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/traffic"
 )
 
@@ -39,46 +38,26 @@ func NewSurge(adapter proxy.Adapter) *Surge {
 	}
 }
 
-func (m *Surge) Build(uuid, siteName string, user UserInfo) []byte {
-	var proxies, proxyGroup, rules string
+func (m *Surge) Build(siteName string, user UserInfo) []byte {
+	var proxies, proxyGroup string
 	var removed []string
+	var ps []string
 
 	for _, p := range m.Adapter.Proxies {
 		switch p.Protocol {
 		case "shadowsocks":
-			proxies += buildShadowsocks(p, uuid)
+			proxies += buildShadowsocks(p, user.UUID)
 		case "trojan":
-			proxies += buildTrojan(p, uuid)
+			proxies += buildTrojan(p, user.UUID)
 		case "hysteria2":
-			proxies += buildHysteria2(p, uuid)
+			proxies += buildHysteria2(p, user.UUID)
 		case "vmess":
-			proxies += buildVMess(p, uuid)
+			proxies += buildVMess(p, user.UUID)
 		default:
 			removed = append(removed, p.Name)
 		}
+		ps = append(ps, p.Name)
 	}
-	for _, group := range m.Adapter.Group {
-		if len(removed) > 0 {
-			group.Proxies = tool.RemoveStringElement(group.Proxies, removed...)
-		}
-		if group.Type == proxy.GroupTypeSelect {
-			proxyGroup += fmt.Sprintf("%s = select, %s", group.Name, strings.Join(group.Proxies, ", ")) + "\r\n"
-		} else if group.Type == proxy.GroupTypeURLTest {
-			proxyGroup += fmt.Sprintf("%s = url-test, %s, url=%s, interval=%d", group.Name, strings.Join(group.Proxies, ", "), group.URL, group.Interval) + "\r\n"
-		} else if group.Type == proxy.GroupTypeFallback {
-			proxyGroup += fmt.Sprintf("%s = fallback, %s, url=%s, interval=%d", group.Name, strings.Join(group.Proxies, ", "), group.URL, group.Interval) + "\r\n"
-		} else {
-			logger.Errorf("[BuildSurfboard] unknown group type: %s", group.Type)
-		}
-	}
-	for _, rule := range m.Adapter.Rules {
-		if rule == "" {
-			continue
-		}
-		rules += rule + "\r\n"
-	}
-	//final rule
-	rules += "\r\n" + "FINAL,手动选择,dns-failed"
 
 	file, err := configFiles.ReadFile("default.tpl")
 	if err != nil {
@@ -99,23 +78,21 @@ func (m *Surge) Build(uuid, siteName string, user UserInfo) []byte {
 	} else {
 		expiredAt = user.ExpiredDate.Format("2006-01-02 15:04:05")
 	}
+
+	ps = tool.RemoveStringElement(ps, removed...)
+	proxyGroup = strings.Join(ps, ",")
+
 	// convert traffic
 	upload := traffic.AutoConvert(user.Upload, false)
 	download := traffic.AutoConvert(user.Download, false)
 	total := traffic.AutoConvert(user.TotalTraffic, false)
 	unusedTraffic := traffic.AutoConvert(user.TotalTraffic-user.Upload-user.Download, false)
 	// query Host
-	urlParse, err := url.Parse(user.SubscribeURL)
-	if err != nil {
-		return nil
-	}
 	if err := tpl.Execute(&buf, map[string]interface{}{
-		"Proxies":         proxies,
-		"ProxyGroup":      proxyGroup,
-		"SubscribeURL":    user.SubscribeURL,
-		"SubscribeInfo":   fmt.Sprintf("title=%s订阅信息, content=上传流量：%s\\n下载流量：%s\\n剩余流量: %s\\n套餐流量：%s\\n到期时间：%s", siteName, upload, download, unusedTraffic, total, expiredAt),
-		"SubscribeDomain": urlParse.Host,
-		"Rules":           rules,
+		"Proxies":       proxies,
+		"ProxyGroup":    proxyGroup,
+		"SubscribeURL":  user.SubscribeURL,
+		"SubscribeInfo": fmt.Sprintf("title=%s订阅信息, content=上传流量：%s\\n下载流量：%s\\n剩余流量: %s\\n套餐流量：%s\\n到期时间：%s", siteName, upload, download, unusedTraffic, total, expiredAt),
 	}); err != nil {
 		logger.Errorf("build Surge config error: %v", err.Error())
 		return nil

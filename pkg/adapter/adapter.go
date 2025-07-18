@@ -12,6 +12,7 @@ import (
 	"github.com/perfect-panel/server/pkg/adapter/shadowrocket"
 	"github.com/perfect-panel/server/pkg/adapter/singbox"
 	"github.com/perfect-panel/server/pkg/adapter/surfboard"
+	"github.com/perfect-panel/server/pkg/adapter/surge"
 	"github.com/perfect-panel/server/pkg/adapter/v2rayn"
 )
 
@@ -93,4 +94,9 @@ func (m *Adapter) BuildSurfboard(siteName string, user surfboard.UserInfo) []byt
 // BuildV2rayN generates a V2rayN configuration for the given UUID.
 func (m *Adapter) BuildV2rayN(uuid string) []byte {
 	return v2rayn.NewV2rayN(m.Adapter).Build(uuid)
+}
+
+// BuildSurge generates a Surge configuration for the given UUID and site name.
+func (m *Adapter) BuildSurge(siteName string, user surge.UserInfo) []byte {
+	return surge.NewSurge(m.Adapter).Build(siteName, user)
 }

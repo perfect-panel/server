@@ -9,6 +9,7 @@ import (
 	"github.com/perfect-panel/server/pkg/adapter"
 	"github.com/perfect-panel/server/pkg/adapter/shadowrocket"
 	"github.com/perfect-panel/server/pkg/adapter/surfboard"
+	"github.com/perfect-panel/server/pkg/adapter/surge"
 
 	"github.com/perfect-panel/server/internal/model/server"
 
@@ -236,7 +237,7 @@ func (l *SubscribeLogic) buildClientConfig(req *types.SubscribeRequest, userSub 
 	case "loon":
 		resp = proxyManager.BuildLoon(userSub.UUID)
 	case "surfboard":
-		subsURL := l.getSubscribeURL(userSub.Token)
+		subsURL := l.getSubscribeURL(userSub.Token, "surfboard")
 		resp = proxyManager.BuildSurfboard(l.svc.Config.Site.SiteName, surfboard.UserInfo{
 			Upload:       userSub.Upload,
 			Download:     userSub.Download,
@@ -248,6 +249,17 @@ func (l *SubscribeLogic) buildClientConfig(req *types.SubscribeRequest, userSub 
 		l.setSurfboardHeaders()
 	case "v2rayn":
 		resp = proxyManager.BuildV2rayN(userSub.UUID)
+	case "surge":
+		subsURL := l.getSubscribeURL(userSub.Token, "surge")
+		resp = proxyManager.BuildSurge(l.svc.Config.Site.SiteName, surge.UserInfo{
+			UUID:         userSub.UUID,
+			Upload:       userSub.Upload,
+			Download:     userSub.Download,
+			TotalTraffic: userSub.Traffic,
+			ExpiredDate:  userSub.ExpireTime,
+			SubscribeURL: subsURL,
+		})
+		l.setSurgeHeaders()
 	default:
 		resp = proxyManager.BuildGeneral(userSub.UUID)
 	}
@@ -269,14 +281,19 @@ func (l *SubscribeLogic) setSurfboardHeaders() {
 	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
 }
 
-func (l *SubscribeLogic) getSubscribeURL(token string) string {
+func (l *SubscribeLogic) setSurgeHeaders() {
+	l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.conf", url.QueryEscape(l.svc.Config.Site.SiteName)))
+	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
+}
+
+func (l *SubscribeLogic) getSubscribeURL(token, flag string) string {
 	if l.svc.Config.Subscribe.PanDomain {
 		return fmt.Sprintf("https://%s", l.ctx.Request.Host)
 	}
 
 	if l.svc.Config.Subscribe.SubscribeDomain != "" {
 		domains := strings.Split(l.svc.Config.Subscribe.SubscribeDomain, "\n")
-		return fmt.Sprintf("https://%s%s?token=%s&flag=surfboard", domains[0], l.svc.Config.Subscribe.SubscribePath, token)
+		return fmt.Sprintf("https://%s%s?token=%s&flag=%s", domains[0], l.svc.Config.Subscribe.SubscribePath, token, flag)
 	}
 
 	return fmt.Sprintf("https://%s%s?token=%s&flag=surfboard", l.ctx.Request.Host, l.svc.Config.Subscribe.SubscribePath, token)
