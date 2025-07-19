@@ -17,13 +17,11 @@ func Email(ctx *svc.ServiceContext) {
 	logger.Debug("Email config initialization")
 	method, err := ctx.AuthModel.FindOneByMethod(context.Background(), "email")
 	if err != nil {
-		panic(fmt.Sprintf("failed to find email auth method: %v", err.Error()))
+		panic(fmt.Sprintf("[Error] Initialization Failed to find email auth method: %v", err.Error()))
 	}
 	var cfg config.EmailConfig
 	var emailConfig = new(auth.EmailAuthConfig)
-	if err := emailConfig.Unmarshal(method.Config); err != nil {
-		panic(fmt.Sprintf("failed to unmarshal email auth config: %v", err.Error()))
-	}
+	emailConfig.Unmarshal(method.Config)
 	tool.DeepCopy(&cfg, emailConfig)
 	cfg.Enable = *method.Enabled
 	value, _ := json.Marshal(emailConfig.PlatformConfig)

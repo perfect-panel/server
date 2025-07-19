@@ -40,34 +40,32 @@ func (l *UpdateAuthMethodConfigLogic) UpdateAuthMethodConfig(req *types.UpdateAu
 
 	tool.DeepCopy(method, req)
 	if req.Config != nil {
-		if value, ok := req.Config.(map[string]interface{}); ok {
-			if req.Method == "email" && value["verify_email_template"] == "" {
-				value["verify_email_template"] = email.DefaultEmailVerifyTemplate
-			}
-			if req.Method == "email" && value["expiration_email_template"] == "" {
-				value["expiration_email_template"] = email.DefaultExpirationEmailTemplate
-			}
-			if req.Method == "email" && value["maintenance_email_template"] == "" {
-				value["maintenance_email_template"] = email.DefaultMaintenanceEmailTemplate
-			}
-			if req.Method == "email" && value["traffic_exceed_email_template"] == "" {
-				value["traffic_exceed_email_template"] = email.DefaultTrafficExceedEmailTemplate
-			}
-
-			if value["platform_config"] != nil {
-				platformConfig, err := validatePlatformConfig(value["platform"].(string), value["platform_config"].(map[string]interface{}))
-				if err != nil {
-					l.Errorw("validate platform config failed", logger.Field("config", req.Config), logger.Field("error", err.Error()))
-					return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "validate platform config failed: %v", err.Error())
-				}
-				req.Config.(map[string]interface{})["platform_config"] = platformConfig
-			}
+		_, exist := req.Config.(map[string]interface{})
+		if !exist {
+			req.Config = initializePlatformConfig(req.Method).(string)
 		}
+		if req.Method == "email" {
+			configs, _ := json.Marshal(req.Config)
+			emailConfig := new(auth.EmailAuthConfig)
+			emailConfig.Unmarshal(string(configs))
+			req.Config = emailConfig
+		}
+
+		if req.Method == "mobile" {
+			configs, _ := json.Marshal(req.Config)
+			mobileConfig := new(auth.MobileAuthConfig)
+			mobileConfig.Unmarshal(string(configs))
+			req.Config = mobileConfig
+		}
+
 		bytes, err := json.Marshal(req.Config)
 		if err != nil {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "marshal config failed: %v", err.Error())
 		}
 		method.Config = string(bytes)
+	} else {
+		// initialize platform config
+		method.Config = initializePlatformConfig(req.Method).(string)
 	}
 	err = l.svcCtx.AuthModel.Update(l.ctx, method)
 	if err != nil {
@@ -123,4 +121,27 @@ func validatePlatformConfig(platform string, cfg map[string]interface{}) (interf
 		return nil, err
 	}
 	return config, nil
+}
+
+func initializePlatformConfig(platform string) interface{} {
+	var result interface{}
+	switch platform {
+	case "email":
+		result = new(auth.EmailAuthConfig).Marshal()
+	case "mobile":
+		result = new(auth.MobileAuthConfig).Marshal()
+	case "apple":
+		result = new(auth.AppleAuthConfig).Marshal()
+	case "google":
+		result = new(auth.GoogleAuthConfig).Marshal()
+	case "github":
+		result = new(auth.GithubAuthConfig).Marshal()
+	case "facebook":
+		result = new(auth.FacebookAuthConfig).Marshal()
+	case "telegram":
+		result = new(auth.TelegramAuthConfig).Marshal()
+	case "device":
+		result = new(auth.DeviceConfig).Marshal()
+	}
+	return result
 }

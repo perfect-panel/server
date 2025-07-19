@@ -52,8 +52,10 @@ func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *types.BindOAuthCallbackR
 		err = l.google(req)
 	case "apple":
 		err = l.apple(req)
+	case "telegram":
+		err = l.telegram(req)
 	default:
-		l.Errorw("oauth login method not support: %v", logger.Field("method", req.Method))
+		l.Errorw("oauth login method not support", logger.Field("method", req.Method))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "oauth login method not support: %v", req.Method)
 	}
 	if err != nil {
@@ -210,5 +212,9 @@ func (l *BindOAuthCallbackLogic) apple(req *types.BindOAuthCallbackRequest) erro
 		l.Errorw("[BindOAuthCallbackLogic] InsertUserAuthMethods error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert user auth method failed: %v", err.Error())
 	}
+	return nil
+}
+
+func (l *BindOAuthCallbackLogic) telegram(req *types.BindOAuthCallbackRequest) error {
 	return nil
 }
