@@ -282,7 +282,6 @@ const (
   </body>
 </html>
 `
-
 	DefaultTrafficExceedEmailTemplate = `<!doctype html>
 <html>
   <head>

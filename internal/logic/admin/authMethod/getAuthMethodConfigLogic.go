@@ -18,7 +18,7 @@ type GetAuthMethodConfigLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Get auth method config
+// NewGetAuthMethodConfigLogic Get auth method config
 func NewGetAuthMethodConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetAuthMethodConfigLogic {
 	return &GetAuthMethodConfigLogic{
 		Logger: logger.WithContext(ctx),

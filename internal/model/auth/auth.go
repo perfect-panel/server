@@ -3,6 +3,8 @@ package auth
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/perfect-panel/server/pkg/email"
 )
 
 type Auth struct {
@@ -124,15 +126,55 @@ type EmailAuthConfig struct {
 }
 
 func (l *EmailAuthConfig) Marshal() string {
+	if l.ExpirationEmailTemplate == "" {
+		l.ExpirationEmailTemplate = email.DefaultExpirationEmailTemplate
+	}
+	if l.ExpirationEmailTemplate == "" {
+		l.MaintenanceEmailTemplate = email.DefaultMaintenanceEmailTemplate
+	}
+	if l.TrafficExceedEmailTemplate == "" {
+		l.TrafficExceedEmailTemplate = email.DefaultTrafficExceedEmailTemplate
+	}
+	if l.VerifyEmailTemplate == "" {
+		l.VerifyEmailTemplate = email.DefaultEmailVerifyTemplate
+	}
 	bytes, err := json.Marshal(l)
 	if err != nil {
-		bytes, _ = json.Marshal(new(EmailAuthConfig))
+		config := &EmailAuthConfig{
+			Platform:                   "smtp",
+			PlatformConfig:             new(SMTPConfig),
+			EnableVerify:               true,
+			EnableNotify:               true,
+			EnableDomainSuffix:         false,
+			DomainSuffixList:           "",
+			VerifyEmailTemplate:        email.DefaultEmailVerifyTemplate,
+			ExpirationEmailTemplate:    email.DefaultExpirationEmailTemplate,
+			MaintenanceEmailTemplate:   email.DefaultMaintenanceEmailTemplate,
+			TrafficExceedEmailTemplate: email.DefaultTrafficExceedEmailTemplate,
+		}
+
+		bytes, _ = json.Marshal(config)
 	}
 	return string(bytes)
 }
 
-func (l *EmailAuthConfig) Unmarshal(data string) error {
-	return json.Unmarshal([]byte(data), &l)
+func (l *EmailAuthConfig) Unmarshal(data string) {
+	err := json.Unmarshal([]byte(data), &l)
+	if err != nil {
+		config := &EmailAuthConfig{
+			Platform:                   "smtp",
+			PlatformConfig:             new(SMTPConfig),
+			EnableVerify:               true,
+			EnableNotify:               true,
+			EnableDomainSuffix:         false,
+			DomainSuffixList:           "",
+			VerifyEmailTemplate:        email.DefaultEmailVerifyTemplate,
+			ExpirationEmailTemplate:    email.DefaultExpirationEmailTemplate,
+			MaintenanceEmailTemplate:   email.DefaultMaintenanceEmailTemplate,
+			TrafficExceedEmailTemplate: email.DefaultTrafficExceedEmailTemplate,
+		}
+		_ = json.Unmarshal([]byte(config.Marshal()), &l)
+	}
 }
 
 // SMTPConfig Email SMTP configuration
@@ -167,13 +209,28 @@ type MobileAuthConfig struct {
 func (l *MobileAuthConfig) Marshal() string {
 	bytes, err := json.Marshal(l)
 	if err != nil {
-		bytes, _ = json.Marshal(new(MobileAuthConfig))
+		config := &MobileAuthConfig{
+			Platform:        "alibaba_cloud",
+			PlatformConfig:  new(AlibabaCloudConfig),
+			EnableWhitelist: false,
+			Whitelist:       []string{},
+		}
+		bytes, _ = json.Marshal(config)
 	}
 	return string(bytes)
 }
 
-func (l *MobileAuthConfig) Unmarshal(data string) error {
-	return json.Unmarshal([]byte(data), &l)
+func (l *MobileAuthConfig) Unmarshal(data string) {
+	err := json.Unmarshal([]byte(data), &l)
+	if err != nil {
+		config := &MobileAuthConfig{
+			Platform:        "alibaba_cloud",
+			PlatformConfig:  new(AlibabaCloudConfig),
+			EnableWhitelist: false,
+			Whitelist:       []string{},
+		}
+		_ = json.Unmarshal([]byte(config.Marshal()), &l)
+	}
 }
 
 type AlibabaCloudConfig struct {
