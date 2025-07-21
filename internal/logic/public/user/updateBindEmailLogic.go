@@ -48,7 +48,7 @@ func (l *UpdateBindEmailLogic) UpdateBindEmail(req *types.UpdateBindEmailRequest
 	if m.Id > 0 {
 		return errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "email already bind")
 	}
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if method.Id == 0 {
 		method = &user.AuthMethods{
 			UserId:         u.Id,
 			AuthType:       "email",
