@@ -27,7 +27,7 @@ type RenewalLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Renewal Subscription
+// NewRenewalLogic Renewal Subscription
 func NewRenewalLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RenewalLogic {
 	return &RenewalLogic{
 		Logger: logger.WithContext(ctx),

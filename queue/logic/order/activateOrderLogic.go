@@ -345,7 +345,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 		return err
 	}
 	// find user subscribe by subscribe token
-	userSub, err := l.svc.UserModel.FindOneSubscribeByOrderId(ctx, orderInfo.ParentId)
+	userSub, err := l.svc.UserModel.FindOneSubscribeByToken(ctx, orderInfo.SubscribeToken)
 	if err != nil {
 		logger.WithContext(ctx).Error("[ActivateOrderLogic] Find user subscribe failed",
 			logger.Field("error", err.Error()),
