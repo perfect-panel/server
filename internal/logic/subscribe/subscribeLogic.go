@@ -236,6 +236,7 @@ func (l *SubscribeLogic) buildClientConfig(req *types.SubscribeRequest, userSub 
 		})
 	case "loon":
 		resp = proxyManager.BuildLoon(userSub.UUID)
+		l.setLoonHeaders()
 	case "surfboard":
 		subsURL := l.getSubscribeURL(userSub.Token, "surfboard")
 		resp = proxyManager.BuildSurfboard(l.svc.Config.Site.SiteName, surfboard.UserInfo{
@@ -282,6 +283,11 @@ func (l *SubscribeLogic) setSurfboardHeaders() {
 }
 
 func (l *SubscribeLogic) setSurgeHeaders() {
+	l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.conf", url.QueryEscape(l.svc.Config.Site.SiteName)))
+	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
+}
+
+func (l *SubscribeLogic) setLoonHeaders() {
 	l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.conf", url.QueryEscape(l.svc.Config.Site.SiteName)))
 	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
 }

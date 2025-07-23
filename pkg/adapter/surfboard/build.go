@@ -67,7 +67,7 @@ func BuildSurfboard(servers proxy.Adapter, siteName string, user UserInfo) []byt
 	total := traffic.AutoConvert(user.TotalTraffic, false)
 	unusedTraffic := traffic.AutoConvert(user.TotalTraffic-user.Upload-user.Download, false)
 	// query Host
-	if err := tpl.Execute(&buf, map[string]interface{}{
+	if err = tpl.Execute(&buf, map[string]interface{}{
 		"Proxies":       proxies,
 		"ProxyGroup":    proxyGroup,
 		"SubscribeURL":  user.SubscribeURL,
