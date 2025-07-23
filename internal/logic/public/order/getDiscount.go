@@ -10,5 +10,6 @@ func getDiscount(discounts []types.SubscribeDiscount, inputMonths int64) float64
 			finalDiscount = discount.Discount
 		}
 	}
+
 	return float64(finalDiscount) / float64(100)
 }

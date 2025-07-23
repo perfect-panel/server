@@ -24,7 +24,8 @@ type PreCreateOrderLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Pre create order
+// NewPreCreateOrderLogic creates a new pre-create order logic instance for order preview operations.
+// It initializes the logger with context and sets up the service context for database operations.
 func NewPreCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PreCreateOrderLogic {
 	return &PreCreateOrderLogic{
 		Logger: logger.WithContext(ctx),
@@ -33,12 +34,21 @@ func NewPreCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Pr
 	}
 }
 
+// PreCreateOrder calculates order pricing preview including discounts, coupons, gift amounts, and fees
+// without actually creating an order. It validates subscription plans, coupons, and payment methods
+// to provide accurate pricing information for the frontend order preview.
 func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (resp *types.PreOrderResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
+
+	if req.Quantity <= 0 {
+		l.Debugf("[PreCreateOrder] Quantity is less than or equal to 0, setting to 1")
+		req.Quantity = 1
+	}
+
 	// find subscribe plan
 	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, req.SubscribeId)
 	if err != nil {
@@ -52,9 +62,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		discount = getDiscount(dis, req.Quantity)
 	}
 	price := sub.UnitPrice * req.Quantity
-	if discount == 0 {
-		discount = 1
-	}
+
 	amount := int64(float64(price) * discount)
 	discountAmount := price - amount
 	var couponAmount int64
@@ -75,7 +83,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		})
 
 		if err != nil {
-			l.Logger.Error("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
+			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
 		}
 
@@ -106,7 +114,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 	if req.Payment != 0 {
 		payment, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
 		if err != nil {
-			l.Logger.Error("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
+			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %v", err.Error())
 		}
 		// Calculate the handling fee

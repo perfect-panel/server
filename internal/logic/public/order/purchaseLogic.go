@@ -31,7 +31,8 @@ const (
 	CloseOrderTimeMinutes = 15
 )
 
-// NewPurchaseLogic purchase Subscription
+// NewPurchaseLogic creates a new purchase logic instance for subscription purchase operations.
+// It initializes the logger with context and sets up the service context for database operations.
 func NewPurchaseLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PurchaseLogic {
 	return &PurchaseLogic{
 		Logger: logger.WithContext(ctx),
@@ -40,6 +41,9 @@ func NewPurchaseLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Purchase
 	}
 }
 
+// Purchase processes new subscription purchase orders including validation, discount calculation,
+// coupon processing, gift amount deduction, fee calculation, and order creation with database transaction.
+// It handles the complete purchase workflow from user validation to order creation and task scheduling.
 func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.PurchaseOrderResponse, err error) {
 
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
@@ -47,6 +51,12 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
+
+	if req.Quantity <= 0 {
+		l.Debugf("[Purchase] Quantity is less than or equal to 0, setting to 1")
+		req.Quantity = 1
+	}
+
 	// find user subscription
 	userSub, err := l.svcCtx.UserModel.QueryUserSubscribe(l.ctx, u.Id)
 	if err != nil {
@@ -88,9 +98,6 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		var dis []types.SubscribeDiscount
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
-	}
-	if discount == 0 {
-		discount = 1
 	}
 	price := sub.UnitPrice * req.Quantity
 	// discount amount
@@ -145,7 +152,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	// find payment method
 	payment, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
 	if err != nil {
-		l.Logger.Error("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
+		l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %v", err.Error())
 	}
 	var feeAmount int64
@@ -183,8 +190,8 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		// update user deduction && Pre deduction ,Return after canceling the order
 		if orderInfo.GiftAmount > 0 {
 			// update user deduction && Pre deduction ,Return after canceling the order
-			if e := l.svcCtx.UserModel.Update(l.ctx, u, db); err != nil {
-				l.Errorw("[Purchase] Database update error", logger.Field("error", err.Error()), logger.Field("user", u))
+			if e := l.svcCtx.UserModel.Update(l.ctx, u, db); e != nil {
+				l.Errorw("[Purchase] Database update error", logger.Field("error", e.Error()), logger.Field("user", u))
 				return e
 			}
 			// create deduction record
@@ -198,7 +205,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 			}
 			if e := db.Model(&user.GiftAmountLog{}).Create(&giftAmountLog).Error; e != nil {
 				l.Errorw("[Purchase] Database insert error",
-					logger.Field("error", err.Error()),
+					logger.Field("error", e.Error()),
 					logger.Field("deductionLog", giftAmountLog),
 				)
 				return e
@@ -216,14 +223,14 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	}
 	val, err := json.Marshal(payload)
 	if err != nil {
-		l.Errorw("[CreateOrder] Marshal payload error", logger.Field("error", err.Error()), logger.Field("payload", payload))
+		l.Errorw("[Purchase] Marshal payload error", logger.Field("error", err.Error()), logger.Field("payload", payload))
 	}
 	task := asynq.NewTask(queue.DeferCloseOrder, val, asynq.MaxRetry(3))
 	taskInfo, err := l.svcCtx.Queue.Enqueue(task, asynq.ProcessIn(CloseOrderTimeMinutes*time.Minute))
 	if err != nil {
-		l.Errorw("[CreateOrder] Enqueue task error", logger.Field("error", err.Error()), logger.Field("task", task))
+		l.Errorw("[Purchase] Enqueue task error", logger.Field("error", err.Error()), logger.Field("task", task))
 	} else {
-		l.Infow("[CreateOrder] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
+		l.Infow("[Purchase] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
 	}
 
 	return &types.PurchaseOrderResponse{

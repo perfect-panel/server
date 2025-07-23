@@ -27,7 +27,7 @@ type RenewalLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// NewRenewalLogic Renewal Subscription
+// NewRenewalLogic creates a new renewal logic instance for subscription renewal operations
 func NewRenewalLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RenewalLogic {
 	return &RenewalLogic{
 		Logger: logger.WithContext(ctx),
@@ -36,12 +36,19 @@ func NewRenewalLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RenewalLo
 	}
 }
 
+// Renewal processes subscription renewal orders including discount calculation,
+// coupon validation, gift amount deduction, fee calculation, and order creation
 func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.RenewalOrderResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
+	if req.Quantity <= 0 {
+		l.Debugf("[Renewal] Quantity is less than or equal to 0, setting to 1")
+		req.Quantity = 1
+	}
+
 	orderNo := tool.GenerateTradeNo()
 	// find user subscribe
 	userSubscribe, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
@@ -63,9 +70,6 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 		var dis []types.SubscribeDiscount
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
-	}
-	if discount == 0 {
-		discount = 1
 	}
 	price := sub.UnitPrice * req.Quantity
 	amount := int64(float64(price) * discount)
@@ -103,7 +107,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 	payment, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
 	if err != nil {
 		l.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
-		return nil, errors.Wrapf(err, "find payment error: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment error: %v", err.Error())
 	}
 	amount -= coupon
 
@@ -112,8 +116,8 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 	if u.GiftAmount > 0 {
 		if u.GiftAmount >= amount {
 			deductionAmount = amount
+			u.GiftAmount -= deductionAmount
 			amount = 0
-			u.GiftAmount -= amount
 		} else {
 			deductionAmount = u.GiftAmount
 			amount -= u.GiftAmount
@@ -155,7 +159,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 		if orderInfo.GiftAmount > 0 {
 			// update user deduction && Pre deduction ,Return after canceling the order
 			if err := l.svcCtx.UserModel.Update(l.ctx, u, db); err != nil {
-				l.Errorw("[Purchase] Database update error", logger.Field("error", err.Error()), logger.Field("user", u))
+				l.Errorw("[Renewal] Database update error", logger.Field("error", err.Error()), logger.Field("user", u))
 				return err
 			}
 			// create deduction record
