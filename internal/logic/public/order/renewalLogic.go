@@ -64,6 +64,9 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
+	if discount == 0 {
+		discount = 1
+	}
 	price := sub.UnitPrice * req.Quantity
 	amount := int64(float64(price) * discount)
 	discountAmount := price - amount
