@@ -52,6 +52,9 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		discount = getDiscount(dis, req.Quantity)
 	}
 	price := sub.UnitPrice * req.Quantity
+	if discount == 0 {
+		discount = 1
+	}
 	amount := int64(float64(price) * discount)
 	discountAmount := price - amount
 	var couponAmount int64
