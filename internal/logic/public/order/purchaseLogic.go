@@ -89,6 +89,9 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
+	if discount == 0 {
+		discount = 1
+	}
 	price := sub.UnitPrice * req.Quantity
 	// discount amount
 	amount := int64(float64(price) * discount)
