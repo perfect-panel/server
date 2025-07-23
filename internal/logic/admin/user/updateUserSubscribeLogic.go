@@ -33,8 +33,15 @@ func (l *UpdateUserSubscribeLogic) UpdateUserSubscribe(req *types.UpdateUserSubs
 		l.Errorw("FindOneUserSubscribe failed:", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneUserSubscribe failed: %v", err.Error())
 	}
+	expiredAt := time.UnixMilli(req.ExpiredAt)
+	if time.Since(expiredAt).Minutes() > 0 {
+		userSub.Status = 3
+	} else {
+		userSub.Status = 1
+	}
+
 	err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, &user.Subscribe{
-		Id:          req.UserSubscribeId,
+		Id:          userSub.Id,
 		UserId:      userSub.UserId,
 		OrderId:     userSub.OrderId,
 		SubscribeId: req.SubscribeId,
