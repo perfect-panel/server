@@ -26,7 +26,7 @@ jobs:
 
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }} .
+        run: docker build --build-arg VERSION=${{ env.COMMIT_ID }} -t ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }} .
 
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}
