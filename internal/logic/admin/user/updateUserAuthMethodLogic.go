@@ -31,11 +31,21 @@ func (l *UpdateUserAuthMethodLogic) UpdateUserAuthMethod(req *types.UpdateUserAu
 		l.Errorw("Get user auth method error", logger.Field("error", err.Error()), logger.Field("userId", req.UserId), logger.Field("authType", req.AuthType))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get user auth method error: %v", err.Error())
 	}
+	userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, req.UserId)
+	if err != nil {
+		l.Errorw("Get user info error", logger.Field("error", err.Error()), logger.Field("userId", req.UserId))
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get user info error: %v", err.Error())
+	}
+
 	method.AuthType = req.AuthType
 	method.AuthIdentifier = req.AuthIdentifier
 	if err = l.svcCtx.UserModel.UpdateUserAuthMethods(l.ctx, method); err != nil {
 		l.Errorw("Update user auth method error", logger.Field("error", err.Error()), logger.Field("userId", req.UserId), logger.Field("authType", req.AuthType))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Update user auth method error: %v", err.Error())
+	}
+	if err = l.svcCtx.UserModel.UpdateUserCache(l.ctx, userInfo); err != nil {
+		l.Errorw("Update user cache error", logger.Field("error", err.Error()), logger.Field("userId", req.UserId))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Update user cache error: %v", err.Error())
 	}
 	return nil
 }
