@@ -63,6 +63,7 @@ type UserFilterParams struct {
 	UserId          *int64
 	SubscribeId     *int64
 	UserSubscribeId *int64
+	Order           string // Order by id, e.g., "desc"
 }
 
 type customUserLogicModel interface {
@@ -195,6 +196,9 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 			if filter.SubscribeId != nil {
 				conn = conn.Joins("LEFT JOIN user_subscribe ON user.id = user_subscribe.user_id").
 					Where("user_subscribe.subscribe_id =? and `status` IN (0,1)", *filter.SubscribeId)
+			}
+			if filter.Order != "" {
+				conn = conn.Order(fmt.Sprintf("id %s", filter.Order))
 			}
 		}
 		return conn.Model(&User{}).Group("user.id").Count(&total).Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error

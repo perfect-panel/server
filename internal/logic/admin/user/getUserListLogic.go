@@ -32,6 +32,7 @@ func (l *GetUserListLogic) GetUserList(req *types.GetUserListRequest) (*types.Ge
 		Search:          req.Search,
 		SubscribeId:     req.SubscribeId,
 		UserSubscribeId: req.UserSubscribeId,
+		Order:           "DESC",
 	})
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetUserListLogic failed: %v", err.Error())
