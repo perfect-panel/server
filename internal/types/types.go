@@ -2273,6 +2273,10 @@ type VerifyEmailRequest struct {
 	Code  string `json:"code" validate:"required"`
 }
 
+type VersionResponse struct {
+	Version string `json:"version"`
+}
+
 type Vless struct {
 	Port            int             `json:"port" validate:"required"`
 	Flow            string          `json:"flow" validate:"required"`

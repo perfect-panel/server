@@ -441,6 +441,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Restart System
 		adminToolGroupRouter.GET("/restart", adminTool.RestartSystemHandler(serverCtx))
+
+		// Get Version
+		adminToolGroupRouter.GET("/version", adminTool.GetVersionHandler(serverCtx))
 	}
 
 	adminUserGroupRouter := router.Group("/v1/admin/user")
