@@ -117,6 +117,16 @@ type customUserLogicModel interface {
 	FindResetSubscribeLog(ctx context.Context, id int64) (*ResetSubscribeLog, error)
 	DeleteResetSubscribeLog(ctx context.Context, id int64, tx ...*gorm.DB) error
 	FilterResetSubscribeLogList(ctx context.Context, filter *FilterResetSubscribeLogParams) ([]*ResetSubscribeLog, int64, error)
+
+	QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
+	QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
+}
+
+type UserStatisticsWithDate struct {
+	Date              string
+	Register          int64
+	NewOrderUsers     int64
+	RenewalOrderUsers int64
 }
 
 // NewModel returns a model for the database table.
@@ -402,4 +412,44 @@ func (m *customUserModel) FilterResetSubscribeLogList(ctx context.Context, filte
 	})
 
 	return list, total, err
+}
+
+// QueryDailyUserStatisticsList Query daily user statistics list for the current month (from 1st to current date)
+func (m *customUserModel) QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error) {
+	var results []UserStatisticsWithDate
+	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+		return conn.Model(&User{}).
+			Select(
+				"DATE(created_at) as date, " +
+					"COUNT(*) as register, " +
+					"0 as new_order_users, " +
+					"0 as renewal_order_users",
+			).
+			Where("created_at BETWEEN ? AND ?", firstDay, date).
+			Group("DATE(created_at)").
+			Order("date ASC").
+			Scan(v).Error
+	})
+	return results, err
+}
+
+// QueryMonthlyUserStatisticsList Query monthly user statistics list for the past 6 months
+func (m *customUserModel) QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error) {
+	var results []UserStatisticsWithDate
+	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		sixMonthsAgo := date.AddDate(0, -5, 0)
+		return conn.Model(&User{}).
+			Select(
+				"DATE_FORMAT(created_at, '%Y-%m') as date, " +
+					"COUNT(*) as register, " +
+					"0 as new_order_users, " +
+					"0 as renewal_order_users",
+			).
+			Where("created_at >= ?", sixMonthsAgo).
+			Group("DATE_FORMAT(created_at, '%Y-%m')").
+			Order("date ASC").
+			Scan(v).Error
+	})
+	return results, err
 }

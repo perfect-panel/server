@@ -61,8 +61,24 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 	} else {
 		resp.Monthly.NewOrderUsers = newMonth
 		resp.Monthly.RenewalOrderUsers = renewalMonth
-		// TODO: Check the purchase status in the past seven days
-		resp.Monthly.List = make([]types.UserStatistics, 0)
+	}
+
+	// Get monthly daily user statistics list for the current month (from 1st to current date)
+	monthlyListData, err := l.svcCtx.UserModel.QueryDailyUserStatisticsList(l.ctx, now)
+	if err != nil {
+		l.Errorw("[QueryUserStatisticsLogic] QueryDailyUserStatisticsList error", logger.Field("error", err.Error()))
+		// Don't return error, just log it and continue with empty list
+	} else {
+		monthlyList := make([]types.UserStatistics, len(monthlyListData))
+		for i, data := range monthlyListData {
+			monthlyList[i] = types.UserStatistics{
+				Date:              data.Date,
+				Register:          data.Register,
+				NewOrderUsers:     data.NewOrderUsers,
+				RenewalOrderUsers: data.RenewalOrderUsers,
+			}
+		}
+		resp.Monthly.List = monthlyList
 	}
 
 	// query all user count
@@ -81,19 +97,51 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 		resp.All.NewOrderUsers = allNewOrderUsers
 		resp.All.RenewalOrderUsers = allRenewalOrderUsers
 	}
+
+	// Get all monthly user statistics list for the past 6 months
+	allListData, err := l.svcCtx.UserModel.QueryMonthlyUserStatisticsList(l.ctx, now)
+	if err != nil {
+		l.Errorw("[QueryUserStatisticsLogic] QueryMonthlyUserStatisticsList error", logger.Field("error", err.Error()))
+		// Don't return error, just log it and continue with empty list
+	} else {
+		allList := make([]types.UserStatistics, len(allListData))
+		for i, data := range allListData {
+			allList[i] = types.UserStatistics{
+				Date:              data.Date,
+				Register:          data.Register,
+				NewOrderUsers:     data.NewOrderUsers,
+				RenewalOrderUsers: data.RenewalOrderUsers,
+			}
+		}
+		resp.All.List = allList
+	}
+
 	return
 }
 
 func (l *QueryUserStatisticsLogic) mockRevenueStatistics() *types.UserStatisticsResponse {
 	now := time.Now()
 
-	// Generate daily user statistics for the past 7 days (oldest first)
+	// Generate daily user statistics for the current month (from 1st to current date)
 	monthlyList := make([]types.UserStatistics, 7)
 	for i := 0; i < 7; i++ {
 		dayDate := now.AddDate(0, 0, -(6 - i))
 		baseRegister := int64(18 + ((6 - i) * 3) + ((6-i)%3)*8)
 		monthlyList[i] = types.UserStatistics{
 			Date:              dayDate.Format("2006-01-02"),
+			Register:          baseRegister,
+			NewOrderUsers:     int64(float64(baseRegister) * 0.65),
+			RenewalOrderUsers: int64(float64(baseRegister) * 0.35),
+		}
+	}
+
+	// Generate monthly user statistics for the past 6 months (oldest first)
+	allList := make([]types.UserStatistics, 6)
+	for i := 0; i < 6; i++ {
+		monthDate := now.AddDate(0, -(5 - i), 0)
+		baseRegister := int64(1800 + ((5 - i) * 200) + ((5-i)%2)*500)
+		allList[i] = types.UserStatistics{
+			Date:              monthDate.Format("2006-01"),
 			Register:          baseRegister,
 			NewOrderUsers:     int64(float64(baseRegister) * 0.65),
 			RenewalOrderUsers: int64(float64(baseRegister) * 0.35),
@@ -116,6 +164,7 @@ func (l *QueryUserStatisticsLogic) mockRevenueStatistics() *types.UserStatistics
 			Register:          18888,
 			NewOrderUsers:     0, // This field is not used in All statistics
 			RenewalOrderUsers: 0, // This field is not used in All statistics
+			List:              allList,
 		},
 	}
 }
