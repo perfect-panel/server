@@ -9,7 +9,7 @@ import (
 )
 
 func (m *defaultUserModel) UpdateUserSubscribeCache(ctx context.Context, data *Subscribe) error {
-	return m.CachedConn.DelCacheCtx(ctx, m.getSubscribeCacheKey(data)...)
+	return m.ClearSubscribeCacheByModels(ctx, data)
 }
 
 // QueryActiveSubscriptions returns the number of active subscriptions.
@@ -113,12 +113,20 @@ func (m *defaultUserModel) UpdateSubscribe(ctx context.Context, data *Subscribe,
 	if err != nil {
 		return err
 	}
-	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+
+	// 使用 defer 确保更新后清理缓存
+	defer func() {
+		if clearErr := m.ClearSubscribeCacheByModels(ctx, old, data); clearErr != nil {
+			// 记录清理缓存错误
+		}
+	}()
+
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
 		return conn.Model(&Subscribe{}).Where("id = ?", data.Id).Save(data).Error
-	}, m.getSubscribeCacheKey(old)...)
+	})
 }
 
 // DeleteSubscribe deletes a record.
@@ -127,22 +135,37 @@ func (m *defaultUserModel) DeleteSubscribe(ctx context.Context, token string, tx
 	if err != nil {
 		return err
 	}
-	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+
+	// 使用 defer 确保删除后清理缓存
+	defer func() {
+		if clearErr := m.ClearSubscribeCacheByModels(ctx, data); clearErr != nil {
+			// 记录清理缓存错误
+		}
+	}()
+
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
 		return conn.Where("token = ?", token).Delete(&Subscribe{}).Error
-	}, m.getSubscribeCacheKey(data)...)
+	})
 }
 
 // InsertSubscribe insert Subscribe into the database.
 func (m *defaultUserModel) InsertSubscribe(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error {
-	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+	// 使用 defer 确保插入后清理相关缓存
+	defer func() {
+		if clearErr := m.ClearSubscribeCacheByModels(ctx, data); clearErr != nil {
+			// 记录清理缓存错误
+		}
+	}()
+
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
 		return conn.Create(data).Error
-	}, m.getSubscribeCacheKey(data)...)
+	})
 }
 
 func (m *defaultUserModel) DeleteSubscribeById(ctx context.Context, id int64, tx ...*gorm.DB) error {
@@ -150,18 +173,22 @@ func (m *defaultUserModel) DeleteSubscribeById(ctx context.Context, id int64, tx
 	if err != nil {
 		return err
 	}
-	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+
+	// 使用 defer 确保删除后清理缓存
+	defer func() {
+		if clearErr := m.ClearSubscribeCacheByModels(ctx, data); clearErr != nil {
+			// 记录清理缓存错误
+		}
+	}()
+
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
 		return conn.Where("id = ?", id).Delete(&Subscribe{}).Error
-	}, m.getSubscribeCacheKey(data)...)
+	})
 }
 
 func (m *defaultUserModel) ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error {
-	var keys []string
-	for _, item := range data {
-		keys = append(keys, m.getSubscribeCacheKey(item)...)
-	}
-	return m.CachedConn.DelCacheCtx(ctx, keys...)
+	return m.ClearSubscribeCacheByModels(ctx, data...)
 }

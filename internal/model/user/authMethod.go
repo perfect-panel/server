@@ -37,17 +37,14 @@ func (m *defaultUserModel) InsertUserAuthMethods(ctx context.Context, data *Auth
 		return err
 	}
 
-	defer func() {
-		if err = m.clearUserCache(context.Background(), u); err != nil {
-			logger.Errorf("[UserModel] clear user cache failed: %v", err.Error())
-		}
-	}()
-
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Model(&AuthMethods{}).Create(data).Error
+		if err = conn.Model(&AuthMethods{}).Create(data).Error; err != nil {
+			return err
+		}
+		return m.ClearUserCache(ctx, u)
 	})
 }
 
@@ -57,17 +54,15 @@ func (m *defaultUserModel) UpdateUserAuthMethods(ctx context.Context, data *Auth
 		return err
 	}
 
-	defer func() {
-		if err = m.clearUserCache(context.Background(), u); err != nil {
-			logger.Errorf("[UserModel] clear user cache failed: %v", err.Error())
-		}
-	}()
-
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Model(&AuthMethods{}).Where("user_id = ? AND auth_type = ?", data.UserId, data.AuthType).Save(data).Error
+		err = conn.Model(&AuthMethods{}).Where("user_id = ? AND auth_type = ?", data.UserId, data.AuthType).Save(data).Error
+		if err != nil {
+			return err
+		}
+		return m.ClearUserCache(ctx, u)
 	})
 }
 
@@ -77,7 +72,7 @@ func (m *defaultUserModel) DeleteUserAuthMethods(ctx context.Context, userId int
 		return err
 	}
 	defer func() {
-		if err = m.clearUserCache(context.Background(), u); err != nil {
+		if err = m.ClearUserCache(context.Background(), u); err != nil {
 			logger.Errorf("[UserModel] clear user cache failed: %v", err.Error())
 		}
 	}()

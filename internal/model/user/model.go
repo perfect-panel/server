@@ -6,11 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/server"
 	"github.com/perfect-panel/server/internal/model/subscribe"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -137,56 +133,6 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 	}
 }
 
-func (m *defaultUserModel) getSubscribeCacheKey(data *Subscribe) []string {
-	if data == nil {
-		return []string{}
-	}
-	var keys []string
-	if data.Token != "" {
-		keys = append(keys, fmt.Sprintf("%s%s", cacheUserSubscribeTokenPrefix, data.Token))
-	}
-	if data.UserId != 0 {
-		keys = append(keys, fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, data.UserId))
-	}
-	if data.Id != 0 {
-		keys = append(keys, fmt.Sprintf("%s%d", cacheUserSubscribeIdPrefix, data.Id))
-	}
-
-	if data.SubscribeId != 0 {
-		var sub *subscribe.Subscribe
-		err := m.QueryNoCacheCtx(context.Background(), &sub, func(conn *gorm.DB, v interface{}) error {
-			return conn.Model(&subscribe.Subscribe{}).Where("id = ?", data.SubscribeId).First(&sub).Error
-		})
-		if err != nil {
-			logger.Error("getUserSubscribeCacheKey", logger.Field("error", err.Error()), logger.Field("subscribeId", data.SubscribeId))
-			return keys
-		}
-		if sub.Server != "" {
-			ids := tool.StringToInt64Slice(sub.Server)
-			for _, id := range ids {
-				keys = append(keys, fmt.Sprintf("%s%d", config.ServerUserListCacheKey, id))
-			}
-		}
-		if sub.ServerGroup != "" {
-			ids := tool.StringToInt64Slice(sub.ServerGroup)
-			var servers []*server.Server
-			err = m.QueryNoCacheCtx(context.Background(), &servers, func(conn *gorm.DB, v interface{}) error {
-				return conn.Model(&server.Server{}).Where("group_id in ?", ids).Find(v).Error
-			})
-			if err != nil {
-				logger.Error("getUserSubscribeCacheKey", logger.Field("error", err.Error()), logger.Field("subscribeId", data.SubscribeId))
-				return keys
-			}
-			for _, s := range servers {
-				keys = append(keys, fmt.Sprintf("%s%d", config.ServerUserListCacheKey, s.Id))
-			}
-		}
-	}
-
-	return keys
-
-}
-
 // QueryPageList returns a list of records that meet the conditions.
 func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, filter *UserFilterParams) ([]*User, int64, error) {
 	var list []*User
@@ -260,7 +206,15 @@ func (m *customUserModel) UpdateUserSubscribeWithTraffic(ctx context.Context, id
 	if err != nil {
 		return err
 	}
-	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+
+	// 使用 defer 确保更新后清理缓存
+	defer func() {
+		if clearErr := m.ClearSubscribeCacheByModels(ctx, sub); clearErr != nil {
+			// 记录清理缓存错误
+		}
+	}()
+
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
@@ -268,7 +222,7 @@ func (m *customUserModel) UpdateUserSubscribeWithTraffic(ctx context.Context, id
 			"download": gorm.Expr("download + ?", download),
 			"upload":   gorm.Expr("upload + ?", upload),
 		}).Error
-	}, m.getSubscribeCacheKey(sub)...)
+	})
 }
 
 func (m *customUserModel) QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error) {
@@ -308,7 +262,7 @@ func (m *customUserModel) QueryAdminUsers(ctx context.Context) ([]*User, error) 
 }
 
 func (m *customUserModel) UpdateUserCache(ctx context.Context, data *User) error {
-	return m.CachedConn.DelCacheCtx(ctx, m.getCacheKeys(data)...)
+	return m.ClearUserCache(ctx, data)
 }
 
 func (m *customUserModel) InsertCommissionLog(ctx context.Context, data *CommissionLog, tx ...*gorm.DB) error {
