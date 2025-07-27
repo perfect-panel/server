@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +32,17 @@ func (m *defaultUserModel) FindUserAuthMethodByPlatform(ctx context.Context, use
 }
 
 func (m *defaultUserModel) InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error {
+	u, err := m.FindOne(ctx, data.UserId)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err = m.clearUserCache(context.Background(), u); err != nil {
+			logger.Errorf("[UserModel] clear user cache failed: %v", err.Error())
+		}
+	}()
+
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
@@ -40,6 +52,17 @@ func (m *defaultUserModel) InsertUserAuthMethods(ctx context.Context, data *Auth
 }
 
 func (m *defaultUserModel) UpdateUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error {
+	u, err := m.FindOne(ctx, data.UserId)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err = m.clearUserCache(context.Background(), u); err != nil {
+			logger.Errorf("[UserModel] clear user cache failed: %v", err.Error())
+		}
+	}()
+
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
@@ -49,6 +72,15 @@ func (m *defaultUserModel) UpdateUserAuthMethods(ctx context.Context, data *Auth
 }
 
 func (m *defaultUserModel) DeleteUserAuthMethods(ctx context.Context, userId int64, platform string, tx ...*gorm.DB) error {
+	u, err := m.FindOne(ctx, userId)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err = m.clearUserCache(context.Background(), u); err != nil {
+			logger.Errorf("[UserModel] clear user cache failed: %v", err.Error())
+		}
+	}()
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]

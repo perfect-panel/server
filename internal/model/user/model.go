@@ -111,6 +111,7 @@ type customUserLogicModel interface {
 	FilterLoginLogList(ctx context.Context, page, size int, filter *LoginLogFilterParams) ([]*LoginLog, int64, error)
 
 	ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error
+	clearUserCache(ctx context.Context, data ...*User) error
 
 	InsertResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error
 	UpdateResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error
@@ -421,9 +422,9 @@ func (m *customUserModel) QueryDailyUserStatisticsList(ctx context.Context, date
 		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
 		return conn.Model(&User{}).
 			Select(
-				"DATE(created_at) as date, " +
-					"COUNT(*) as register, " +
-					"0 as new_order_users, " +
+				"DATE(created_at) as date, "+
+					"COUNT(*) as register, "+
+					"0 as new_order_users, "+
 					"0 as renewal_order_users",
 			).
 			Where("created_at BETWEEN ? AND ?", firstDay, date).
@@ -441,9 +442,9 @@ func (m *customUserModel) QueryMonthlyUserStatisticsList(ctx context.Context, da
 		sixMonthsAgo := date.AddDate(0, -5, 0)
 		return conn.Model(&User{}).
 			Select(
-				"DATE_FORMAT(created_at, '%Y-%m') as date, " +
-					"COUNT(*) as register, " +
-					"0 as new_order_users, " +
+				"DATE_FORMAT(created_at, '%Y-%m') as date, "+
+					"COUNT(*) as register, "+
+					"0 as new_order_users, "+
 					"0 as renewal_order_users",
 			).
 			Where("created_at >= ?", sixMonthsAgo).

@@ -73,6 +73,15 @@ func (m *defaultUserModel) getCacheKeys(data *User) []string {
 	return cacheKeys
 }
 
+func (m *defaultUserModel) clearUserCache(ctx context.Context, data ...*User) error {
+
+	keys := m.batchGetCacheKeys(data...)
+	if len(keys) == 0 {
+		return nil
+	}
+	return m.CachedConn.DelCacheCtx(ctx, keys...)
+}
+
 func (m *defaultUserModel) FindOneByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
 	key := fmt.Sprintf("%s%v", cacheUserEmailPrefix, email)

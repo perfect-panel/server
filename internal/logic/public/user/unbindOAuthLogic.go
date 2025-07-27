@@ -42,6 +42,7 @@ func (l *UnbindOAuthLogic) UnbindOAuth(req *types.UnbindOAuthRequest) error {
 		l.Errorw("delete user auth methods failed:", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete user auth methods failed: %v", err.Error())
 	}
+
 	return nil
 }
 func (l *UnbindOAuthLogic) validator(req *types.UnbindOAuthRequest) bool {
