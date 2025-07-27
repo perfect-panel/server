@@ -23,7 +23,16 @@ import (
 	"gorm.io/gorm"
 )
 
-type googleRequest struct {
+const (
+	OAuthGoogle    = "google"
+	OAuthApple     = "apple"
+	OAuthTelegram  = "telegram"
+	AuthEmail      = "email"
+	AuthExpire     = 86400
+	TelegramDomain = "ppanel.com"
+)
+
+type oauthRequest struct {
 	Code  string `json:"code"`
 	State string `json:"state"`
 }
@@ -43,38 +52,515 @@ func NewOAuthLoginGetTokenLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTokenRequest, ip, userAgent string) (resp *types.LoginResponse, err error) {
+	startTime := time.Now()
+	requestID := uuidx.NewUUID().String()
 	loginStatus := false
 	var userInfo *user.User
-	// Record login status
-	defer func(svcCtx *svc.ServiceContext) {
-		if userInfo != nil && userInfo.Id != 0 {
-			if err := svcCtx.UserModel.InsertLoginLog(l.ctx, &user.LoginLog{
-				UserId:    userInfo.Id,
-				LoginIP:   ip,
-				UserAgent: userAgent,
-				Success:   &loginStatus,
-			}); err != nil {
-				l.Errorw("error insert login log: %v", logger.Field("error", err.Error()))
-			}
+
+	l.Infow("oauth login request started",
+		logger.Field("request_id", requestID),
+		logger.Field("method", req.Method),
+		logger.Field("ip", ip),
+		logger.Field("user_agent", userAgent),
+	)
+
+	defer func() {
+		duration := time.Since(startTime)
+		l.recordLoginStatus(&loginStatus, &userInfo, ip, userAgent, requestID)
+
+		if loginStatus {
+			l.Infow("oauth login completed successfully",
+				logger.Field("request_id", requestID),
+				logger.Field("method", req.Method),
+				logger.Field("user_id", userInfo.Id),
+				logger.Field("duration_ms", duration.Milliseconds()),
+			)
+		} else {
+			l.Errorw("oauth login failed",
+				logger.Field("request_id", requestID),
+				logger.Field("method", req.Method),
+				logger.Field("error", err),
+				logger.Field("duration_ms", duration.Milliseconds()),
+			)
 		}
-	}(l.svcCtx)
-	switch req.Method {
-	case "google":
-		userInfo, err = l.google(req)
-	case "apple":
-		userInfo, err = l.apple(req)
-	case "telegram":
-		userInfo, err = l.telegram(req)
-	default:
-		l.Errorw("oauth login method not support: %v", logger.Field("method", req.Method))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "oauth login method not support: %v", req.Method)
-	}
+	}()
+
+	userInfo, err = l.handleOAuthProvider(req, requestID)
 	if err != nil {
 		return nil, err
 	}
-	// Generate session id
+
+	token, err := l.generateToken(userInfo, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	loginStatus = true
+	return &types.LoginResponse{Token: token}, nil
+}
+
+func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+	startTime := time.Now()
+	l.Infow("google oauth processing started",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthGoogle),
+	)
+
+	var request oauthRequest
+	if err := tool.CloneMapToStruct(req.Callback.(map[string]interface{}), &request); err != nil {
+		l.Errorw("failed to parse google callback data",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthGoogle),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "parse callback data failed: %v", err)
+	}
+
+	l.Debugw("google oauth state validation started",
+		logger.Field("request_id", requestID),
+		logger.Field("state", request.State),
+	)
+
+	redirect, err := l.validateStateCode(OAuthGoogle, request.State, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := l.getGoogleConfig(requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	client := google.New(&google.Config{
+		ClientID:     cfg.ClientId,
+		ClientSecret: cfg.ClientSecret,
+		RedirectURL:  redirect,
+	})
+
+	l.Debugw("exchanging google authorization code for token",
+		logger.Field("request_id", requestID),
+		logger.Field("redirect_url", redirect),
+	)
+
+	token, err := client.Exchange(l.ctx, request.Code)
+	if err != nil {
+		l.Errorw("failed to exchange google authorization code",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthGoogle),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "exchange token failed: %v", err)
+	}
+
+	l.Debugw("fetching google user information",
+		logger.Field("request_id", requestID),
+	)
+
+	googleUserInfo, err := client.GetUserInfo(token.AccessToken)
+	if err != nil {
+		l.Errorw("failed to get google user info",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthGoogle),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get user info failed: %v", err)
+	}
+
+	l.Infow("google oauth processing completed",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthGoogle),
+		logger.Field("openid", googleUserInfo.OpenID),
+		logger.Field("email", googleUserInfo.Email),
+		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
+	)
+
+	return l.findOrRegisterUser(OAuthGoogle, googleUserInfo.OpenID, googleUserInfo.Email, googleUserInfo.Picture, requestID)
+}
+
+func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+	startTime := time.Now()
+	l.Infow("apple oauth processing started",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthApple),
+	)
+
+	callback := req.Callback.(map[string]interface{})
+	state, _ := callback["state"].(string)
+	code, _ := callback["code"].(string)
+
+	l.Debugw("apple oauth state validation started",
+		logger.Field("request_id", requestID),
+		logger.Field("state", state),
+	)
+
+	if _, err := l.validateStateCode(OAuthApple, state, requestID); err != nil {
+		return nil, err
+	}
+
+	cfg, err := l.getAppleConfig(requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := apple.New(apple.Config{
+		ClientID:     cfg.ClientId,
+		TeamID:       cfg.TeamID,
+		KeyID:        cfg.KeyID,
+		ClientSecret: cfg.ClientSecret,
+		RedirectURI:  cfg.RedirectURL,
+	})
+	if err != nil {
+		l.Errorw("failed to create apple client",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthApple),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "new apple client failed: %v", err)
+	}
+
+	l.Debugw("verifying apple web token",
+		logger.Field("request_id", requestID),
+	)
+
+	resp, err := client.VerifyWebToken(l.ctx, code)
+	if err != nil {
+		l.Errorw("failed to verify apple web token",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthApple),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "verify web token failed: %v", err)
+	}
+
+	if resp.Error != "" {
+		l.Errorw("apple web token verification returned error",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthApple),
+			logger.Field("apple_error", resp.Error),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "verify web token failed: %v", resp.Error)
+	}
+
+	appleUnique, err := apple.GetUniqueID(resp.IDToken)
+	if err != nil {
+		l.Errorw("failed to get apple unique id",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthApple),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple unique id failed: %v", err)
+	}
+
+	appleUserInfo, err := apple.GetClaims(resp.AccessToken)
+	if err != nil {
+		l.Errorw("failed to get apple user claims",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthApple),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple user info failed: %v", err)
+	}
+
+	email := ""
+	if emailVal, ok := (*appleUserInfo)["email"]; ok {
+		email, _ = emailVal.(string)
+	}
+
+	l.Infow("apple oauth processing completed",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthApple),
+		logger.Field("unique_id", appleUnique),
+		logger.Field("email", email),
+		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
+	)
+
+	return l.findOrRegisterUser(OAuthApple, appleUnique, email, "", requestID)
+}
+
+func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+	startTime := time.Now()
+	l.Infow("telegram oauth processing started",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthTelegram),
+	)
+
+	cfg, err := l.getTelegramConfig(requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	encodeText, _ := req.Callback.(map[string]interface{})["tgAuthResult"].(string)
+	l.Debugw("parsing telegram callback data",
+		logger.Field("request_id", requestID),
+		logger.Field("data_length", len(encodeText)),
+	)
+
+	callbackData, err := telegram.ParseAndValidateBase64([]byte(encodeText), cfg.BotToken)
+	if err != nil {
+		l.Errorw("failed to parse telegram callback data",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthTelegram),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "parse telegram callback failed: %v", err)
+	}
+
+	l.Debugw("validating telegram auth date",
+		logger.Field("request_id", requestID),
+		logger.Field("auth_date", *callbackData.AuthDate),
+		logger.Field("current_time", time.Now().Unix()),
+	)
+
+	if time.Now().Unix()-*callbackData.AuthDate > AuthExpire {
+		l.Errorw("telegram auth date expired",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthTelegram),
+			logger.Field("auth_date", *callbackData.AuthDate),
+			logger.Field("current_time", time.Now().Unix()),
+			logger.Field("expire_seconds", AuthExpire),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "auth date expired")
+	}
+
+	userID := fmt.Sprintf("%v", *callbackData.Id)
+	email := fmt.Sprintf("%v@%s", *callbackData.Id, TelegramDomain)
+	avatar := ""
+	if callbackData.PhotoUrl != nil {
+		avatar = *callbackData.PhotoUrl
+	}
+
+	l.Infow("telegram oauth processing completed",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthTelegram),
+		logger.Field("user_id", userID),
+		logger.Field("email", email),
+		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
+	)
+
+	return l.findOrRegisterUser(OAuthTelegram, userID, email, avatar, requestID)
+}
+
+func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, requestID string) (*user.User, error) {
+	startTime := time.Now()
+	l.Infow("user registration started",
+		logger.Field("request_id", requestID),
+		logger.Field("auth_method", method),
+		logger.Field("email", email),
+		logger.Field("openid", openid),
+	)
+
+	if l.svcCtx.Config.Invite.ForcedInvite {
+		l.Errorw("registration blocked due to forced invite policy",
+			logger.Field("request_id", requestID),
+			logger.Field("auth_method", method),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InviteCodeError), "invite code is required")
+	}
+
+	var userInfo *user.User
+	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
+		if email != "" {
+			l.Debugw("checking if email already exists",
+				logger.Field("request_id", requestID),
+				logger.Field("email", email),
+			)
+			if err := l.checkEmailExists(db, email, requestID); err != nil {
+				return err
+			}
+		}
+
+		l.Debugw("creating new user record",
+			logger.Field("request_id", requestID),
+			logger.Field("avatar", avatar),
+		)
+
+		userInfo = &user.User{Avatar: avatar}
+		if err := db.Create(userInfo).Error; err != nil {
+			l.Errorw("failed to create user record",
+				logger.Field("request_id", requestID),
+				logger.Field("error", err.Error()),
+			)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create user info failed: %v", err)
+		}
+
+		userInfo.ReferCode = uuidx.UserInviteCode(userInfo.Id)
+		l.Debugw("updating user refer code",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userInfo.Id),
+			logger.Field("refer_code", userInfo.ReferCode),
+		)
+
+		if err := db.Model(&user.User{}).Where("id = ?", userInfo.Id).Update("refer_code", userInfo.ReferCode).Error; err != nil {
+			l.Errorw("failed to update refer code",
+				logger.Field("request_id", requestID),
+				logger.Field("user_id", userInfo.Id),
+				logger.Field("error", err.Error()),
+			)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update refer code failed: %v", err)
+		}
+
+		if err := l.createAuthMethod(db, userInfo.Id, method, openid, requestID); err != nil {
+			return err
+		}
+
+		if email != "" {
+			if err := l.createAuthMethod(db, userInfo.Id, AuthEmail, email, requestID); err != nil {
+				return err
+			}
+		}
+
+		if l.svcCtx.Config.Register.EnableTrial {
+			l.Debugw("activating trial subscription",
+				logger.Field("request_id", requestID),
+				logger.Field("user_id", userInfo.Id),
+			)
+			if err := l.activeTrial(userInfo.Id, requestID); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		l.Errorw("user registration failed",
+			logger.Field("request_id", requestID),
+			logger.Field("auth_method", method),
+			logger.Field("error", err.Error()),
+			logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
+		)
+		return userInfo, err
+	}
+
+	l.Infow("user registration completed successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", userInfo.Id),
+		logger.Field("auth_method", method),
+		logger.Field("email", email),
+		logger.Field("refer_code", userInfo.ReferCode),
+		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
+	)
+
+	return userInfo, err
+}
+
+func (l *OAuthLoginGetTokenLogic) checkEmailExists(db *gorm.DB, email, requestID string) error {
+	var methodInfo user.AuthMethods
+	err := db.Model(&user.AuthMethods{}).Where("auth_identifier = ?", email).First(&methodInfo).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("failed to check email existence",
+			logger.Field("request_id", requestID),
+			logger.Field("email", email),
+			logger.Field("error", err.Error()),
+		)
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "check email exists failed: %v", err)
+	}
+	if methodInfo.UserId != 0 {
+		l.Errorw("email already exists for another user",
+			logger.Field("request_id", requestID),
+			logger.Field("email", email),
+			logger.Field("existing_user_id", methodInfo.UserId),
+		)
+		return errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "user email exist: %v", email)
+	}
+	l.Debugw("email availability confirmed",
+		logger.Field("request_id", requestID),
+		logger.Field("email", email),
+	)
+	return nil
+}
+
+func (l *OAuthLoginGetTokenLogic) createAuthMethod(db *gorm.DB, userID int64, authType, identifier, requestID string) error {
+	l.Debugw("creating auth method",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", userID),
+		logger.Field("auth_type", authType),
+		logger.Field("identifier", identifier),
+	)
+
+	authMethod := &user.AuthMethods{
+		UserId:         userID,
+		AuthType:       authType,
+		AuthIdentifier: identifier,
+		Verified:       true,
+	}
+	if err := db.Create(authMethod).Error; err != nil {
+		l.Errorw("failed to create auth method",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userID),
+			logger.Field("auth_type", authType),
+			logger.Field("identifier", identifier),
+			logger.Field("error", err.Error()),
+		)
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create auth method failed: %v", err)
+	}
+
+	l.Debugw("auth method created successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", userID),
+		logger.Field("auth_type", authType),
+		logger.Field("auth_method_id", authMethod.Id),
+	)
+	return nil
+}
+
+func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus *bool, userInfo **user.User, ip, userAgent, requestID string) {
+	if *userInfo != nil && (*userInfo).Id != 0 {
+		if err := l.svcCtx.UserModel.InsertLoginLog(l.ctx, &user.LoginLog{
+			UserId:    (*userInfo).Id,
+			LoginIP:   ip,
+			UserAgent: userAgent,
+			Success:   loginStatus,
+		}); err != nil {
+			l.Errorw("failed to insert login log",
+				logger.Field("request_id", requestID),
+				logger.Field("user_id", (*userInfo).Id),
+				logger.Field("ip", ip),
+				logger.Field("error", err.Error()),
+			)
+		} else {
+			l.Debugw("login log recorded successfully",
+				logger.Field("request_id", requestID),
+				logger.Field("user_id", (*userInfo).Id),
+				logger.Field("ip", ip),
+				logger.Field("success", *loginStatus),
+			)
+		}
+	}
+}
+
+func (l *OAuthLoginGetTokenLogic) handleOAuthProvider(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+	l.Debugw("handling oauth provider",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", req.Method),
+	)
+
+	switch req.Method {
+	case OAuthGoogle:
+		return l.google(req, requestID)
+	case OAuthApple:
+		return l.apple(req, requestID)
+	case OAuthTelegram:
+		return l.telegram(req, requestID)
+	default:
+		l.Errorw("unsupported oauth login method",
+			logger.Field("request_id", requestID),
+			logger.Field("method", req.Method),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "oauth login method not supported: %v", req.Method)
+	}
+}
+
+func (l *OAuthLoginGetTokenLogic) generateToken(userInfo *user.User, requestID string) (string, error) {
+	startTime := time.Now()
 	sessionId := uuidx.NewUUID().String()
-	// Generate token
+
+	l.Debugw("generating jwt token",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", userInfo.Id),
+		logger.Field("session_id", sessionId),
+	)
+
 	token, err := jwt.NewJwtToken(
 		l.svcCtx.Config.JwtAuth.AccessSecret,
 		time.Now().Unix(),
@@ -83,262 +569,284 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTok
 		jwt.WithOption("SessionId", sessionId),
 	)
 	if err != nil {
-		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "token generate error: %v", err.Error())
+		l.Errorw("failed to generate jwt token",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userInfo.Id),
+			logger.Field("error", err.Error()),
+		)
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "token generate error: %v", err)
 	}
 
 	sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
 	if err = l.svcCtx.Redis.Set(l.ctx, sessionIdCacheKey, userInfo.Id, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
-	}
-	loginStatus = true
-	return &types.LoginResponse{
-		Token: token,
-	}, nil
-}
-
-func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest) (*user.User, error) {
-	var request googleRequest
-	err := tool.CloneMapToStruct(req.Callback.(map[string]interface{}), &request)
-	if err != nil {
-		l.Errorw("error CloneMapToStruct: %v", logger.Field("error", err.Error()))
-		return nil, err
-	}
-	// validate the state code
-	redirect, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("google:%s", request.State)).Result()
-	if err != nil {
-		l.Errorw("error get google state code: %v", logger.Field("error", err.Error()))
-		return nil, err
-	}
-	// get google config
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "google")
-	if err != nil {
-		l.Errorw("error find google auth method: %v", logger.Field("error", err.Error()))
-		return nil, err
-	}
-	var cfg auth.GoogleAuthConfig
-	err = cfg.Unmarshal(authMethod.Config)
-	if err != nil {
-		l.Errorw("error unmarshal google config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
-		return nil, err
-	}
-	client := google.New(&google.Config{
-		ClientID:     cfg.ClientId,
-		ClientSecret: cfg.ClientSecret,
-		RedirectURL:  redirect,
-	})
-	token, err := client.Exchange(l.ctx, request.Code)
-	if err != nil {
-		l.Errorw("error exchange google token: %v", logger.Field("error", err.Error()))
-		return nil, err
-	}
-	googleUserInfo, err := client.GetUserInfo(token.AccessToken)
-	if err != nil {
-		l.Errorw("error get google user info: %v", logger.Field("error", err.Error()))
-		return nil, err
-	}
-	// query user info
-	userAuthMethod, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "google", googleUserInfo.OpenID)
-	if err != nil {
-		if errors.As(err, &gorm.ErrRecordNotFound) {
-			return l.register(googleUserInfo.Email, googleUserInfo.Picture, "google", googleUserInfo.OpenID)
-		}
-		return nil, err
-	}
-	return l.svcCtx.UserModel.FindOne(l.ctx, userAuthMethod.UserId)
-}
-
-func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest) (*user.User, error) {
-	// validate the state code
-	_, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("apple:%s", req.Callback.(map[string]interface{})["state"])).Result()
-	if err != nil {
-		l.Errorw("[AppleLoginCallback] Get State code error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple state code failed: %v", err.Error())
-	}
-	appleAuth, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "apple")
-	if err != nil {
-		l.Errorw("[AppleLoginCallback] FindOneByMethod error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find apple auth method failed: %v", err.Error())
-	}
-	var appleCfg auth.AppleAuthConfig
-	err = appleCfg.Unmarshal(appleAuth.Config)
-	if err != nil {
-		l.Errorw("[AppleLoginCallback] Unmarshal error", logger.Field("error", err.Error()), logger.Field("config", appleAuth.Config))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal apple config failed: %v", err.Error())
-	}
-
-	client, err := apple.New(apple.Config{
-		ClientID:     appleCfg.ClientId,
-		TeamID:       appleCfg.TeamID,
-		KeyID:        appleCfg.KeyID,
-		ClientSecret: appleCfg.ClientSecret,
-		RedirectURI:  appleCfg.RedirectURL,
-	})
-	if err != nil {
-		l.Errorw("[AppleLoginCallback] New apple client error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "new apple client failed: %v", err.Error())
-	}
-	// verify web token
-	resp, err := client.VerifyWebToken(l.ctx, req.Callback.(map[string]interface{})["code"].(string))
-	if err != nil {
-		l.Errorw("[AppleLoginCallback] VerifyWebToken error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "verify web token failed: %v", err.Error())
-	}
-	if resp.Error != "" {
-		l.Errorw("[AppleLoginCallback] VerifyWebToken error", logger.Field("error", resp.Error))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "verify web token failed: %v", resp.Error)
-	}
-	// query apple user unique id
-	appleUnique, err := apple.GetUniqueID(resp.IDToken)
-	if err != nil {
-		l.Errorw("[AppleLoginCallback] GetUniqueID error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple unique id failed: %v", err.Error())
-	}
-	// get apple user info
-	appleUserInfo, err := apple.GetClaims(resp.AccessToken)
-	if err != nil {
-		l.Errorw("[AppleLoginCallback] GetClaims error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple user info failed: %v", err.Error())
-	}
-	// query user by apple unique id
-	userAuthMethod, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "apple", appleUnique)
-	if err != nil {
-		// if user not exist, handle register
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return l.register((*appleUserInfo)["email"].(string), "", "apple", appleUnique)
-		}
-		l.Errorw("[AppleLoginCallback] FindUserAuthMethodByOpenID error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth method by openid failed: %v", err.Error())
-	}
-	// query user info
-	userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, userAuthMethod.UserId)
-
-	if err != nil {
-		l.Errorw(
-			"[AppleLoginCallback] FindOne error",
+		l.Errorw("failed to cache session id",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userInfo.Id),
+			logger.Field("session_id", sessionId),
 			logger.Field("error", err.Error()),
 		)
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user info failed: %v", err.Error())
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err)
 	}
 
-	return userInfo, nil
+	l.Infow("jwt token generated successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", userInfo.Id),
+		logger.Field("session_id", sessionId),
+		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
+	)
+
+	return token, nil
 }
 
-func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest) (*user.User, error) {
-	appleAuth, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "telegram")
+func (l *OAuthLoginGetTokenLogic) validateStateCode(provider, state, requestID string) (string, error) {
+	stateKey := fmt.Sprintf("%s:%s", provider, state)
+	l.Debugw("validating oauth state code",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", provider),
+		logger.Field("state_key", stateKey),
+	)
+
+	redirect, err := l.svcCtx.Redis.Get(l.ctx, stateKey).Result()
 	if err != nil {
-		l.Errorw("[OAuthLoginGetToken] FindOneByMethod error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find telegram auth method failed: %v", err.Error())
+		l.Errorw("failed to validate state code",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", provider),
+			logger.Field("state_key", stateKey),
+			logger.Field("error", err.Error()),
+		)
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get %s state code failed: %v", provider, err)
 	}
-	var telegramCfg auth.TelegramAuthConfig
-	err = json.Unmarshal([]byte(appleAuth.Config), &telegramCfg)
+
+	l.Debugw("state code validated successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", provider),
+		logger.Field("redirect_url", redirect),
+	)
+	return redirect, nil
+}
+
+func (l *OAuthLoginGetTokenLogic) getGoogleConfig(requestID string) (*auth.GoogleAuthConfig, error) {
+	l.Debugw("fetching google oauth config",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthGoogle),
+	)
+
+	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, OAuthGoogle)
 	if err != nil {
-		l.Errorw("[OAuthLoginGetToken] Unmarshal error", logger.Field("error", err.Error()), logger.Field("config", appleAuth.Config))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal telegram config failed: %v", err.Error())
+		l.Errorw("failed to find google auth method",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthGoogle),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find google auth method failed: %v", err)
 	}
-	encodeText := req.Callback.(map[string]interface{})["tgAuthResult"].(string)
-	// base64 decode
-	callbackData, err := telegram.ParseAndValidateBase64([]byte(encodeText), telegramCfg.BotToken)
+
+	var cfg auth.GoogleAuthConfig
+	if err = cfg.Unmarshal(authMethod.Config); err != nil {
+		l.Errorw("failed to unmarshal google config",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthGoogle),
+			logger.Field("config", authMethod.Config),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal google config failed: %v", err)
+	}
+
+	l.Debugw("google oauth config loaded successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthGoogle),
+		logger.Field("client_id", cfg.ClientId),
+	)
+	return &cfg, nil
+}
+
+func (l *OAuthLoginGetTokenLogic) getAppleConfig(requestID string) (*auth.AppleAuthConfig, error) {
+	l.Debugw("fetching apple oauth config",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthApple),
+	)
+
+	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, OAuthApple)
 	if err != nil {
-		l.Errorw("[TelegramLoginCallback] ParseAndValidateBase64 error", logger.Field("error", err.Error()))
-		return nil, err
+		l.Errorw("failed to find apple auth method",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthApple),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find apple auth method failed: %v", err)
 	}
-	// 验证数据有效期
-	if time.Now().Unix()-*callbackData.AuthDate > 86400 {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "auth date expired")
+
+	var cfg auth.AppleAuthConfig
+	if err = cfg.Unmarshal(authMethod.Config); err != nil {
+		l.Errorw("failed to unmarshal apple config",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthApple),
+			logger.Field("config", authMethod.Config),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal apple config failed: %v", err)
 	}
-	// query user auth info
-	userAuthMethod, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "telegram", fmt.Sprintf("%v", *callbackData.Id))
+
+	l.Debugw("apple oauth config loaded successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthApple),
+		logger.Field("client_id", cfg.ClientId),
+		logger.Field("team_id", cfg.TeamID),
+	)
+	return &cfg, nil
+}
+
+func (l *OAuthLoginGetTokenLogic) getTelegramConfig(requestID string) (*auth.TelegramAuthConfig, error) {
+	l.Debugw("fetching telegram oauth config",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthTelegram),
+	)
+
+	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, OAuthTelegram)
 	if err != nil {
-		if errors.As(err, &gorm.ErrRecordNotFound) {
-			return l.register(fmt.Sprintf("%v@%s", *callbackData.Id, "qq.com"), *callbackData.PhotoUrl, "telegram", fmt.Sprintf("%v", callbackData.Id))
+		l.Errorw("failed to find telegram auth method",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthTelegram),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find telegram auth method failed: %v", err)
+	}
+
+	var cfg auth.TelegramAuthConfig
+	if err = json.Unmarshal([]byte(authMethod.Config), &cfg); err != nil {
+		l.Errorw("failed to unmarshal telegram config",
+			logger.Field("request_id", requestID),
+			logger.Field("provider", OAuthTelegram),
+			logger.Field("config", authMethod.Config),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal telegram config failed: %v", err)
+	}
+
+	l.Debugw("telegram oauth config loaded successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("provider", OAuthTelegram),
+	)
+	return &cfg, nil
+}
+
+func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, avatar, requestID string) (*user.User, error) {
+	l.Debugw("finding or registering user",
+		logger.Field("request_id", requestID),
+		logger.Field("auth_type", authType),
+		logger.Field("openid", openID),
+		logger.Field("email", email),
+	)
+
+	userAuthMethod, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, authType, openID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			l.Infow("user not found, starting registration",
+				logger.Field("request_id", requestID),
+				logger.Field("auth_type", authType),
+				logger.Field("openid", openID),
+				logger.Field("email", email),
+			)
+			return l.register(email, avatar, authType, openID, requestID)
 		}
+		l.Errorw("failed to find user auth method by openid",
+			logger.Field("request_id", requestID),
+			logger.Field("auth_type", authType),
+			logger.Field("openid", openID),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth method by openid failed: %v", err)
 	}
-	// query user info
+
+	l.Debugw("found existing user auth method",
+		logger.Field("request_id", requestID),
+		logger.Field("auth_type", authType),
+		logger.Field("user_id", userAuthMethod.UserId),
+	)
+
 	userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, userAuthMethod.UserId)
 	if err != nil {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user info failed: %v", err.Error())
+		l.Errorw("failed to find user by id",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userAuthMethod.UserId),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user info failed: %v", err)
 	}
+
+	l.Infow("existing user found successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", userInfo.Id),
+		logger.Field("auth_type", authType),
+	)
+
 	return userInfo, nil
 }
 
-func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid string) (*user.User, error) {
-	if l.svcCtx.Config.Invite.ForcedInvite {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InviteCodeError), "invite code is required")
-	}
-	var userInfo *user.User
-	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		err := db.Model(&user.User{}).Where("email = ?", email).First(&userInfo).Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-		if userInfo.Id != 0 {
-			return errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "user email exist: %v", email)
-		}
-		userInfo = &user.User{
-			Avatar: avatar,
-		}
-		if err := db.Create(userInfo).Error; err != nil {
-			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create user info failed: %v", err.Error())
-		}
-		// Generate ReferCode
-		userInfo.ReferCode = uuidx.UserInviteCode(userInfo.Id)
-		// Update ReferCode
-		err = db.Where("id = ?", userInfo.Id).Update("refer_code", userInfo.ReferCode).Error
-		if err != nil {
-			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update refer code failed: %v", err.Error())
-		}
-		authMethod := &user.AuthMethods{
-			UserId:         userInfo.Id,
-			AuthType:       method,
-			AuthIdentifier: openid,
-			Verified:       true,
-		}
-		if err = db.Create(authMethod).Error; err != nil {
-			l.Errorw("error create auth method: %v", logger.Field("error", err.Error()))
-			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create auth method failed: %v", err.Error())
-		}
-		if email != "" {
-			authMethod = &user.AuthMethods{
-				UserId:         userInfo.Id,
-				AuthType:       "email",
-				AuthIdentifier: email,
-				Verified:       true,
-			}
-			if err := db.Create(authMethod).Error; err != nil {
-				l.Errorw("error create auth method: %v", logger.Field("error", err.Error()))
-				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create auth method failed: %v", err.Error())
-			}
-		}
-		if l.svcCtx.Config.Register.EnableTrial {
-			// Active trial
-			if err = l.activeTrial(userInfo.Id); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return userInfo, err
-}
+func (l *OAuthLoginGetTokenLogic) activeTrial(uid int64, requestID string) error {
+	l.Debugw("fetching trial subscription template",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", uid),
+		logger.Field("trial_subscribe_id", l.svcCtx.Config.Register.TrialSubscribe),
+	)
 
-func (l *OAuthLoginGetTokenLogic) activeTrial(uid int64) error {
 	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
 	if err != nil {
+		l.Errorw("failed to find trial subscription template",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", uid),
+			logger.Field("trial_subscribe_id", l.svcCtx.Config.Register.TrialSubscribe),
+			logger.Field("error", err.Error()),
+		)
 		return err
 	}
+
+	startTime := time.Now()
+	expireTime := tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, startTime)
+	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v", uid))
+	subscribeUUID := uuidx.NewUUID().String()
+
+	l.Debugw("creating trial subscription",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", uid),
+		logger.Field("subscribe_id", sub.Id),
+		logger.Field("start_time", startTime),
+		logger.Field("expire_time", expireTime),
+		logger.Field("traffic", sub.Traffic),
+		logger.Field("token", subscribeToken),
+		logger.Field("uuid", subscribeUUID),
+	)
+
 	userSub := &user.Subscribe{
 		Id:          0,
 		UserId:      uid,
 		OrderId:     0,
 		SubscribeId: sub.Id,
-		StartTime:   time.Now(),
-		ExpireTime:  tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, time.Now()),
+		StartTime:   startTime,
+		ExpireTime:  expireTime,
 		Traffic:     sub.Traffic,
 		Download:    0,
 		Upload:      0,
-		Token:       uuidx.SubscribeToken(fmt.Sprintf("Trial-%v", uid)),
-		UUID:        uuidx.NewUUID().String(),
+		Token:       subscribeToken,
+		UUID:        subscribeUUID,
 		Status:      1,
 	}
-	return l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
+
+	if err := l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub); err != nil {
+		l.Errorw("failed to insert trial subscription",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", uid),
+			logger.Field("error", err.Error()),
+		)
+		return err
+	}
+
+	l.Infow("trial subscription activated successfully",
+		logger.Field("request_id", requestID),
+		logger.Field("user_id", uid),
+		logger.Field("subscribe_id", sub.Id),
+		logger.Field("expire_time", expireTime),
+		logger.Field("traffic", sub.Traffic),
+	)
+	return nil
 }
