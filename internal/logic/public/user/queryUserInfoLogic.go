@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"sort"
 
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -53,8 +54,29 @@ func (l *QueryUserInfoLogic) QueryUserInfo() (resp *types.User, err error) {
 		}
 		userMethods = append(userMethods, item)
 	}
+
+	// 按照指定顺序排序：email第一位，mobile第二位，其他按原顺序
+	sort.Slice(userMethods, func(i, j int) bool {
+		return getAuthTypePriority(userMethods[i].AuthType) < getAuthTypePriority(userMethods[j].AuthType)
+	})
+
 	resp.AuthMethods = userMethods
 	return resp, nil
+}
+
+// getAuthTypePriority 获取认证类型的排序优先级
+// email: 1 (第一位)
+// mobile: 2 (第二位)
+// 其他类型: 100+ (后续位置)
+func getAuthTypePriority(authType string) int {
+	switch authType {
+	case "email":
+		return 1
+	case "mobile":
+		return 2
+	default:
+		return 100
+	}
 }
 
 // maskOpenID 脱敏 OpenID，只保留前 3 和后 3 位
