@@ -14,7 +14,6 @@ func buildTrojan(data proxy.Proxy, password string) string {
 		fmt.Sprintf("%s=trojan", data.Name),
 		data.Server,
 		fmt.Sprintf("%d", data.Port),
-		"auto",
 		password,
 		"fast-open=false",
 		"udp=true",
