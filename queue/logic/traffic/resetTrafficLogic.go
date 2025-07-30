@@ -2,6 +2,7 @@ package traffic
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -114,9 +115,16 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 		}
 	}()
 
+	// Reset today's traffic data
+	err = l.svc.NodeCache.ResetTodayTrafficData(ctx)
+	if err != nil {
+		logger.Errorw("[ResetTodayTraffic] Failed to reset today traffic data",
+			logger.Field("error", err.Error()))
+	}
+
 	// Load last reset time from cache
 	var cache resetTrafficCache
-	err = l.svc.Redis.Get(ctx, cacheKey).Scan(&cache)
+	cacheData, err := l.svc.Redis.Get(ctx, cacheKey).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			logger.Errorw("[ResetTraffic] Failed to get cache", logger.Field("error", err.Error()))
@@ -127,7 +135,15 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 		}
 		logger.Infow("[ResetTraffic] Using default cache value", logger.Field("lastResetTime", cache.LastResetTime))
 	} else {
-		logger.Infow("[ResetTraffic] Cache loaded successfully", logger.Field("lastResetTime", cache.LastResetTime))
+		// Parse JSON data
+		if err := json.Unmarshal([]byte(cacheData), &cache); err != nil {
+			logger.Errorw("[ResetTraffic] Failed to unmarshal cache", logger.Field("error", err.Error()))
+			cache = resetTrafficCache{
+				LastResetTime: time.Now().Add(-10 * time.Minute),
+			}
+		} else {
+			logger.Infow("[ResetTraffic] Cache loaded successfully", logger.Field("lastResetTime", cache.LastResetTime))
+		}
 	}
 
 	// Execute reset operations in order: yearly -> monthly (1st) -> monthly (cycle)
@@ -153,12 +169,17 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 	updatedCache := resetTrafficCache{
 		LastResetTime: startTime,
 	}
-	cacheErr := l.svc.Redis.Set(ctx, cacheKey, updatedCache, 0).Err()
-	if cacheErr != nil {
-		logger.Errorw("[ResetTraffic] Failed to update cache", logger.Field("error", cacheErr.Error()))
-		// Don't return error here as the main task completed successfully
+	cacheDataBytes, marshalErr := json.Marshal(updatedCache)
+	if marshalErr != nil {
+		logger.Errorw("[ResetTraffic] Failed to marshal cache", logger.Field("error", marshalErr.Error()))
 	} else {
-		logger.Infow("[ResetTraffic] Cache updated successfully", logger.Field("newLastResetTime", startTime))
+		cacheErr := l.svc.Redis.Set(ctx, cacheKey, cacheDataBytes, 0).Err()
+		if cacheErr != nil {
+			logger.Errorw("[ResetTraffic] Failed to update cache", logger.Field("error", cacheErr.Error()))
+			// Don't return error here as the main task completed successfully
+		} else {
+			logger.Infow("[ResetTraffic] Cache updated successfully", logger.Field("newLastResetTime", startTime))
+		}
 	}
 
 	return nil
