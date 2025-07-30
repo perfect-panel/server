@@ -12,20 +12,22 @@ import (
 
 func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		if svc.Config.Subscribe.PanDomain {
-			domain := c.Request.Host
-			domainArr := strings.Split(domain, ".")
-			domainFirst := domainArr[0]
-			request := types.SubscribeRequest{
-				Token: domainFirst,
-				Flag:  domainArr[1],
-				UA:    c.Request.Header.Get("User-Agent"),
-			}
 
+		domain := c.Request.Host
+		domainArr := strings.Split(domain, ".")
+		domainFirst := domainArr[0]
+		request := types.SubscribeRequest{
+			Token: domainFirst,
+			Flag:  domainArr[1],
+			UA:    c.Request.Header.Get("User-Agent"),
+		}
+
+		if svc.Config.Subscribe.PanDomain && len(domainFirst) == 32 {
 			// intercept browser
 			ua := c.GetHeader("User-Agent")
 			if ua == "" {
 				c.String(http.StatusForbidden, "Access denied")
+				c.Abort()
 				return
 			}
 			browserKeywords := []string{"chrome", "firefox", "safari", "edge", "opera", "micromessenger"}
@@ -33,6 +35,7 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 				lcUA := strings.ToLower(ua)
 				if strings.Contains(lcUA, keyword) {
 					c.String(http.StatusForbidden, "Access denied")
+					c.Abort()
 					return
 				}
 			}
