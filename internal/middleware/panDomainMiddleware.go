@@ -13,16 +13,8 @@ import (
 func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		domain := c.Request.Host
-		domainArr := strings.Split(domain, ".")
-		domainFirst := domainArr[0]
-		request := types.SubscribeRequest{
-			Token: domainFirst,
-			Flag:  domainArr[1],
-			UA:    c.Request.Header.Get("User-Agent"),
-		}
+		if svc.Config.Subscribe.PanDomain && c.Request.URL.Path == "/" {
 
-		if svc.Config.Subscribe.PanDomain && len(domainFirst) == 32 {
 			// intercept browser
 			ua := c.GetHeader("User-Agent")
 			if ua == "" {
@@ -40,6 +32,14 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 				}
 			}
 
+			domain := c.Request.Host
+			domainArr := strings.Split(domain, ".")
+			domainFirst := domainArr[0]
+			request := types.SubscribeRequest{
+				Token: domainFirst,
+				Flag:  domainArr[1],
+				UA:    c.Request.Header.Get("User-Agent"),
+			}
 			l := subscribe.NewSubscribeLogic(c, svc)
 			resp, err := l.Generate(&request)
 			if err != nil {
