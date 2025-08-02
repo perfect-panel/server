@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/queue/types"
+
+	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -208,22 +209,19 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 		var monthlyResetUsers []int64
 
 		// Check if today is the last day of current month
-		nextMonth := now.AddDate(0, 1, 0)
-		isLastDayOfMonth := nextMonth.Month() != now.Month()
+		isLastDayOfMonth := now.AddDate(0, 0, 1).Month() != now.Month()
 
 		query := db.Model(&user.Subscribe{}).Select("`id`").
 			Where("`subscribe_id` IN ?", resetMonthSubIds).
-			Where("`status` = ?", 1).                                                                          // Only active subscriptions
-			Where("PERIOD_DIFF(DATE_FORMAT(CURDATE(), '%Y%m'), DATE_FORMAT(start_time, '%Y%m')) > 0").         // At least one month passed
-			Where("MOD(PERIOD_DIFF(DATE_FORMAT(CURDATE(), '%Y%m'), DATE_FORMAT(start_time, '%Y%m')), 1) = 0"). // Monthly cycle
-			Where("DATE(start_time) < CURDATE()")                                                              // Only reset subscriptions that have started
+			Where("`status` = ?", 1). // Only active subscriptions
+			Where("TIMESTAMPDIFF(MONTH, DATE(expire_time), CURDATE())")
 
 		if isLastDayOfMonth {
 			// Last day of month: handle subscription start dates >= today
-			query = query.Where("DAY(start_time) >= ?", now.Day())
+			query = query.Where("DAY(`expire_time`) >= ?", now.Day())
 		} else {
 			// Normal case: exact day match
-			query = query.Where("DAY(start_time) = ?", now.Day())
+			query = query.Where("DAY(`expire_time`) = ?", now.Day())
 		}
 
 		err = query.Find(&monthlyResetUsers).Error
@@ -362,29 +360,20 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 		// Query users for yearly reset based on subscription start date anniversary
 		var usersYearReset []int64
 
-		// Check if today is the last day of current month
-		nextMonth := now.AddDate(0, 1, 0)
-		isLastDayOfMonth := nextMonth.Month() != now.Month()
-
 		// Check if today is February 28th (handle leap year case)
 		isLeapYearCase := now.Month() == 2 && now.Day() == 28
 
 		query := db.Model(&user.Subscribe{}).Select("`id`").
 			Where("`subscribe_id` IN ?", resetYearSubIds).
-			Where("MONTH(start_time) = ?", now.Month()).                    // Same month
-			Where("`status` = ?", 1).                                       // Only active subscriptions
-			Where("TIMESTAMPDIFF(YEAR, DATE(start_time), CURDATE()) >= 1"). // At least 1 year passed
-			Where("DATE(start_time) < CURDATE()")                           // Only reset subscriptions that have started
-
+			Where("MONTH(expire_time) = ?", now.Month()).                  // Same month
+			Where("`status` = ?", 1).                                      // Only active subscriptions
+			Where("TIMESTAMPDIFF(YEAR, CURDATE(),DATE(expire_time)) >= 1") // At least 1 year passed
 		if isLeapYearCase {
 			// February 28th: handle both Feb 28 and Feb 29 subscriptions
-			query = query.Where("DAY(start_time) IN (28, 29)")
-		} else if isLastDayOfMonth {
-			// Last day of month: handle subscription start dates >= today
-			query = query.Where("DAY(start_time) >= ?", now.Day())
+			query = query.Where("DAY(expire_time) IN (28, 29)")
 		} else {
 			// Normal case: exact day match
-			query = query.Where("DAY(start_time) = ?", now.Day())
+			query = query.Where("DAY(expire_time) = ?", now.Day())
 		}
 
 		err = query.Find(&usersYearReset).Error
