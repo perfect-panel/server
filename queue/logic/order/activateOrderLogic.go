@@ -500,7 +500,7 @@ func (l *ActivateOrderLogic) updateSubscriptionForRenewal(ctx context.Context, u
 	}
 
 	if userSub.FinishedAt != nil {
-		if userSub.FinishedAt.Before(now) {
+		if userSub.FinishedAt.Before(now) && today > resetDay {
 			// reset user traffic if finished at is before now
 			userSub.Download = 0
 			userSub.Upload = 0
