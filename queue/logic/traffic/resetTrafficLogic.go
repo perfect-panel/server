@@ -213,8 +213,8 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 
 		query := db.Model(&user.Subscribe{}).Select("`id`").
 			Where("`subscribe_id` IN ?", resetMonthSubIds).
-			Where("`status` = ?", 1). // Only active subscriptions
-			Where("TIMESTAMPDIFF(MONTH, DATE(expire_time), CURDATE())")
+			Where("`status` IN ?", []int64{1, 2}).                          // Only active subscriptions
+			Where("TIMESTAMPDIFF(MONTH, CURDATE(),DATE(expire_time)) >= 1") // At least 1 month passed
 
 		if isLastDayOfMonth {
 			// Last day of month: handle subscription start dates >= today
@@ -298,7 +298,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 		var users1stReset []int64
 		err = db.Model(&user.Subscribe{}).Select("`id`").
 			Where("`subscribe_id` IN ?", reset1stSubIds).
-			Where("`status` = ?", 1). // Only active subscriptions
+			Where("`status` IN ?", []int64{1, 2}). // Only active subscriptions
 			Find(&users1stReset).Error
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query 1st reset users", logger.Field("error", err.Error()))
@@ -366,7 +366,7 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 		query := db.Model(&user.Subscribe{}).Select("`id`").
 			Where("`subscribe_id` IN ?", resetYearSubIds).
 			Where("MONTH(expire_time) = ?", now.Month()).                  // Same month
-			Where("`status` = ?", 1).                                      // Only active subscriptions
+			Where("`status` IN ?", []int64{1, 2}).                         // Only active subscriptions
 			Where("TIMESTAMPDIFF(YEAR, CURDATE(),DATE(expire_time)) >= 1") // At least 1 year passed
 		if isLeapYearCase {
 			// February 28th: handle both Feb 28 and Feb 29 subscriptions
