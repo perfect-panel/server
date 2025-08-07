@@ -255,6 +255,26 @@ type BatchDeleteUserRequest struct {
 	Ids []int64 `json:"ids" validate:"required"`
 }
 
+type BatchSendEmailTask struct {
+	Id                int64  `json:"id"`
+	Subject           string `json:"subject"`
+	Content           string `json:"content"`
+	Recipients        string `json:"recipients"`
+	Scope             string `json:"scope"`
+	RegisterStartTime int64  `json:"register_start_time"`
+	RegisterEndTime   int64  `json:"register_end_time"`
+	Additional        string `json:"additional"`
+	Scheduled         int64  `json:"scheduled"`
+	Interval          uint8  `json:"interval"`
+	Limit             uint64 `json:"limit"`
+	Status            uint8  `json:"status"`
+	Errors            string `json:"errors"`
+	Total             uint64 `json:"total"`
+	Current           uint64 `json:"current"`
+	CreatedAt         int64  `json:"created_at"`
+	UpdatedAt         int64  `json:"updated_at"`
+}
+
 type BindOAuthCallbackRequest struct {
 	Method   string      `json:"method"`
 	Callback interface{} `json:"callback"`
@@ -370,6 +390,18 @@ type CreateApplicationVersionRequest struct {
 	Platform      string `json:"platform" validate:"required,oneof=windows mac linux android ios harmony"`
 	IsDefault     bool   `json:"is_default"`
 	ApplicationId int64  `json:"application_id" validate:"required"`
+}
+
+type CreateBatchSendEmailTaskRequest struct {
+	Subject           string `json:"subject"`
+	Content           string `json:"content"`
+	Scope             string `json:"scope"`
+	RegisterStartTime int64  `json:"register_start_time,omitempty"`
+	RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+	Additional        string `json:"additional,omitempty"`
+	Scheduled         int64  `json:"scheduled,omitempty"`
+	Interval          uint8  `json:"interval,omitempty"`
+	Limit             uint64 `json:"limit,omitempty"`
 }
 
 type CreateCouponRequest struct {
@@ -706,6 +738,29 @@ type GetAvailablePaymentMethodsResponse struct {
 	List []PaymentMethod `json:"list"`
 }
 
+type GetBatchSendEmailTaskListRequest struct {
+	Page   int    `form:"page"`
+	Size   int    `form:"size"`
+	Scope  string `form:"scope,omitempty"`
+	Status *uint8 `form:"status,omitempty"`
+}
+
+type GetBatchSendEmailTaskListResponse struct {
+	Total int64                `json:"total"`
+	List  []BatchSendEmailTask `json:"list"`
+}
+
+type GetBatchSendEmailTaskStatusRequest struct {
+	Id int64 `json:"id"`
+}
+
+type GetBatchSendEmailTaskStatusResponse struct {
+	Status  uint8  `json:"status"`
+	Current int64  `json:"current"`
+	Total   int64  `json:"total"`
+	Errors  string `json:"errors"`
+}
+
 type GetCouponListRequest struct {
 	Page      int64  `form:"page" validate:"required"`
 	Size      int64  `form:"size" validate:"required"`
@@ -835,6 +890,16 @@ type GetPaymentMethodListRequest struct {
 type GetPaymentMethodListResponse struct {
 	Total int64                 `json:"total"`
 	List  []PaymentMethodDetail `json:"list"`
+}
+
+type GetPreSendEmailCountRequest struct {
+	Scope             string `json:"scope"`
+	RegisterStartTime int64  `json:"register_start_time,omitempty"`
+	RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+}
+
+type GetPreSendEmailCountResponse struct {
+	Count int64 `json:"count"`
 }
 
 type GetRuleGroupResponse struct {
@@ -1632,6 +1697,10 @@ type SiteCustomDataContacts struct {
 type SortItem struct {
 	Id   int64 `json:"id" validate:"required"`
 	Sort int64 `json:"sort" validate:"required"`
+}
+
+type StopBatchSendEmailTaskRequest struct {
+	Id int64 `json:"id"`
 }
 
 type StripePayment struct {

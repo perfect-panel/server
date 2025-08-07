@@ -36,4 +36,7 @@ func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
 
 	// Schedule reset traffic
 	mux.Handle(types.SchedulerResetTraffic, traffic.NewResetTrafficLogic(serverCtx))
+
+	// ScheduledBatchSendEmail
+	mux.Handle(types.ScheduledBatchSendEmail, emailLogic.NewBatchEmailLogic(serverCtx))
 }

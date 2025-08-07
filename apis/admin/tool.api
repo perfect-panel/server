@@ -14,7 +14,6 @@ type (
 	LogResponse {
 		List interface{} `json:"list"`
 	}
-
 	VersionResponse {
 		Version string `json:"version"`
 	}

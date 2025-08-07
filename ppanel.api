@@ -27,6 +27,7 @@ import (
 	"apis/admin/console.api"
 	"apis/admin/log.api"
 	"apis/admin/ads.api"
+	"apis/admin/marketing.api"
 	"apis/public/user.api"
 	"apis/public/subscribe.api"
 	"apis/public/order.api"

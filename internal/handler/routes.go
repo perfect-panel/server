@@ -12,6 +12,7 @@ import (
 	adminCoupon "github.com/perfect-panel/server/internal/handler/admin/coupon"
 	adminDocument "github.com/perfect-panel/server/internal/handler/admin/document"
 	adminLog "github.com/perfect-panel/server/internal/handler/admin/log"
+	adminMarketing "github.com/perfect-panel/server/internal/handler/admin/marketing"
 	adminOrder "github.com/perfect-panel/server/internal/handler/admin/order"
 	adminPayment "github.com/perfect-panel/server/internal/handler/admin/payment"
 	adminServer "github.com/perfect-panel/server/internal/handler/admin/server"
@@ -178,6 +179,26 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	{
 		// Get message log list
 		adminLogGroupRouter.GET("/message/list", adminLog.GetMessageLogListHandler(serverCtx))
+	}
+
+	adminMarketingGroupRouter := router.Group("/v1/admin/marketing")
+	adminMarketingGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Get batch send email task list
+		adminMarketingGroupRouter.GET("/email/batch/list", adminMarketing.GetBatchSendEmailTaskListHandler(serverCtx))
+
+		// Get pre-send email count
+		adminMarketingGroupRouter.POST("/email/batch/pre-send-count", adminMarketing.GetPreSendEmailCountHandler(serverCtx))
+
+		// Create a batch send email task
+		adminMarketingGroupRouter.POST("/email/batch/send", adminMarketing.CreateBatchSendEmailTaskHandler(serverCtx))
+
+		// Get batch send email task status
+		adminMarketingGroupRouter.POST("/email/batch/status", adminMarketing.GetBatchSendEmailTaskStatusHandler(serverCtx))
+
+		// Stop a batch send email task
+		adminMarketingGroupRouter.POST("/email/batch/stop", adminMarketing.StopBatchSendEmailTaskHandler(serverCtx))
 	}
 
 	adminOrderGroupRouter := router.Group("/v1/admin/order")

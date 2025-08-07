@@ -515,7 +515,7 @@ type (
 		Id        int64    `json:"id"`
 		Icon      string   `json:"icon"`
 		Name      string   `json:"name" validate:"required"`
-		Type 	  string   `json:"type"`
+		Type      string   `json:"type"`
 		Tags      []string `json:"tags"`
 		Rules     string   `json:"rules"`
 		Enable    bool     `json:"enable"`
