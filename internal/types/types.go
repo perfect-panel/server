@@ -1782,6 +1782,8 @@ type SubscribeConfig struct {
 	SubscribePath   string `json:"subscribe_path"`
 	SubscribeDomain string `json:"subscribe_domain"`
 	PanDomain       bool   `json:"pan_domain"`
+	UserAgentLimit  bool   `json:"user_agent_limit"`
+	UserAgentList   string `json:"user_agent_list"`
 }
 
 type SubscribeDiscount struct {
