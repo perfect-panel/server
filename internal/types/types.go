@@ -488,15 +488,15 @@ type CreateRuleGroupRequest struct {
 }
 
 type CreateSubscribeApplicationRequest struct {
-	Name              string `json:"name"`
-	Description       string `json:"description,omitempty"`
-	Icon              string `json:"icon,omitempty"`
-	UserAgent         string `json:"user_agent"`
-	IsDefault         bool   `json:"is_default"`
-	ProxyTemplate     string `json:"proxy_template"`
-	SubscribeTemplate string `json:"template"`
-	OutputFormat      string `json:"output_format"`
-	DownloadLink      string `json:"download_link,omitempty"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description,omitempty"`
+	Icon              string       `json:"icon,omitempty"`
+	UserAgent         string       `json:"user_agent"`
+	IsDefault         bool         `json:"is_default"`
+	ProxyTemplate     string       `json:"proxy_template"`
+	SubscribeTemplate string       `json:"template"`
+	OutputFormat      string       `json:"output_format"`
+	DownloadLink      DownloadLink `json:"download_link"`
 }
 
 type CreateSubscribeGroupRequest struct {
@@ -663,6 +663,15 @@ type Document struct {
 	Show      bool     `json:"show"`
 	CreatedAt int64    `json:"created_at"`
 	UpdatedAt int64    `json:"updated_at"`
+}
+
+type DownloadLink struct {
+	IOS     string `json:"ios,omitempty"`
+	Android string `json:"android,omitempty"`
+	Windows string `json:"windows,omitempty"`
+	Mac     string `json:"mac,omitempty"`
+	Linux   string `json:"linux,omitempty"`
+	Harmony string `json:"harmony,omitempty"`
 }
 
 type EPayNotifyRequest struct {
@@ -1763,18 +1772,18 @@ type Subscribe struct {
 }
 
 type SubscribeApplication struct {
-	Id                int64  `json:"id"`
-	Name              string `json:"name"`
-	Description       string `json:"description,omitempty"`
-	Icon              string `json:"icon,omitempty"`
-	UserAgent         string `json:"user_agent"`
-	IsDefault         bool   `json:"is_default"`
-	ProxyTemplate     string `json:"proxy_template"`
-	SubscribeTemplate string `json:"template"`
-	OutputFormat      string `json:"output_format"`
-	DownloadLink      string `json:"download_link,omitempty"`
-	CreatedAt         int64  `json:"created_at"`
-	UpdatedAt         int64  `json:"updated_at"`
+	Id                int64        `json:"id"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description,omitempty"`
+	Icon              string       `json:"icon,omitempty"`
+	UserAgent         string       `json:"user_agent"`
+	IsDefault         bool         `json:"is_default"`
+	ProxyTemplate     string       `json:"proxy_template"`
+	SubscribeTemplate string       `json:"template"`
+	OutputFormat      string       `json:"output_format"`
+	DownloadLink      DownloadLink `json:"download_link,omitempty"`
+	CreatedAt         int64        `json:"created_at"`
+	UpdatedAt         int64        `json:"updated_at"`
 }
 
 type SubscribeConfig struct {
@@ -2087,16 +2096,16 @@ type UpdateRuleGroupRequest struct {
 }
 
 type UpdateSubscribeApplicationRequest struct {
-	Id                int64  `json:"id"`
-	Name              string `json:"name"`
-	Description       string `json:"description,omitempty"`
-	Icon              string `json:"icon,omitempty"`
-	UserAgent         string `json:"user_agent"`
-	IsDefault         bool   `json:"is_default"`
-	ProxyTemplate     string `json:"proxy_template"`
-	SubscribeTemplate string `json:"template"`
-	OutputFormat      string `json:"output_format"`
-	DownloadLink      string `json:"download_link,omitempty"`
+	Id                int64        `json:"id"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description,omitempty"`
+	Icon              string       `json:"icon,omitempty"`
+	UserAgent         string       `json:"user_agent"`
+	IsDefault         bool         `json:"is_default"`
+	ProxyTemplate     string       `json:"proxy_template"`
+	SubscribeTemplate string       `json:"template"`
+	OutputFormat      string       `json:"output_format"`
+	DownloadLink      DownloadLink `json:"download_link,omitempty"`
 }
 
 type UpdateSubscribeGroupRequest struct {
