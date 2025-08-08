@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	adminAds "github.com/perfect-panel/server/internal/handler/admin/ads"
 	adminAnnouncement "github.com/perfect-panel/server/internal/handler/admin/announcement"
+	adminApplication "github.com/perfect-panel/server/internal/handler/admin/application"
 	adminAuthMethod "github.com/perfect-panel/server/internal/handler/admin/authMethod"
 	adminConsole "github.com/perfect-panel/server/internal/handler/admin/console"
 	adminCoupon "github.com/perfect-panel/server/internal/handler/admin/coupon"
@@ -85,6 +86,23 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get announcement list
 		adminAnnouncementGroupRouter.GET("/list", adminAnnouncement.GetAnnouncementListHandler(serverCtx))
+	}
+
+	adminApplicationGroupRouter := router.Group("/v1/admin/application")
+	adminApplicationGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Create subscribe application
+		adminApplicationGroupRouter.POST("/", adminApplication.CreateSubscribeApplicationHandler(serverCtx))
+
+		// Update subscribe application
+		adminApplicationGroupRouter.PUT("/subscribe_application", adminApplication.UpdateSubscribeApplicationHandler(serverCtx))
+
+		// Delete subscribe application
+		adminApplicationGroupRouter.DELETE("/subscribe_application", adminApplication.DeleteSubscribeApplicationHandler(serverCtx))
+
+		// Get subscribe application list
+		adminApplicationGroupRouter.GET("/subscribe_application_list", adminApplication.GetSubscribeApplicationListHandler(serverCtx))
 	}
 
 	adminAuthMethodGroupRouter := router.Group("/v1/admin/auth-method")

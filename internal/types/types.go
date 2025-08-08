@@ -487,6 +487,18 @@ type CreateRuleGroupRequest struct {
 	Enable  bool     `json:"enable"`
 }
 
+type CreateSubscribeApplicationRequest struct {
+	Name              string `json:"name"`
+	Description       string `json:"description,omitempty"`
+	Icon              string `json:"icon,omitempty"`
+	UserAgent         string `json:"user_agent"`
+	IsDefault         bool   `json:"is_default"`
+	ProxyTemplate     string `json:"proxy_template"`
+	SubscribeTemplate string `json:"template"`
+	OutputFormat      string `json:"output_format"`
+	DownloadLink      string `json:"download_link,omitempty"`
+}
+
 type CreateSubscribeGroupRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
@@ -616,6 +628,10 @@ type DeletePaymentMethodRequest struct {
 
 type DeleteRuleGroupRequest struct {
 	Id int64 `json:"id" validate:"required"`
+}
+
+type DeleteSubscribeApplicationRequest struct {
+	Id int64 `json:"id"`
 }
 
 type DeleteSubscribeGroupRequest struct {
@@ -930,6 +946,16 @@ type GetStatResponse struct {
 	Node     int64    `json:"node"`
 	Country  int64    `json:"country"`
 	Protocol []string `json:"protocol"`
+}
+
+type GetSubscribeApplicationListRequest struct {
+	Page int `form:"page"`
+	Size int `form:"size"`
+}
+
+type GetSubscribeApplicationListResponse struct {
+	Total int64                  `json:"total"`
+	List  []SubscribeApplication `json:"list"`
 }
 
 type GetSubscribeDetailsRequest struct {
@@ -1736,6 +1762,21 @@ type Subscribe struct {
 	UpdatedAt      int64               `json:"updated_at"`
 }
 
+type SubscribeApplication struct {
+	Id                int64  `json:"id"`
+	Name              string `json:"name"`
+	Description       string `json:"description,omitempty"`
+	Icon              string `json:"icon,omitempty"`
+	UserAgent         string `json:"user_agent"`
+	IsDefault         bool   `json:"is_default"`
+	ProxyTemplate     string `json:"proxy_template"`
+	SubscribeTemplate string `json:"template"`
+	OutputFormat      string `json:"output_format"`
+	DownloadLink      string `json:"download_link,omitempty"`
+	CreatedAt         int64  `json:"created_at"`
+	UpdatedAt         int64  `json:"updated_at"`
+}
+
 type SubscribeConfig struct {
 	SingleModel     bool   `json:"single_model"`
 	SubscribePath   string `json:"subscribe_path"`
@@ -2041,6 +2082,19 @@ type UpdateRuleGroupRequest struct {
 	Rules   string   `json:"rules"`
 	Default bool     `json:"default"`
 	Enable  bool     `json:"enable"`
+}
+
+type UpdateSubscribeApplicationRequest struct {
+	Id                int64  `json:"id"`
+	Name              string `json:"name"`
+	Description       string `json:"description,omitempty"`
+	Icon              string `json:"icon,omitempty"`
+	UserAgent         string `json:"user_agent"`
+	IsDefault         bool   `json:"is_default"`
+	ProxyTemplate     string `json:"proxy_template"`
+	SubscribeTemplate string `json:"template"`
+	OutputFormat      string `json:"output_format"`
+	DownloadLink      string `json:"download_link,omitempty"`
 }
 
 type UpdateSubscribeGroupRequest struct {
