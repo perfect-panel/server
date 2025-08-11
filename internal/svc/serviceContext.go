@@ -3,6 +3,7 @@ package svc
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/client"
 	"github.com/perfect-panel/server/pkg/device"
 
 	"github.com/perfect-panel/server/internal/model/ads"
@@ -34,27 +35,29 @@ import (
 )
 
 type ServiceContext struct {
-	DB                    *gorm.DB
-	Redis                 *redis.Client
-	Config                config.Config
-	Queue                 *asynq.Client
-	NodeCache             *cache.NodeCacheClient
-	AuthModel             auth.Model
-	AdsModel              ads.Model
-	LogModel              log.Model
-	UserModel             user.Model
-	OrderModel            order.Model
-	TicketModel           ticket.Model
-	ServerModel           server.Model
-	SystemModel           system.Model
-	CouponModel           coupon.Model
-	PaymentModel          payment.Model
-	DocumentModel         document.Model
-	SubscribeModel        subscribe.Model
-	TrafficLogModel       traffic.Model
-	ApplicationModel      application.Model
-	AnnouncementModel     announcement.Model
-	SubscribeTypeModel    subscribeType.Model
+	DB                 *gorm.DB
+	Redis              *redis.Client
+	Config             config.Config
+	Queue              *asynq.Client
+	NodeCache          *cache.NodeCacheClient
+	AuthModel          auth.Model
+	AdsModel           ads.Model
+	LogModel           log.Model
+	UserModel          user.Model
+	OrderModel         order.Model
+	ClientModel        client.Model
+	TicketModel        ticket.Model
+	ServerModel        server.Model
+	SystemModel        system.Model
+	CouponModel        coupon.Model
+	PaymentModel       payment.Model
+	DocumentModel      document.Model
+	SubscribeModel     subscribe.Model
+	TrafficLogModel    traffic.Model
+	ApplicationModel   application.Model
+	AnnouncementModel  announcement.Model
+	SubscribeTypeModel subscribeType.Model
+
 	Restart               func() error
 	TelegramBot           *tgbotapi.BotAPI
 	NodeMultiplierManager *nodeMultiplier.Manager
@@ -94,6 +97,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		AuthModel:         auth.NewModel(db, rds),
 		UserModel:         user.NewModel(db, rds),
 		OrderModel:        order.NewModel(db, rds),
+		ClientModel:       client.NewSubscribeApplicationModel(db),
 		TicketModel:       ticket.NewModel(db, rds),
 		ServerModel:       server.NewModel(db, rds),
 		SystemModel:       system.NewModel(db, rds),

@@ -491,6 +491,7 @@ type CreateSubscribeApplicationRequest struct {
 	Name              string       `json:"name"`
 	Description       string       `json:"description,omitempty"`
 	Icon              string       `json:"icon,omitempty"`
+	Scheme            string       `json:"scheme,omitempty"`
 	UserAgent         string       `json:"user_agent"`
 	IsDefault         bool         `json:"is_default"`
 	ProxyTemplate     string       `json:"proxy_template"`
@@ -1776,6 +1777,7 @@ type SubscribeApplication struct {
 	Name              string       `json:"name"`
 	Description       string       `json:"description,omitempty"`
 	Icon              string       `json:"icon,omitempty"`
+	Scheme            string       `json:"scheme,omitempty"`
 	UserAgent         string       `json:"user_agent"`
 	IsDefault         bool         `json:"is_default"`
 	ProxyTemplate     string       `json:"proxy_template"`
@@ -2100,6 +2102,7 @@ type UpdateSubscribeApplicationRequest struct {
 	Name              string       `json:"name"`
 	Description       string       `json:"description,omitempty"`
 	Icon              string       `json:"icon,omitempty"`
+	Scheme            string       `json:"scheme,omitempty"`
 	UserAgent         string       `json:"user_agent"`
 	IsDefault         bool         `json:"is_default"`
 	ProxyTemplate     string       `json:"proxy_template"`
