@@ -42,7 +42,6 @@ func (l *CreateSubscribeApplicationLogic) CreateSubscribeApplication(req *types.
 		Scheme:            req.Scheme,
 		UserAgent:         req.UserAgent,
 		IsDefault:         req.IsDefault,
-		ProxyTemplate:     req.ProxyTemplate,
 		SubscribeTemplate: req.SubscribeTemplate,
 		OutputFormat:      req.OutputFormat,
 		DownloadLink:      string(linkData),

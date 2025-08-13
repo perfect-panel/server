@@ -755,6 +755,5 @@ type (
 		CreatedAt    int64    `json:"created_at"`
 		Download     int64    `json:"download"`
 	}
-
 )
 

@@ -13,7 +13,6 @@ type SubscribeApplication struct {
 	Scheme            string    `gorm:"type:varchar(255);default:'';not null;comment:Scheme"`
 	UserAgent         string    `gorm:"type:varchar(255);default:'';not null;comment:User Agent"`
 	IsDefault         bool      `gorm:"type:tinyint(1);not null;default:0;comment:Is Default Application"`
-	ProxyTemplate     string    `gorm:"type:MEDIUMTEXT;default:null;comment:Proxy Template"`
 	SubscribeTemplate string    `gorm:"type:MEDIUMTEXT;default:null;comment:Subscribe Template"`
 	OutputFormat      string    `gorm:"type:varchar(50);default:'yaml';not null;comment:Output Format"`
 	DownloadLink      string    `gorm:"type:text;not null;comment:Download Link"`

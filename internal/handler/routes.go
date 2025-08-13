@@ -95,6 +95,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Create subscribe application
 		adminApplicationGroupRouter.POST("/", adminApplication.CreateSubscribeApplicationHandler(serverCtx))
 
+		// Preview Template
+		adminApplicationGroupRouter.GET("/preview", adminApplication.PreviewSubscribeTemplateHandler(serverCtx))
+
 		// Update subscribe application
 		adminApplicationGroupRouter.PUT("/subscribe_application", adminApplication.UpdateSubscribeApplicationHandler(serverCtx))
 
@@ -761,6 +764,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Check verification code
 		commonGroupRouter.POST("/check_verification_code", common.CheckVerificationCodeHandler(serverCtx))
+
+		// Get Client
+		commonGroupRouter.GET("/client", common.GetClientHandler(serverCtx))
 
 		// Get verification code
 		commonGroupRouter.POST("/send_code", common.SendEmailCodeHandler(serverCtx))

@@ -47,7 +47,6 @@ func (l *UpdateSubscribeApplicationLogic) UpdateSubscribeApplication(req *types.
 	data.Scheme = req.Scheme
 	data.UserAgent = req.UserAgent
 	data.IsDefault = req.IsDefault
-	data.ProxyTemplate = req.ProxyTemplate
 	data.SubscribeTemplate = req.SubscribeTemplate
 	data.OutputFormat = req.OutputFormat
 	data.DownloadLink = string(linkData)

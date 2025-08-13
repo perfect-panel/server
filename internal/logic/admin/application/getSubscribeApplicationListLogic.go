@@ -46,7 +46,6 @@ func (l *GetSubscribeApplicationListLogic) GetSubscribeApplicationList(req *type
 			Scheme:            item.Scheme,
 			UserAgent:         item.UserAgent,
 			IsDefault:         item.IsDefault,
-			ProxyTemplate:     item.ProxyTemplate,
 			SubscribeTemplate: item.SubscribeTemplate,
 			OutputFormat:      item.OutputFormat,
 			DownloadLink:      temp,

@@ -494,7 +494,6 @@ type CreateSubscribeApplicationRequest struct {
 	Scheme            string       `json:"scheme,omitempty"`
 	UserAgent         string       `json:"user_agent"`
 	IsDefault         bool         `json:"is_default"`
-	ProxyTemplate     string       `json:"proxy_template"`
 	SubscribeTemplate string       `json:"template"`
 	OutputFormat      string       `json:"output_format"`
 	DownloadLink      DownloadLink `json:"download_link"`
@@ -968,6 +967,11 @@ type GetSubscribeApplicationListResponse struct {
 	List  []SubscribeApplication `json:"list"`
 }
 
+type GetSubscribeClientResponse struct {
+	Total int64             `json:"total"`
+	List  []SubscribeClient `json:"list"`
+}
+
 type GetSubscribeDetailsRequest struct {
 	Id int64 `form:"id" validate:"required"`
 }
@@ -1386,6 +1390,10 @@ type PreUnsubscribeResponse struct {
 	DeductionAmount int64 `json:"deduction_amount"`
 }
 
+type PreviewSubscribeTemplateRequest struct {
+	Id int64 `form:"id"`
+}
+
 type PrivacyPolicyConfig struct {
 	PrivacyPolicy string `json:"privacy_policy"`
 }
@@ -1780,12 +1788,21 @@ type SubscribeApplication struct {
 	Scheme            string       `json:"scheme,omitempty"`
 	UserAgent         string       `json:"user_agent"`
 	IsDefault         bool         `json:"is_default"`
-	ProxyTemplate     string       `json:"proxy_template"`
 	SubscribeTemplate string       `json:"template"`
 	OutputFormat      string       `json:"output_format"`
 	DownloadLink      DownloadLink `json:"download_link,omitempty"`
 	CreatedAt         int64        `json:"created_at"`
 	UpdatedAt         int64        `json:"updated_at"`
+}
+
+type SubscribeClient struct {
+	Id           int64        `json:"id"`
+	Name         string       `json:"name"`
+	Description  string       `json:"description,omitempty"`
+	Icon         string       `json:"icon,omitempty"`
+	Scheme       string       `json:"scheme,omitempty"`
+	IsDefault    bool         `json:"is_default"`
+	DownloadLink DownloadLink `json:"download_link,omitempty"`
 }
 
 type SubscribeConfig struct {

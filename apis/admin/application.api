@@ -11,33 +11,24 @@ info (
 import "../types.api"
 
 type (
-    DownloadLink {
-        IOS     string `json:"ios,omitempty"`
-        Android string `json:"android,omitempty"`
-        Windows string `json:"windows,omitempty"`
-        Mac     string `json:"mac,omitempty"`
-        Linux   string `json:"linux,omitempty"`
-        Harmony string `json:"harmony,omitempty"`
-    }
-    SubscribeApplication {
-        Id                int64        `json:"id"`
-        Name              string       `json:"name"`
-        Description       string       `json:"description,omitempty"`
-        Icon              string       `json:"icon,omitempty"`
-        Scheme            string       `json:"scheme,omitempty"`
-        UserAgent         string       `json:"user_agent"`
-        IsDefault         bool         `json:"is_default"`
-        ProxyTemplate     string       `json:"proxy_template"`
-        SubscribeTemplate string       `json:"template"`
-        OutputFormat      string       `json:"output_format"`
-        DownloadLink      DownloadLink `json:"download_link,omitempty"`
-        CreatedAt         int64        `json:"created_at"`
-        UpdatedAt         int64        `json:"updated_at"`
-    }
-    GetSubscribeApplicationListResponse {
-        Total int64                  `json:"total"`
-        List  []SubscribeApplication `json:"list"`
-    }
+	SubscribeApplication {
+		Id                int64        `json:"id"`
+		Name              string       `json:"name"`
+		Description       string       `json:"description,omitempty"`
+		Icon              string       `json:"icon,omitempty"`
+		Scheme            string       `json:"scheme,omitempty"`
+		UserAgent         string       `json:"user_agent"`
+		IsDefault         bool         `json:"is_default"`
+		SubscribeTemplate string       `json:"template"`
+		OutputFormat      string       `json:"output_format"`
+		DownloadLink      DownloadLink `json:"download_link,omitempty"`
+		CreatedAt         int64        `json:"created_at"`
+		UpdatedAt         int64        `json:"updated_at"`
+	}
+	GetSubscribeApplicationListResponse {
+		Total int64                  `json:"total"`
+		List  []SubscribeApplication `json:"list"`
+	}
 	CreateSubscribeApplicationRequest {
 		Name              string       `json:"name"`
 		Description       string       `json:"description,omitempty"`
@@ -69,6 +60,9 @@ type (
 		Page int `form:"page"`
 		Size int `form:"size"`
 	}
+	PreviewSubscribeTemplateRequest {
+		Id int64 `form:"id"`
+	}
 )
 
 @server (
@@ -92,5 +86,9 @@ service ppanel {
 	@doc "Delete subscribe application"
 	@handler DeleteSubscribeApplication
 	delete /subscribe_application (DeleteSubscribeApplicationRequest)
+
+	@doc "Preview Template"
+	@handler PreviewSubscribeTemplate
+	get /preview (PreviewSubscribeTemplateRequest) returns (string)
 }
 
