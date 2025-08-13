@@ -120,5 +120,9 @@ service ppanel {
 	@doc "Check verification code"
 	@handler CheckVerificationCode
 	post /check_verification_code (CheckVerificationCodeRequest) returns (CheckVerificationCodeRespone)
+
+	@doc "Get Client"
+	@handler GetClient
+	get /client returns (GetSubscribeApplicationListResponse)
 }
 
