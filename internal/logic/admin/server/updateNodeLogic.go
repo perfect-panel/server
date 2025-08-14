@@ -133,6 +133,7 @@ func (l *UpdateNodeLogic) UpdateNode(req *types.UpdateNodeRequest) error {
 		}
 		l.Infow("[GetNodeCountry]: Enqueue Success", logger.Field("taskID", taskInfo.ID), logger.Field("payload", string(payload)))
 	}
+
 	l.svcCtx.DeviceManager.Broadcast(device.SubscribeUpdate)
 	return nil
 }
