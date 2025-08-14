@@ -2126,7 +2126,6 @@ type UpdateSubscribeApplicationRequest struct {
 	Scheme            string       `json:"scheme,omitempty"`
 	UserAgent         string       `json:"user_agent"`
 	IsDefault         bool         `json:"is_default"`
-	ProxyTemplate     string       `json:"proxy_template"`
 	SubscribeTemplate string       `json:"template"`
 	OutputFormat      string       `json:"output_format"`
 	DownloadLink      DownloadLink `json:"download_link,omitempty"`
