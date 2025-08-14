@@ -1394,6 +1394,10 @@ type PreviewSubscribeTemplateRequest struct {
 	Id int64 `form:"id"`
 }
 
+type PreviewSubscribeTemplateResponse struct {
+	Template string `json:"template"` // 预览的模板内容
+}
+
 type PrivacyPolicyConfig struct {
 	PrivacyPolicy string `json:"privacy_policy"`
 }

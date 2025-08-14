@@ -27,17 +27,17 @@ func NewPreviewSubscribeTemplateLogic(ctx context.Context, svcCtx *svc.ServiceCo
 	}
 }
 
-func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.PreviewSubscribeTemplateRequest) (resp string, err error) {
+func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.PreviewSubscribeTemplateRequest) (resp *types.PreviewSubscribeTemplateResponse, err error) {
 	servers, err := l.svcCtx.ServerModel.FindAllServer(l.ctx)
 	if err != nil {
 		l.Errorf("[PreviewSubscribeTemplateLogic] FindAllServer error: %v", err.Error())
-		return "", errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindAllServer error: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindAllServer error: %v", err.Error())
 	}
 
 	data, err := l.svcCtx.ClientModel.FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("[PreviewSubscribeTemplateLogic] FindOne error: %v", err.Error())
-		return "", errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneClient error: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneClient error: %v", err.Error())
 	}
 
 	sub := adapter.NewAdapter(data.SubscribeTemplate, adapter.WithServers(servers),
@@ -56,12 +56,14 @@ func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.Prev
 	a, err := sub.Client()
 	if err != nil {
 		l.Errorf("[PreviewSubscribeTemplateLogic] Client error: %v", err.Error())
-		return "", errors.Wrapf(xerr.NewErrMsg(err.Error()), "Client error: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrMsg(err.Error()), "Client error: %v", err.Error())
 	}
 	bytes, err := a.Build()
 	if err != nil {
 		l.Errorf("[PreviewSubscribeTemplateLogic] Build error: %v", err.Error())
-		return "", errors.Wrapf(xerr.NewErrMsg(err.Error()), "Build error: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrMsg(err.Error()), "Build error: %v", err.Error())
 	}
-	return string(bytes), nil
+	return &types.PreviewSubscribeTemplateResponse{
+		Template: string(bytes),
+	}, nil
 }

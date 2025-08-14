@@ -63,6 +63,9 @@ type (
 	PreviewSubscribeTemplateRequest {
 		Id int64 `form:"id"`
 	}
+	PreviewSubscribeTemplateResponse {
+		Template string `json:"template"` // 预览的模板内容
+	}
 )
 
 @server (
@@ -89,6 +92,6 @@ service ppanel {
 
 	@doc "Preview Template"
 	@handler PreviewSubscribeTemplate
-	get /preview (PreviewSubscribeTemplateRequest) returns (string)
+	get /preview (PreviewSubscribeTemplateRequest) returns (PreviewSubscribeTemplateResponse)
 }
 
