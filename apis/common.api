@@ -78,6 +78,19 @@ type (
 	CheckVerificationCodeRespone {
 		Status bool `json:"status"`
 	}
+	SubscribeClient {
+		Id           int64        `json:"id"`
+		Name         string       `json:"name"`
+		Description  string       `json:"description,omitempty"`
+		Icon         string       `json:"icon,omitempty"`
+		Scheme       string       `json:"scheme,omitempty"`
+		IsDefault    bool         `json:"is_default"`
+		DownloadLink DownloadLink `json:"download_link,omitempty"`
+	}
+	GetSubscribeClientResponse {
+		Total int64             `json:"total"`
+		List  []SubscribeClient `json:"list"`
+	}
 )
 
 @server (
@@ -120,5 +133,9 @@ service ppanel {
 	@doc "Check verification code"
 	@handler CheckVerificationCode
 	post /check_verification_code (CheckVerificationCodeRequest) returns (CheckVerificationCodeRespone)
+
+	@doc "Get Client"
+	@handler GetClient
+	get /client returns (GetSubscribeClientResponse)
 }
 

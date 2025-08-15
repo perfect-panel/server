@@ -77,5 +77,10 @@ func (l *CreateUserSubscribeLogic) CreateUserSubscribe(req *types.CreateUserSubs
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "UpdateUserCache error: %v", err.Error())
 	}
 
+	err = l.svcCtx.SubscribeModel.ClearCache(l.ctx, userSub.SubscribeId)
+	if err != nil {
+		logger.Errorw("ClearSubscribe error", logger.Field("error", err.Error()))
+	}
+
 	return nil
 }

@@ -69,10 +69,13 @@ func (m *defaultServerModel) getCacheKeys(data *Server) []string {
 	detailsKey := fmt.Sprintf("%s%v", CacheServerDetailPrefix, data.Id)
 	ServerIdKey := fmt.Sprintf("%s%v", cacheServerIdPrefix, data.Id)
 	configIdKey := fmt.Sprintf("%s%v", config.ServerConfigCacheKey, data.Id)
+	userIDKey := fmt.Sprintf("%s%d", config.ServerUserListCacheKey, data.Id)
+
 	cacheKeys := []string{
 		ServerIdKey,
 		detailsKey,
 		configIdKey,
+		userIDKey,
 	}
 	return cacheKeys
 }

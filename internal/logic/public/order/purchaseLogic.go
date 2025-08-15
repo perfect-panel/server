@@ -159,6 +159,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	// Calculate the handling fee
 	if amount > 0 {
 		feeAmount = calculateFee(amount, payment)
+		amount += feeAmount
 	}
 	// query user is new purchase or renewal
 	isNew, err := l.svcCtx.OrderModel.IsUserEligibleForNewOrder(l.ctx, u.Id)

@@ -134,7 +134,6 @@ func RemoveStringElement(arr []string, element ...string) []string {
 	var result []string
 	for _, str := range arr {
 		if !Contains(element, str) {
-			logger.Infof("Remove Element: %s", str)
 			result = append(result, str)
 		}
 	}

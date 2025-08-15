@@ -7,11 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 	adminAds "github.com/perfect-panel/server/internal/handler/admin/ads"
 	adminAnnouncement "github.com/perfect-panel/server/internal/handler/admin/announcement"
+	adminApplication "github.com/perfect-panel/server/internal/handler/admin/application"
 	adminAuthMethod "github.com/perfect-panel/server/internal/handler/admin/authMethod"
 	adminConsole "github.com/perfect-panel/server/internal/handler/admin/console"
 	adminCoupon "github.com/perfect-panel/server/internal/handler/admin/coupon"
 	adminDocument "github.com/perfect-panel/server/internal/handler/admin/document"
 	adminLog "github.com/perfect-panel/server/internal/handler/admin/log"
+	adminMarketing "github.com/perfect-panel/server/internal/handler/admin/marketing"
 	adminOrder "github.com/perfect-panel/server/internal/handler/admin/order"
 	adminPayment "github.com/perfect-panel/server/internal/handler/admin/payment"
 	adminServer "github.com/perfect-panel/server/internal/handler/admin/server"
@@ -84,6 +86,26 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get announcement list
 		adminAnnouncementGroupRouter.GET("/list", adminAnnouncement.GetAnnouncementListHandler(serverCtx))
+	}
+
+	adminApplicationGroupRouter := router.Group("/v1/admin/application")
+	adminApplicationGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Create subscribe application
+		adminApplicationGroupRouter.POST("/", adminApplication.CreateSubscribeApplicationHandler(serverCtx))
+
+		// Preview Template
+		adminApplicationGroupRouter.GET("/preview", adminApplication.PreviewSubscribeTemplateHandler(serverCtx))
+
+		// Update subscribe application
+		adminApplicationGroupRouter.PUT("/subscribe_application", adminApplication.UpdateSubscribeApplicationHandler(serverCtx))
+
+		// Delete subscribe application
+		adminApplicationGroupRouter.DELETE("/subscribe_application", adminApplication.DeleteSubscribeApplicationHandler(serverCtx))
+
+		// Get subscribe application list
+		adminApplicationGroupRouter.GET("/subscribe_application_list", adminApplication.GetSubscribeApplicationListHandler(serverCtx))
 	}
 
 	adminAuthMethodGroupRouter := router.Group("/v1/admin/auth-method")
@@ -178,6 +200,26 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	{
 		// Get message log list
 		adminLogGroupRouter.GET("/message/list", adminLog.GetMessageLogListHandler(serverCtx))
+	}
+
+	adminMarketingGroupRouter := router.Group("/v1/admin/marketing")
+	adminMarketingGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Get batch send email task list
+		adminMarketingGroupRouter.GET("/email/batch/list", adminMarketing.GetBatchSendEmailTaskListHandler(serverCtx))
+
+		// Get pre-send email count
+		adminMarketingGroupRouter.POST("/email/batch/pre-send-count", adminMarketing.GetPreSendEmailCountHandler(serverCtx))
+
+		// Create a batch send email task
+		adminMarketingGroupRouter.POST("/email/batch/send", adminMarketing.CreateBatchSendEmailTaskHandler(serverCtx))
+
+		// Get batch send email task status
+		adminMarketingGroupRouter.POST("/email/batch/status", adminMarketing.GetBatchSendEmailTaskStatusHandler(serverCtx))
+
+		// Stop a batch send email task
+		adminMarketingGroupRouter.POST("/email/batch/stop", adminMarketing.StopBatchSendEmailTaskHandler(serverCtx))
 	}
 
 	adminOrderGroupRouter := router.Group("/v1/admin/order")
@@ -441,6 +483,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Restart System
 		adminToolGroupRouter.GET("/restart", adminTool.RestartSystemHandler(serverCtx))
+
+		// Get Version
+		adminToolGroupRouter.GET("/version", adminTool.GetVersionHandler(serverCtx))
 	}
 
 	adminUserGroupRouter := router.Group("/v1/admin/user")
@@ -719,6 +764,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Check verification code
 		commonGroupRouter.POST("/check_verification_code", common.CheckVerificationCodeHandler(serverCtx))
+
+		// Get Client
+		commonGroupRouter.GET("/client", common.GetClientHandler(serverCtx))
 
 		// Get verification code
 		commonGroupRouter.POST("/send_code", common.SendEmailCodeHandler(serverCtx))

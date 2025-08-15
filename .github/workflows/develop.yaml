@@ -26,7 +26,7 @@ jobs:
 
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }} .
+        run: docker build --build-arg VERSION=${{ env.COMMIT_ID }} -t ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }} .
 
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}
@@ -47,4 +47,4 @@ jobs:
             fi
             
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-            docker run -d --restart=always --log-driver=journald --name ppanel-server-dev -p 8080:8080 -v /www/wwwroot/api/etc:/app/etc --restart=always -d ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}
+            docker run -d --restart=always --log-driver=journald --name ppanel-server-dev -p 8080:8080 -v /www/wwwroot/api/etc:/app/etc -v /www/wwwroot/api/logs:/app/logs --restart=always -d ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}

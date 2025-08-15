@@ -24,5 +24,7 @@ import (
 	"./admin/auth.api"
 	"./admin/log.api"
 	"./admin/ads.api"
+	"./admin/marketing.api"
+	"./admin/application.api"
 )
 

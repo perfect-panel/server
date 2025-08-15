@@ -2,9 +2,6 @@ package user
 
 import (
 	"time"
-
-	"gorm.io/gorm"
-	"gorm.io/plugin/soft_delete"
 )
 
 type User struct {
@@ -28,39 +25,7 @@ type User struct {
 	UpdatedAt             time.Time     `gorm:"comment:Update Time"`
 }
 
-func (User) TableName() string {
-	return "user"
-}
-
-type OldUser struct {
-	Id    int64  `gorm:"primaryKey"`
-	Email string `gorm:"index:idx_email;type:varchar(100);comment:Email"`
-	//Telephone             string                `gorm:"index:idx_telephone;type:varchar(20);default:'';comment:Telephone"`
-	//TelephoneAreaCode     string                `gorm:"index:idx_telephone;type:varchar(20);default:'';comment:TelephoneAreaCode"`
-	Password              string                `gorm:"type:varchar(100);not null;comment:User Password"`
-	Avatar                string                `gorm:"type:varchar(200);default:'';comment:User Avatar"`
-	Balance               int64                 `gorm:"default:0;comment:User Balance"` // User Balance Amount
-	Telegram              int64                 `gorm:"default:null;comment:Telegram Account"`
-	ReferCode             string                `gorm:"type:varchar(20);default:'';comment:Referral Code"`
-	RefererId             int64                 `gorm:"index:idx_referer;comment:Referrer ID"`
-	Commission            int64                 `gorm:"default:0;comment:Commission"` // Commission Amount
-	GiftAmount            int64                 `gorm:"default:0;comment:User Gift Amount"`
-	Enable                *bool                 `gorm:"default:true;not null;comment:Is Account Enabled"`
-	IsAdmin               *bool                 `gorm:"default:false;not null;comment:Is Admin"`
-	ValidEmail            *bool                 `gorm:"default:false;not null;comment:Is Email Verified"`
-	EnableEmailNotify     *bool                 `gorm:"default:false;not null;comment:Enable Email Notifications"`
-	EnableTelegramNotify  *bool                 `gorm:"default:false;not null;comment:Enable Telegram Notifications"`
-	EnableBalanceNotify   *bool                 `gorm:"default:false;not null;comment:Enable Balance Change Notifications"`
-	EnableLoginNotify     *bool                 `gorm:"default:false;not null;comment:Enable Login Notifications"`
-	EnableSubscribeNotify *bool                 `gorm:"default:false;not null;comment:Enable Subscription Notifications"`
-	EnableTradeNotify     *bool                 `gorm:"default:false;not null;comment:Enable Trade Notifications"`
-	CreatedAt             time.Time             `gorm:"<-:create;comment:Creation Time"`
-	UpdatedAt             time.Time             `gorm:"comment:Update Time"`
-	DeletedAt             gorm.DeletedAt        `gorm:"default:null;comment:Deletion Time"`
-	IsDel                 soft_delete.DeletedAt `gorm:"softDelete:flag,DeletedAtField:DeletedAt;comment:1: Normal 0: Deleted"` // Using `1` and `0` to indicate
-}
-
-func (OldUser) TableName() string {
+func (*User) TableName() string {
 	return "user"
 }
 
@@ -83,7 +48,7 @@ type Subscribe struct {
 	UpdatedAt   time.Time  `gorm:"comment:Update Time"`
 }
 
-func (Subscribe) TableName() string {
+func (*Subscribe) TableName() string {
 	return "user_subscribe"
 }
 
@@ -125,7 +90,7 @@ type CommissionLog struct {
 	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
 }
 
-func (CommissionLog) TableName() string {
+func (*CommissionLog) TableName() string {
 	return "user_commission_log"
 }
 
@@ -139,7 +104,7 @@ type AuthMethods struct {
 	UpdatedAt      time.Time `gorm:"comment:Update Time"`
 }
 
-func (AuthMethods) TableName() string {
+func (*AuthMethods) TableName() string {
 	return "user_auth_methods"
 }
 
@@ -155,7 +120,7 @@ type Device struct {
 	UpdatedAt  time.Time `gorm:"comment:Update Time"`
 }
 
-func (Device) TableName() string {
+func (*Device) TableName() string {
 	return "user_device"
 }
 

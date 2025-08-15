@@ -255,6 +255,26 @@ type BatchDeleteUserRequest struct {
 	Ids []int64 `json:"ids" validate:"required"`
 }
 
+type BatchSendEmailTask struct {
+	Id                int64  `json:"id"`
+	Subject           string `json:"subject"`
+	Content           string `json:"content"`
+	Recipients        string `json:"recipients"`
+	Scope             string `json:"scope"`
+	RegisterStartTime int64  `json:"register_start_time"`
+	RegisterEndTime   int64  `json:"register_end_time"`
+	Additional        string `json:"additional"`
+	Scheduled         int64  `json:"scheduled"`
+	Interval          uint8  `json:"interval"`
+	Limit             uint64 `json:"limit"`
+	Status            uint8  `json:"status"`
+	Errors            string `json:"errors"`
+	Total             uint64 `json:"total"`
+	Current           uint64 `json:"current"`
+	CreatedAt         int64  `json:"created_at"`
+	UpdatedAt         int64  `json:"updated_at"`
+}
+
 type BindOAuthCallbackRequest struct {
 	Method   string      `json:"method"`
 	Callback interface{} `json:"callback"`
@@ -372,6 +392,18 @@ type CreateApplicationVersionRequest struct {
 	ApplicationId int64  `json:"application_id" validate:"required"`
 }
 
+type CreateBatchSendEmailTaskRequest struct {
+	Subject           string `json:"subject"`
+	Content           string `json:"content"`
+	Scope             string `json:"scope"`
+	RegisterStartTime int64  `json:"register_start_time,omitempty"`
+	RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+	Additional        string `json:"additional,omitempty"`
+	Scheduled         int64  `json:"scheduled,omitempty"`
+	Interval          uint8  `json:"interval,omitempty"`
+	Limit             uint64 `json:"limit,omitempty"`
+}
+
 type CreateCouponRequest struct {
 	Name       string  `json:"name" validate:"required"`
 	Code       string  `json:"code,omitempty"`
@@ -453,6 +485,18 @@ type CreateRuleGroupRequest struct {
 	Rules   string   `json:"rules"`
 	Default bool     `json:"default"`
 	Enable  bool     `json:"enable"`
+}
+
+type CreateSubscribeApplicationRequest struct {
+	Name              string       `json:"name"`
+	Description       string       `json:"description,omitempty"`
+	Icon              string       `json:"icon,omitempty"`
+	Scheme            string       `json:"scheme,omitempty"`
+	UserAgent         string       `json:"user_agent"`
+	IsDefault         bool         `json:"is_default"`
+	SubscribeTemplate string       `json:"template"`
+	OutputFormat      string       `json:"output_format"`
+	DownloadLink      DownloadLink `json:"download_link"`
 }
 
 type CreateSubscribeGroupRequest struct {
@@ -586,6 +630,10 @@ type DeleteRuleGroupRequest struct {
 	Id int64 `json:"id" validate:"required"`
 }
 
+type DeleteSubscribeApplicationRequest struct {
+	Id int64 `json:"id"`
+}
+
 type DeleteSubscribeGroupRequest struct {
 	Id int64 `json:"id" validate:"required"`
 }
@@ -615,6 +663,15 @@ type Document struct {
 	Show      bool     `json:"show"`
 	CreatedAt int64    `json:"created_at"`
 	UpdatedAt int64    `json:"updated_at"`
+}
+
+type DownloadLink struct {
+	IOS     string `json:"ios,omitempty"`
+	Android string `json:"android,omitempty"`
+	Windows string `json:"windows,omitempty"`
+	Mac     string `json:"mac,omitempty"`
+	Linux   string `json:"linux,omitempty"`
+	Harmony string `json:"harmony,omitempty"`
 }
 
 type EPayNotifyRequest struct {
@@ -704,6 +761,29 @@ type GetAuthMethodListResponse struct {
 
 type GetAvailablePaymentMethodsResponse struct {
 	List []PaymentMethod `json:"list"`
+}
+
+type GetBatchSendEmailTaskListRequest struct {
+	Page   int    `form:"page"`
+	Size   int    `form:"size"`
+	Scope  string `form:"scope,omitempty"`
+	Status *uint8 `form:"status,omitempty"`
+}
+
+type GetBatchSendEmailTaskListResponse struct {
+	Total int64                `json:"total"`
+	List  []BatchSendEmailTask `json:"list"`
+}
+
+type GetBatchSendEmailTaskStatusRequest struct {
+	Id int64 `json:"id"`
+}
+
+type GetBatchSendEmailTaskStatusResponse struct {
+	Status  uint8  `json:"status"`
+	Current int64  `json:"current"`
+	Total   int64  `json:"total"`
+	Errors  string `json:"errors"`
 }
 
 type GetCouponListRequest struct {
@@ -837,6 +917,16 @@ type GetPaymentMethodListResponse struct {
 	List  []PaymentMethodDetail `json:"list"`
 }
 
+type GetPreSendEmailCountRequest struct {
+	Scope             string `json:"scope"`
+	RegisterStartTime int64  `json:"register_start_time,omitempty"`
+	RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+}
+
+type GetPreSendEmailCountResponse struct {
+	Count int64 `json:"count"`
+}
+
 type GetRuleGroupResponse struct {
 	Total int64             `json:"total"`
 	List  []ServerRuleGroup `json:"list"`
@@ -865,6 +955,21 @@ type GetStatResponse struct {
 	Node     int64    `json:"node"`
 	Country  int64    `json:"country"`
 	Protocol []string `json:"protocol"`
+}
+
+type GetSubscribeApplicationListRequest struct {
+	Page int `form:"page"`
+	Size int `form:"size"`
+}
+
+type GetSubscribeApplicationListResponse struct {
+	Total int64                  `json:"total"`
+	List  []SubscribeApplication `json:"list"`
+}
+
+type GetSubscribeClientResponse struct {
+	Total int64             `json:"total"`
+	List  []SubscribeClient `json:"list"`
 }
 
 type GetSubscribeDetailsRequest struct {
@@ -1285,6 +1390,14 @@ type PreUnsubscribeResponse struct {
 	DeductionAmount int64 `json:"deduction_amount"`
 }
 
+type PreviewSubscribeTemplateRequest struct {
+	Id int64 `form:"id"`
+}
+
+type PreviewSubscribeTemplateResponse struct {
+	Template string `json:"template"` // 预览的模板内容
+}
+
 type PrivacyPolicyConfig struct {
 	PrivacyPolicy string `json:"privacy_policy"`
 }
@@ -1634,6 +1747,10 @@ type SortItem struct {
 	Sort int64 `json:"sort" validate:"required"`
 }
 
+type StopBatchSendEmailTaskRequest struct {
+	Id int64 `json:"id"`
+}
+
 type StripePayment struct {
 	Method         string `json:"method"`
 	ClientSecret   string `json:"client_secret"`
@@ -1667,11 +1784,38 @@ type Subscribe struct {
 	UpdatedAt      int64               `json:"updated_at"`
 }
 
+type SubscribeApplication struct {
+	Id                int64        `json:"id"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description,omitempty"`
+	Icon              string       `json:"icon,omitempty"`
+	Scheme            string       `json:"scheme,omitempty"`
+	UserAgent         string       `json:"user_agent"`
+	IsDefault         bool         `json:"is_default"`
+	SubscribeTemplate string       `json:"template"`
+	OutputFormat      string       `json:"output_format"`
+	DownloadLink      DownloadLink `json:"download_link,omitempty"`
+	CreatedAt         int64        `json:"created_at"`
+	UpdatedAt         int64        `json:"updated_at"`
+}
+
+type SubscribeClient struct {
+	Id           int64        `json:"id"`
+	Name         string       `json:"name"`
+	Description  string       `json:"description,omitempty"`
+	Icon         string       `json:"icon,omitempty"`
+	Scheme       string       `json:"scheme,omitempty"`
+	IsDefault    bool         `json:"is_default"`
+	DownloadLink DownloadLink `json:"download_link,omitempty"`
+}
+
 type SubscribeConfig struct {
 	SingleModel     bool   `json:"single_model"`
 	SubscribePath   string `json:"subscribe_path"`
 	SubscribeDomain string `json:"subscribe_domain"`
 	PanDomain       bool   `json:"pan_domain"`
+	UserAgentLimit  bool   `json:"user_agent_limit"`
+	UserAgentList   string `json:"user_agent_list"`
 }
 
 type SubscribeDiscount struct {
@@ -1974,6 +2118,19 @@ type UpdateRuleGroupRequest struct {
 	Enable  bool     `json:"enable"`
 }
 
+type UpdateSubscribeApplicationRequest struct {
+	Id                int64        `json:"id"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description,omitempty"`
+	Icon              string       `json:"icon,omitempty"`
+	Scheme            string       `json:"scheme,omitempty"`
+	UserAgent         string       `json:"user_agent"`
+	IsDefault         bool         `json:"is_default"`
+	SubscribeTemplate string       `json:"template"`
+	OutputFormat      string       `json:"output_format"`
+	DownloadLink      DownloadLink `json:"download_link,omitempty"`
+}
+
 type UpdateSubscribeGroupRequest struct {
 	Id          int64  `json:"id" validate:"required"`
 	Name        string `json:"name" validate:"required"`
@@ -2271,6 +2428,10 @@ type VerifyConfig struct {
 type VerifyEmailRequest struct {
 	Email string `json:"email" validate:"required"`
 	Code  string `json:"code" validate:"required"`
+}
+
+type VersionResponse struct {
+	Version string `json:"version"`
 }
 
 type Vless struct {

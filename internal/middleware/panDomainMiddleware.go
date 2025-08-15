@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +12,26 @@ import (
 
 func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		if svc.Config.Subscribe.PanDomain {
+
+		if svc.Config.Subscribe.PanDomain && c.Request.URL.Path == "/" {
+
+			// intercept browser
+			ua := c.GetHeader("User-Agent")
+			if ua == "" {
+				c.String(http.StatusForbidden, "Access denied")
+				c.Abort()
+				return
+			}
+			browserKeywords := []string{"chrome", "firefox", "safari", "edge", "opera", "micromessenger"}
+			for _, keyword := range browserKeywords {
+				lcUA := strings.ToLower(ua)
+				if strings.Contains(lcUA, keyword) {
+					c.String(http.StatusForbidden, "Access denied")
+					c.Abort()
+					return
+				}
+			}
+
 			domain := c.Request.Host
 			domainArr := strings.Split(domain, ".")
 			domainFirst := domainArr[0]

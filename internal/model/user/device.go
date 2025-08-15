@@ -51,13 +51,12 @@ func (m *customUserModel) UpdateDevice(ctx context.Context, data *Device, tx ...
 	if err != nil {
 		return err
 	}
-	deviceIdKey := fmt.Sprintf("%s%v", cacheUserDeviceIdPrefix, old.Id)
 	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
 		return conn.Save(data).Error
-	}, deviceIdKey)
+	}, old.GetCacheKeys()...)
 	return err
 }
 
@@ -69,12 +68,11 @@ func (m *customUserModel) DeleteDevice(ctx context.Context, id int64, tx ...*gor
 		}
 		return err
 	}
-	deviceIdKey := fmt.Sprintf("%s%v", cacheUserDeviceIdPrefix, data.Id)
 	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
 		return conn.Delete(&Device{}, id).Error
-	}, deviceIdKey)
+	}, data.GetCacheKeys()...)
 	return err
 }

@@ -40,6 +40,13 @@ type Details struct {
 	UpdatedAt      time.Time            `gorm:"comment:Update Time"`
 }
 
+type OrdersTotalWithDate struct {
+	Date               string
+	AmountTotal        int64
+	NewOrderAmount     int64
+	RenewalOrderAmount int64
+}
+
 type customOrderLogicModel interface {
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
 	QueryOrderListByPage(ctx context.Context, page, size int, status uint8, user, subscribe int64, search string) (int64, []*Details, error)
@@ -52,6 +59,8 @@ type customOrderLogicModel interface {
 	QueryDateUserCounts(ctx context.Context, date time.Time) (int64, int64, error)
 	QueryTotalUserCounts(ctx context.Context) (int64, int64, error)
 	IsUserEligibleForNewOrder(ctx context.Context, userID int64) (bool, error)
+	QueryDailyOrdersList(ctx context.Context, date time.Time) ([]OrdersTotalWithDate, error)
+	QueryMonthlyOrdersList(ctx context.Context, date time.Time) ([]OrdersTotalWithDate, error)
 }
 
 // NewModel returns a model for the database table.
@@ -225,4 +234,44 @@ func (m *customOrderModel) IsUserEligibleForNewOrder(ctx context.Context, userID
 			Count(&count).Error
 	})
 	return count == 0, err
+}
+
+// QueryDailyOrdersList Query daily orders list for the current month (from 1st to current date)
+func (m *customOrderModel) QueryDailyOrdersList(ctx context.Context, date time.Time) ([]OrdersTotalWithDate, error) {
+	var results []OrdersTotalWithDate
+	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+		return conn.Model(&Order{}).
+			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, firstDay, date, "balance").
+			Select(
+				"DATE(created_at) as date, " +
+					"SUM(amount) as amount_total, " +
+					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
+					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
+			).
+			Group("DATE(created_at)").
+			Order("date ASC").
+			Scan(v).Error
+	})
+	return results, err
+}
+
+// QueryMonthlyOrdersList Query monthly orders list for the past 6 months
+func (m *customOrderModel) QueryMonthlyOrdersList(ctx context.Context, date time.Time) ([]OrdersTotalWithDate, error) {
+	var results []OrdersTotalWithDate
+	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		sixMonthsAgo := date.AddDate(0, -5, 0)
+		return conn.Model(&Order{}).
+			Where("status IN ? AND created_at >= ? AND method != ?", []int64{2, 5}, sixMonthsAgo, "balance").
+			Select(
+				"DATE_FORMAT(created_at, '%Y-%m') as date, " +
+					"SUM(amount) as amount_total, " +
+					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
+					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
+			).
+			Group("DATE_FORMAT(created_at, '%Y-%m')").
+			Order("date ASC").
+			Scan(v).Error
+	})
+	return results, err
 }

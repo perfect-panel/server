@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -31,24 +32,50 @@ func (m *defaultUserModel) FindUserAuthMethodByPlatform(ctx context.Context, use
 }
 
 func (m *defaultUserModel) InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error {
+	u, err := m.FindOne(ctx, data.UserId)
+	if err != nil {
+		return err
+	}
+
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Model(&AuthMethods{}).Create(data).Error
+		if err = conn.Model(&AuthMethods{}).Create(data).Error; err != nil {
+			return err
+		}
+		return m.ClearUserCache(ctx, u)
 	})
 }
 
 func (m *defaultUserModel) UpdateUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error {
+	u, err := m.FindOne(ctx, data.UserId)
+	if err != nil {
+		return err
+	}
+
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Model(&AuthMethods{}).Where("user_id = ? AND auth_type = ?", data.UserId, data.AuthType).Save(data).Error
+		err = conn.Model(&AuthMethods{}).Where("user_id = ? AND auth_type = ?", data.UserId, data.AuthType).Save(data).Error
+		if err != nil {
+			return err
+		}
+		return m.ClearUserCache(ctx, u)
 	})
 }
 
 func (m *defaultUserModel) DeleteUserAuthMethods(ctx context.Context, userId int64, platform string, tx ...*gorm.DB) error {
+	u, err := m.FindOne(ctx, userId)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err = m.ClearUserCache(context.Background(), u); err != nil {
+			logger.Errorf("[UserModel] clear user cache failed: %v", err.Error())
+		}
+	}()
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]

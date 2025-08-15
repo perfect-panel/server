@@ -6,11 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/server"
 	"github.com/perfect-panel/server/internal/model/subscribe"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -63,6 +59,7 @@ type UserFilterParams struct {
 	UserId          *int64
 	SubscribeId     *int64
 	UserSubscribeId *int64
+	Order           string // Order by id, e.g., "desc"
 }
 
 type customUserLogicModel interface {
@@ -110,12 +107,23 @@ type customUserLogicModel interface {
 	FilterLoginLogList(ctx context.Context, page, size int, filter *LoginLogFilterParams) ([]*LoginLog, int64, error)
 
 	ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error
+	clearUserCache(ctx context.Context, data ...*User) error
 
 	InsertResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error
 	UpdateResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error
 	FindResetSubscribeLog(ctx context.Context, id int64) (*ResetSubscribeLog, error)
 	DeleteResetSubscribeLog(ctx context.Context, id int64, tx ...*gorm.DB) error
 	FilterResetSubscribeLogList(ctx context.Context, filter *FilterResetSubscribeLogParams) ([]*ResetSubscribeLog, int64, error)
+
+	QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
+	QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
+}
+
+type UserStatisticsWithDate struct {
+	Date              string
+	Register          int64
+	NewOrderUsers     int64
+	RenewalOrderUsers int64
 }
 
 // NewModel returns a model for the database table.
@@ -123,56 +131,6 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 	return &customUserModel{
 		defaultUserModel: newUserModel(conn, c),
 	}
-}
-
-func (m *defaultUserModel) getSubscribeCacheKey(data *Subscribe) []string {
-	if data == nil {
-		return []string{}
-	}
-	var keys []string
-	if data.Token != "" {
-		keys = append(keys, fmt.Sprintf("%s%s", cacheUserSubscribeTokenPrefix, data.Token))
-	}
-	if data.UserId != 0 {
-		keys = append(keys, fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, data.UserId))
-	}
-	if data.Id != 0 {
-		keys = append(keys, fmt.Sprintf("%s%d", cacheUserSubscribeIdPrefix, data.Id))
-	}
-
-	if data.SubscribeId != 0 {
-		var sub *subscribe.Subscribe
-		err := m.QueryNoCacheCtx(context.Background(), &sub, func(conn *gorm.DB, v interface{}) error {
-			return conn.Model(&subscribe.Subscribe{}).Where("id = ?", data.SubscribeId).First(&sub).Error
-		})
-		if err != nil {
-			logger.Error("getUserSubscribeCacheKey", logger.Field("error", err.Error()), logger.Field("subscribeId", data.SubscribeId))
-			return keys
-		}
-		if sub.Server != "" {
-			ids := tool.StringToInt64Slice(sub.Server)
-			for _, id := range ids {
-				keys = append(keys, fmt.Sprintf("%s%d", config.ServerUserListCacheKey, id))
-			}
-		}
-		if sub.ServerGroup != "" {
-			ids := tool.StringToInt64Slice(sub.ServerGroup)
-			var servers []*server.Server
-			err = m.QueryNoCacheCtx(context.Background(), &servers, func(conn *gorm.DB, v interface{}) error {
-				return conn.Model(&server.Server{}).Where("group_id in ?", ids).Find(v).Error
-			})
-			if err != nil {
-				logger.Error("getUserSubscribeCacheKey", logger.Field("error", err.Error()), logger.Field("subscribeId", data.SubscribeId))
-				return keys
-			}
-			for _, s := range servers {
-				keys = append(keys, fmt.Sprintf("%s%d", config.ServerUserListCacheKey, s.Id))
-			}
-		}
-	}
-
-	return keys
-
 }
 
 // QueryPageList returns a list of records that meet the conditions.
@@ -195,6 +153,9 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 			if filter.SubscribeId != nil {
 				conn = conn.Joins("LEFT JOIN user_subscribe ON user.id = user_subscribe.user_id").
 					Where("user_subscribe.subscribe_id =? and `status` IN (0,1)", *filter.SubscribeId)
+			}
+			if filter.Order != "" {
+				conn = conn.Order(fmt.Sprintf("user.id %s", filter.Order))
 			}
 		}
 		return conn.Model(&User{}).Group("user.id").Count(&total).Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error
@@ -245,7 +206,15 @@ func (m *customUserModel) UpdateUserSubscribeWithTraffic(ctx context.Context, id
 	if err != nil {
 		return err
 	}
-	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+
+	// 使用 defer 确保更新后清理缓存
+	defer func() {
+		if clearErr := m.ClearSubscribeCacheByModels(ctx, sub); clearErr != nil {
+			// 记录清理缓存错误
+		}
+	}()
+
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
@@ -253,7 +222,7 @@ func (m *customUserModel) UpdateUserSubscribeWithTraffic(ctx context.Context, id
 			"download": gorm.Expr("download + ?", download),
 			"upload":   gorm.Expr("upload + ?", upload),
 		}).Error
-	}, m.getSubscribeCacheKey(sub)...)
+	})
 }
 
 func (m *customUserModel) QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error) {
@@ -293,7 +262,7 @@ func (m *customUserModel) QueryAdminUsers(ctx context.Context) ([]*User, error) 
 }
 
 func (m *customUserModel) UpdateUserCache(ctx context.Context, data *User) error {
-	return m.CachedConn.DelCacheCtx(ctx, m.getCacheKeys(data)...)
+	return m.ClearUserCache(ctx, data)
 }
 
 func (m *customUserModel) InsertCommissionLog(ctx context.Context, data *CommissionLog, tx ...*gorm.DB) error {
@@ -398,4 +367,44 @@ func (m *customUserModel) FilterResetSubscribeLogList(ctx context.Context, filte
 	})
 
 	return list, total, err
+}
+
+// QueryDailyUserStatisticsList Query daily user statistics list for the current month (from 1st to current date)
+func (m *customUserModel) QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error) {
+	var results []UserStatisticsWithDate
+	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+		return conn.Model(&User{}).
+			Select(
+				"DATE(created_at) as date, "+
+					"COUNT(*) as register, "+
+					"0 as new_order_users, "+
+					"0 as renewal_order_users",
+			).
+			Where("created_at BETWEEN ? AND ?", firstDay, date).
+			Group("DATE(created_at)").
+			Order("date ASC").
+			Scan(v).Error
+	})
+	return results, err
+}
+
+// QueryMonthlyUserStatisticsList Query monthly user statistics list for the past 6 months
+func (m *customUserModel) QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error) {
+	var results []UserStatisticsWithDate
+	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		sixMonthsAgo := date.AddDate(0, -5, 0)
+		return conn.Model(&User{}).
+			Select(
+				"DATE_FORMAT(created_at, '%Y-%m') as date, "+
+					"COUNT(*) as register, "+
+					"0 as new_order_users, "+
+					"0 as renewal_order_users",
+			).
+			Where("created_at >= ?", sixMonthsAgo).
+			Group("DATE_FORMAT(created_at, '%Y-%m')").
+			Order("date ASC").
+			Scan(v).Error
+	})
+	return results, err
 }

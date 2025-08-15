@@ -490,14 +490,22 @@ func (l *ActivateOrderLogic) updateSubscriptionForRenewal(ctx context.Context, u
 	if userSub.ExpireTime.Before(now) {
 		userSub.ExpireTime = now
 	}
+	today := time.Now().Day()
+	resetDay := userSub.ExpireTime.Day()
 
 	// Reset traffic if enabled
-	if sub.RenewalReset != nil && *sub.RenewalReset {
+	if (sub.RenewalReset != nil && *sub.RenewalReset) || today == resetDay {
 		userSub.Download = 0
 		userSub.Upload = 0
 	}
 
 	if userSub.FinishedAt != nil {
+		if userSub.FinishedAt.Before(now) && today > resetDay {
+			// reset user traffic if finished at is before now
+			userSub.Download = 0
+			userSub.Upload = 0
+		}
+
 		userSub.FinishedAt = nil
 	}
 

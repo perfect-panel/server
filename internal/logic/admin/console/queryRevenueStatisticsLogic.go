@@ -50,8 +50,8 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 	// Get monthly's revenue statistics
 	monthlyData, err := l.svcCtx.OrderModel.QueryMonthlyOrders(l.ctx, now)
 	if err != nil {
-		l.Errorw("[QueryRevenueStatisticsLogic] QueryDateOrders error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryDateOrders error: %v", err)
+		l.Errorw("[QueryRevenueStatisticsLogic] QueryMonthlyOrders error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryMonthlyOrders error: %v", err)
 	} else {
 		monthly = types.OrdersStatistics{
 			AmountTotal:        monthlyData.AmountTotal,
@@ -59,6 +59,24 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 			RenewalOrderAmount: monthlyData.RenewalOrderAmount,
 			List:               make([]types.OrdersStatistics, 0),
 		}
+	}
+
+	// Get monthly daily list for the current month (from 1st to current date)
+	monthlyListData, err := l.svcCtx.OrderModel.QueryDailyOrdersList(l.ctx, now)
+	if err != nil {
+		l.Errorw("[QueryRevenueStatisticsLogic] QueryDailyOrdersList error", logger.Field("error", err.Error()))
+		// Don't return error, just log it and continue with empty list
+	} else {
+		monthlyList := make([]types.OrdersStatistics, len(monthlyListData))
+		for i, data := range monthlyListData {
+			monthlyList[i] = types.OrdersStatistics{
+				Date:               data.Date,
+				AmountTotal:        data.AmountTotal,
+				NewOrderAmount:     data.NewOrderAmount,
+				RenewalOrderAmount: data.RenewalOrderAmount,
+			}
+		}
+		monthly.List = monthlyList
 	}
 
 	// Get all revenue statistics
@@ -74,6 +92,25 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 			List:               make([]types.OrdersStatistics, 0),
 		}
 	}
+
+	// Get all monthly list for the past 6 months
+	allListData, err := l.svcCtx.OrderModel.QueryMonthlyOrdersList(l.ctx, now)
+	if err != nil {
+		l.Errorw("[QueryRevenueStatisticsLogic] QueryMonthlyOrdersList error", logger.Field("error", err.Error()))
+		// Don't return error, just log it and continue with empty list
+	} else {
+		allList := make([]types.OrdersStatistics, len(allListData))
+		for i, data := range allListData {
+			allList[i] = types.OrdersStatistics{
+				Date:               data.Date,
+				AmountTotal:        data.AmountTotal,
+				NewOrderAmount:     data.NewOrderAmount,
+				RenewalOrderAmount: data.RenewalOrderAmount,
+			}
+		}
+		all.List = allList
+	}
+
 	return &types.RevenueStatisticsResponse{
 		Today:   today,
 		Monthly: monthly,
@@ -85,7 +122,7 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 func (l *QueryRevenueStatisticsLogic) mockRevenueStatistics() *types.RevenueStatisticsResponse {
 	now := time.Now()
 
-	// Generate daily data for the past 7 days (oldest first)
+	// Generate daily data for the current month (from 1st to current date)
 	monthlyList := make([]types.OrdersStatistics, 7)
 	for i := 0; i < 7; i++ {
 		dayDate := now.AddDate(0, 0, -(6 - i))

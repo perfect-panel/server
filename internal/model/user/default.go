@@ -48,29 +48,20 @@ func newUserModel(db *gorm.DB, c *redis.Client) *defaultUserModel {
 func (m *defaultUserModel) batchGetCacheKeys(users ...*User) []string {
 	var keys []string
 	for _, user := range users {
-		keys = append(keys, m.getCacheKeys(user)...)
+		keys = append(keys, user.GetCacheKeys()...)
 	}
 	return keys
-
 }
+
 func (m *defaultUserModel) getCacheKeys(data *User) []string {
 	if data == nil {
 		return []string{}
 	}
-	userIdKey := fmt.Sprintf("%s%v", cacheUserIdPrefix, data.Id)
-	cacheKeys := []string{
-		userIdKey,
-	}
-	// email key
-	if len(data.AuthMethods) > 0 {
-		for _, auth := range data.AuthMethods {
-			if auth.AuthType == "email" {
-				cacheKeys = append(cacheKeys, fmt.Sprintf("%s%v", cacheUserEmailPrefix, auth.AuthIdentifier))
-				break
-			}
-		}
-	}
-	return cacheKeys
+	return data.GetCacheKeys()
+}
+
+func (m *defaultUserModel) clearUserCache(ctx context.Context, data ...*User) error {
+	return m.ClearUserCache(ctx, data...)
 }
 
 func (m *defaultUserModel) FindOneByEmail(ctx context.Context, email string) (*User, error) {
@@ -127,53 +118,58 @@ func (m *defaultUserModel) Delete(ctx context.Context, id int64, tx ...*gorm.DB)
 		}
 		return err
 	}
-	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
-		if len(tx) > 0 {
-			conn = tx[0]
+
+	// 使用批量相关缓存清理，包含所有相关数据的缓存
+	defer func() {
+		if clearErr := m.BatchClearRelatedCache(ctx, data); clearErr != nil {
+			// 记录清理缓存错误，但不阻断删除操作
 		}
-		return conn.Transaction(func(db *gorm.DB) error {
-			if err := db.Model(&User{}).Where("`id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			if err := db.Model(&AuthMethods{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			if err := db.Model(&Subscribe{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			if err := db.Model(&BalanceLog{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			if err := db.Model(&GiftAmountLog{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			if err := db.Model(&LoginLog{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			if err := db.Model(&SubscribeLog{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			if err := db.Model(&Device{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
+	}()
 
-			subs, err := m.QueryUserSubscribe(ctx, id)
-			if err != nil {
-				return err
-			}
-			for _, sub := range subs {
-				if err := m.DeleteSubscribeById(ctx, sub.Id, db); err != nil {
-					return err
-				}
-			}
+	return m.TransactCtx(ctx, func(db *gorm.DB) error {
+		if len(tx) > 0 {
+			db = tx[0]
+		}
 
-			if err := db.Model(&CommissionLog{}).Where("`user_id` = ?", id).Delete(&User{}).Error; err != nil {
-				return err
-			}
-			return nil
-		})
-	}, m.getCacheKeys(data)...)
-	return err
+		// 删除用户相关的所有数据
+		if err := db.Model(&User{}).Where("`id` = ?", id).Delete(&User{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&AuthMethods{}).Where("`user_id` = ?", id).Delete(&AuthMethods{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&Subscribe{}).Where("`user_id` = ?", id).Delete(&Subscribe{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&BalanceLog{}).Where("`user_id` = ?", id).Delete(&BalanceLog{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&GiftAmountLog{}).Where("`user_id` = ?", id).Delete(&GiftAmountLog{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&LoginLog{}).Where("`user_id` = ?", id).Delete(&LoginLog{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&SubscribeLog{}).Where("`user_id` = ?", id).Delete(&SubscribeLog{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&Device{}).Where("`user_id` = ?", id).Delete(&Device{}).Error; err != nil {
+			return err
+		}
+
+		if err := db.Model(&CommissionLog{}).Where("`user_id` = ?", id).Delete(&CommissionLog{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (m *defaultUserModel) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {

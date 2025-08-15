@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -58,8 +60,18 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 		return []string{}
 	}
 	SubscribeIdKey := fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id)
-	cacheKeys := []string{
-		SubscribeIdKey,
+	serverKey := make([]string, 0)
+	if data.Server != "" {
+		cacheKey := strings.Split(data.Server, ",")
+		for _, v := range cacheKey {
+			if v != "" {
+				serverKey = append(serverKey, fmt.Sprintf("%s%v", config.ServerUserListCacheKey, v))
+			}
+		}
+	}
+	cacheKeys := []string{SubscribeIdKey}
+	if len(serverKey) > 0 {
+		cacheKeys = append(cacheKeys, serverKey...)
 	}
 	return cacheKeys
 }

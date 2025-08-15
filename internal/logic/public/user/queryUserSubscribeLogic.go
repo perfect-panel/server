@@ -68,7 +68,7 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *types.QueryUserSub
 
 // 计算下次重置时间
 func calculateNextResetTime(sub *types.UserSubscribe) int64 {
-	startTime := time.UnixMilli(sub.StartTime)
+	resetTime := time.UnixMilli(sub.ExpireTime)
 	now := time.Now()
 	switch sub.Subscribe.ResetCycle {
 	case 0:
@@ -76,15 +76,15 @@ func calculateNextResetTime(sub *types.UserSubscribe) int64 {
 	case 1:
 		return time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location()).UnixMilli()
 	case 2:
-		if startTime.Day() > now.Day() {
-			return time.Date(now.Year(), now.Month(), startTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
+		if resetTime.Day() > now.Day() {
+			return time.Date(now.Year(), now.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
 		} else {
-			return time.Date(now.Year(), now.Month()+1, startTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
+			return time.Date(now.Year(), now.Month()+1, resetTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
 		}
 	case 3:
-		targetTime := time.Date(now.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, now.Location())
+		targetTime := time.Date(now.Year(), resetTime.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location())
 		if targetTime.Before(now) {
-			targetTime = time.Date(now.Year()+1, startTime.Month(), startTime.Day(), 0, 0, 0, 0, now.Location())
+			targetTime = time.Date(now.Year()+1, resetTime.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location())
 		}
 		return targetTime.UnixMilli()
 	default:
