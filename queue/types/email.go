@@ -9,6 +9,7 @@ const (
 
 type (
 	SendEmailPayload struct {
+		Type    string `json:"type"`
 		Email   string `json:"to"`
 		Subject string `json:"subject"`
 		Content string `json:"content"`
