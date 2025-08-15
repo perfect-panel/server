@@ -464,6 +464,19 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 		return err
 	}
 
+	// Clear user subscription cache
+	err = l.svc.UserModel.ClearSubscribeCache(ctx, userSub)
+	if err != nil {
+		logger.WithContext(ctx).Error("Clear user subscribe cache failed",
+			logger.Field("error", err.Error()),
+			logger.Field("subscribe_id", userSub.Id),
+			logger.Field("user_id", userInfo.Id),
+		)
+	}
+
+	// Clear cache
+	l.clearServerCache(ctx, sub)
+
 	// Handle commission
 	go l.handleCommission(context.Background(), userInfo, orderInfo, false)
 
@@ -546,6 +559,19 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 	if err != nil {
 		return err
 	}
+
+	// Clear user subscription cache
+	err = l.svc.UserModel.ClearSubscribeCache(ctx, userSub)
+	if err != nil {
+		logger.WithContext(ctx).Error("Clear user subscribe cache failed",
+			logger.Field("error", err.Error()),
+			logger.Field("subscribe_id", userSub.Id),
+			logger.Field("user_id", userInfo.Id),
+		)
+	}
+
+	// Clear cache
+	l.clearServerCache(ctx, sub)
 
 	// Send notifications
 	l.sendNotifications(ctx, orderInfo, userInfo, sub, userSub, telegram.ResetTrafficNotify)

@@ -64,7 +64,7 @@ func (s *Subscribe) GetCacheKeys() []string {
 	if s == nil {
 		return []string{}
 	}
-	keys := []string{}
+	keys := make([]string, 0)
 
 	if s.Token != "" {
 		keys = append(keys, fmt.Sprintf("%s%s", cacheUserSubscribeTokenPrefix, s.Token))

@@ -2,8 +2,9 @@ package user
 
 import (
 	"context"
-	"github.com/perfect-panel/server/internal/model/order"
 	"time"
+
+	"github.com/perfect-panel/server/internal/model/order"
 
 	"github.com/perfect-panel/server/pkg/constant"
 
@@ -72,5 +73,16 @@ func (l *ResetUserSubscribeTokenLogic) ResetUserSubscribeToken(req *types.ResetU
 		l.Errorw("UpdateSubscribe failed:", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "UpdateSubscribe failed: %v", err.Error())
 	}
+	//clear user subscription cache
+	if err = l.svcCtx.UserModel.ClearSubscribeCache(l.ctx, &newSub); err != nil {
+		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
+	}
+	// Clear subscription cache
+	if err = l.svcCtx.SubscribeModel.ClearCache(l.ctx, userSub.SubscribeId); err != nil {
+		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSub.SubscribeId))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
+	}
+
 	return nil
 }

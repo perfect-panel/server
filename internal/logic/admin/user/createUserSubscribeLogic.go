@@ -81,6 +81,5 @@ func (l *CreateUserSubscribeLogic) CreateUserSubscribe(req *types.CreateUserSubs
 	if err != nil {
 		logger.Errorw("ClearSubscribe error", logger.Field("error", err.Error()))
 	}
-
 	return nil
 }

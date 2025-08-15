@@ -46,8 +46,9 @@ var (
 func (m *customServerModel) ClearCache(ctx context.Context, id int64) error {
 	serverIdKey := fmt.Sprintf("%s%v", cacheServerIdPrefix, id)
 	configKey := fmt.Sprintf("%s%d", config.ServerConfigCacheKey, id)
+	userListKey := fmt.Sprintf("%s%v", config.ServerUserListCacheKey, id)
 
-	return m.DelCacheCtx(ctx, serverIdKey, configKey)
+	return m.DelCacheCtx(ctx, serverIdKey, configKey, userListKey)
 }
 
 // QueryServerCountByServerGroups Query  Server Count By Server Groups

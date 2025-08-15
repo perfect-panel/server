@@ -38,6 +38,14 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
+
+	// find user subscription by ID
+	userSub, err := l.svcCtx.UserModel.FindOneSubscribe(l.ctx, req.Id)
+	if err != nil {
+		l.Errorw("FindOneSubscribe failed", logger.Field("error", err.Error()), logger.Field("reqId", req.Id))
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())
+	}
+
 	// Calculate the remaining amount to refund based on unused subscription time/traffic
 	remainingAmount, err := CalculateRemainingAmount(l.ctx, l.svcCtx, req.Id)
 	if err != nil {
@@ -117,6 +125,22 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		u.Balance = balance
 		return l.svcCtx.UserModel.Update(l.ctx, u)
 	})
+
+	if err != nil {
+		l.Errorw("Unsubscribe transaction failed", logger.Field("error", err.Error()), logger.Field("userId", u.Id), logger.Field("reqId", req.Id))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unsubscribe transaction failed: %v", err.Error())
+	}
+
+	//clear user subscription cache
+	if err = l.svcCtx.UserModel.ClearSubscribeCache(l.ctx, userSub); err != nil {
+		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
+	}
+	// Clear subscription cache
+	if err = l.svcCtx.SubscribeModel.ClearCache(l.ctx, userSub.SubscribeId); err != nil {
+		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSub.SubscribeId))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
+	}
 
 	return err
 }

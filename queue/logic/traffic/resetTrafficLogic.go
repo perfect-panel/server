@@ -244,13 +244,29 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 				logger.Errorw("[ResetTraffic] Failed to update monthly reset users", logger.Field("error", err.Error()))
 				return err
 			}
-
+			// Find user subscriptions for these users
+			var userSubs []*user.Subscribe
+			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", monthlyResetUsers).Find(&userSubs).Error
+			if err != nil {
+				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
+				return err
+			}
+			// Clear cache for these subscriptions
+			for _, sub := range userSubs {
+				if sub.SubscribeId > 0 {
+					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
+					if err != nil {
+						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
+							logger.Field("subscribeId", sub.SubscribeId),
+							logger.Field("error", err.Error()))
+					}
+				}
+			}
 			logger.Infow("[ResetTraffic] Monthly reset completed", logger.Field("count", len(monthlyResetUsers)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for monthly reset")
 		}
-
-		return nil
+		return l.svc.SubscribeModel.ClearCache(ctx, resetMonthSubIds...)
 	})
 	if err != nil {
 		logger.Errorw("[ResetTraffic] Monthly reset transaction failed", logger.Field("error", err.Error()))
@@ -320,20 +336,37 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 				logger.Errorw("[ResetTraffic] Failed to update 1st reset users", logger.Field("error", err.Error()))
 				return err
 			}
+			var userSubs []*user.Subscribe
+			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", users1stReset).Find(&userSubs).Error
+			if err != nil {
+				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
+				return err
+			}
+
+			// Clear cache for these subscriptions
+			for _, sub := range userSubs {
+				if sub.SubscribeId > 0 {
+					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
+					if err != nil {
+						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
+							logger.Field("subscribeId", sub.SubscribeId),
+							logger.Field("error", err.Error()))
+					}
+				}
+			}
 
 			logger.Infow("[ResetTraffic] 1st reset completed", logger.Field("count", len(users1stReset)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for 1st reset")
 		}
 
-		return nil
+		return l.svc.SubscribeModel.ClearCache(ctx, reset1stSubIds...)
 	})
 
 	if err != nil {
 		logger.Errorw("[ResetTraffic] 1st reset transaction failed", logger.Field("error", err.Error()))
 		return err
 	}
-
 	logger.Infow("[ResetTraffic] 1st reset process completed")
 	return nil
 }
@@ -397,12 +430,32 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 				logger.Errorw("[ResetTraffic] Failed to update yearly reset users", logger.Field("error", err.Error()))
 				return err
 			}
-
+			// Find user subscriptions for these users
+			var userSubs []*user.Subscribe
+			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", usersYearReset).Find(&userSubs).Error
+			if err != nil {
+				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
+				return err
+			}
+			// Clear cache for these subscriptions
+			for _, sub := range userSubs {
+				if sub.SubscribeId > 0 {
+					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
+					if err != nil {
+						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
+							logger.Field("subscribeId", sub.SubscribeId),
+							logger.Field("error", err.Error()))
+					}
+				}
+			}
 			logger.Infow("[ResetTraffic] Yearly reset completed", logger.Field("count", len(usersYearReset)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for yearly reset")
 		}
-
+		err = l.svc.SubscribeModel.ClearCache(ctx, resetYearSubIds...)
+		if err != nil {
+			logger.Errorw("[ResetTraffic] Failed to clear yearly reset subscription cache", logger.Field("error", err.Error()))
+		}
 		return nil
 	})
 

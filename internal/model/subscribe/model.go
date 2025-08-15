@@ -35,7 +35,7 @@ type customSubscribeLogicModel interface {
 	QuerySubscribeIdsByServerIdAndServerGroupId(ctx context.Context, serverId, serverGroupId int64) ([]*Subscribe, error)
 	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
 	QuerySubscribeListByIds(ctx context.Context, ids []int64) ([]*Subscribe, error)
-	ClearCache(ctx context.Context, id int64) error
+	ClearCache(ctx context.Context, id ...int64) error
 }
 
 // NewModel returns a model for the database table.
@@ -109,23 +109,18 @@ func (m *customSubscribeModel) QuerySubscribeListByIds(ctx context.Context, ids 
 	return list, err
 }
 
-func (m *customSubscribeModel) ClearCache(ctx context.Context, id int64) error {
-	if id <= 0 {
+func (m *customSubscribeModel) ClearCache(ctx context.Context, ids ...int64) error {
+	if len(ids) <= 0 {
 		return nil
 	}
-	data, err := m.FindOne(ctx, id)
-	if err != nil {
-		return err
-	}
 
-	cacheKeys := m.getCacheKeys(data)
-
-	cacheKeys = append(cacheKeys, m.getCacheKeys(&Subscribe{Id: id})...)
-
-	for _, key := range cacheKeys {
-		if err := m.CachedConn.DelCacheCtx(ctx, key); err != nil {
+	var cacheKeys []string
+	for _, id := range ids {
+		data, err := m.FindOne(ctx, id)
+		if err != nil {
 			return err
 		}
+		cacheKeys = append(cacheKeys, m.getCacheKeys(data)...)
 	}
-	return nil
+	return m.CachedConn.DelCacheCtx(ctx, cacheKeys...)
 }
