@@ -87,7 +87,7 @@ func RegisterSubscribeHandlers(router *gin.Engine, serverCtx *svc.ServiceContext
 	if path == "" {
 		path = "/api/subscribe"
 	}
-	router.GET(path, SubscribeHandler(serverCtx))
+	router.GET(path, V2SubscribeHandler(serverCtx))
 
 	router.GET(path+"/v2", V2SubscribeHandler(serverCtx))
 }
