@@ -70,6 +70,7 @@ func (l *SubscribeLogic) V2(req *types.SubscribeRequest) (resp *types.SubscribeR
 		adapter.WithServers(servers),
 		adapter.WithSiteName(l.svc.Config.Site.SiteName),
 		adapter.WithSubscribeName(subscribeInfo.Name),
+		adapter.WithOutputFormat(targetApp.OutputFormat),
 		adapter.WithUserInfo(adapter.User{
 			Password:     userSubscribe.UUID,
 			ExpiredAt:    userSubscribe.ExpireTime,
