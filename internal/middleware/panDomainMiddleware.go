@@ -41,7 +41,7 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 				UA:    c.Request.Header.Get("User-Agent"),
 			}
 			l := subscribe.NewSubscribeLogic(c, svc)
-			resp, err := l.Generate(&request)
+			resp, err := l.V2(&request)
 			if err != nil {
 				return
 			}

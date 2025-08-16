@@ -110,6 +110,7 @@ func (l *SubscribeLogic) V2(req *types.SubscribeRequest) (resp *types.SubscribeR
 			userSubscribe.Upload, userSubscribe.Download, userSubscribe.Traffic, userSubscribe.ExpireTime.Unix(),
 		),
 	}
+	subscribeStatus = true
 	return
 }
 
