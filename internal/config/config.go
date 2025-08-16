@@ -55,6 +55,8 @@ type SubscribeConfig struct {
 	SubscribePath   string `yaml:"SubscribePath" default:"/api/subscribe"`
 	SubscribeDomain string `yaml:"SubscribeDomain" default:""`
 	PanDomain       bool   `yaml:"PanDomain" default:"false"`
+	UserAgentLimit  bool   `yaml:"UserAgentLimit" default:"false"`
+	UserAgentList   string `yaml:"UserAgentList" default:""`
 }
 
 type RegisterConfig struct {

@@ -10,7 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/types"
 )
 
-func V2SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
+func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var req types.SubscribeRequest
 		if c.Request.Header.Get("token") != "" {
@@ -18,20 +18,26 @@ func V2SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 		} else {
 			req.Token = c.Query("token")
 		}
+		ua := c.GetHeader("User-Agent")
 		req.UA = c.Request.Header.Get("User-Agent")
 		req.Flag = c.Query("flag")
 
-		// intercept browser
-		ua := c.GetHeader("User-Agent")
-		if ua == "" {
-			c.String(http.StatusForbidden, "Access denied")
-			return
-		}
-		browserKeywords := []string{"chrome", "firefox", "safari", "edge", "opera", "micromessenger"}
-		for _, keyword := range browserKeywords {
-			lcUA := strings.ToLower(ua)
-			if strings.Contains(lcUA, keyword) {
+		if svcCtx.Config.Subscribe.UserAgentLimit {
+			if ua == "" {
 				c.String(http.StatusForbidden, "Access denied")
+				c.Abort()
+				return
+			}
+			browserKeywords := strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")
+			var allow = false
+			for _, keyword := range browserKeywords {
+				if strings.Contains(strings.ToLower(ua), strings.ToLower(keyword)) {
+					allow = true
+				}
+			}
+			if !allow {
+				c.String(http.StatusForbidden, "Access denied")
+				c.Abort()
 				return
 			}
 		}
@@ -51,7 +57,5 @@ func RegisterSubscribeHandlers(router *gin.Engine, serverCtx *svc.ServiceContext
 	if path == "" {
 		path = "/api/subscribe"
 	}
-	router.GET(path, V2SubscribeHandler(serverCtx))
-
-	router.GET(path+"/v2", V2SubscribeHandler(serverCtx))
+	router.GET(path, SubscribeHandler(serverCtx))
 }

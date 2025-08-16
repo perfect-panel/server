@@ -17,15 +17,21 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 
 			// intercept browser
 			ua := c.GetHeader("User-Agent")
-			if ua == "" {
-				c.String(http.StatusForbidden, "Access denied")
-				c.Abort()
-				return
-			}
-			browserKeywords := []string{"chrome", "firefox", "safari", "edge", "opera", "micromessenger"}
-			for _, keyword := range browserKeywords {
-				lcUA := strings.ToLower(ua)
-				if strings.Contains(lcUA, keyword) {
+
+			if svc.Config.Subscribe.UserAgentLimit {
+				if ua == "" {
+					c.String(http.StatusForbidden, "Access denied")
+					c.Abort()
+					return
+				}
+				browserKeywords := strings.Split(svc.Config.Subscribe.UserAgentList, "\n")
+				var allow = false
+				for _, keyword := range browserKeywords {
+					if strings.Contains(strings.ToLower(ua), keyword) {
+						allow = true
+					}
+				}
+				if !allow {
 					c.String(http.StatusForbidden, "Access denied")
 					c.Abort()
 					return
