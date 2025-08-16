@@ -1,9 +1,13 @@
 package subscribe
 
 import (
+	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/adapter"
+	"github.com/perfect-panel/server/internal/model/client"
 	"github.com/perfect-panel/server/internal/model/server"
 
 	"github.com/perfect-panel/server/internal/model/user"
@@ -32,38 +36,119 @@ func NewSubscribeLogic(ctx *gin.Context, svc *svc.ServiceContext) *SubscribeLogi
 	}
 }
 
-//func (l *SubscribeLogic) GenerateBak(req *types.SubscribeRequest) (*types.SubscribeResponse, error) {
-//	userSub, err := l.getUserSubscribe(req.Token)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	var subscribeStatus = false
-//	defer func() {
-//		l.logSubscribeActivity(subscribeStatus, userSub, req)
-//	}()
-//
-//	servers, err := l.getServers(userSub)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	rules, err := l.getRules()
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	resp, headerInfo, err := l.buildClientConfig(req, userSub, servers, rules)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	subscribeStatus = true
-//	return &types.SubscribeResponse{
-//		Config: resp,
-//		Header: headerInfo,
-//	}, nil
-//}
+func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.SubscribeResponse, err error) {
+	// query client list
+	clients, err := l.svc.ClientModel.List(l.ctx.Request.Context())
+	if err != nil {
+		l.Errorw("[SubscribeLogic] Query client list failed", logger.Field("error", err.Error()))
+		return nil, err
+	}
+
+	userAgent := strings.ToLower(l.ctx.Request.UserAgent())
+
+	var targetApp, defaultApp *client.SubscribeApplication
+
+	for _, item := range clients {
+		u := strings.ToLower(item.UserAgent)
+		if item.IsDefault {
+			defaultApp = item
+		}
+		if strings.Contains(userAgent, u) {
+			targetApp = item
+			break
+		}
+	}
+	if targetApp == nil {
+		l.Debugf("[SubscribeLogic] No matching client found", logger.Field("userAgent", userAgent))
+		if defaultApp == nil {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "No matching client found for user agent: %s", userAgent)
+		}
+		targetApp = defaultApp
+	}
+	// Find user subscribe by token
+	userSubscribe, err := l.getUserSubscribe(req.Token)
+	if err != nil {
+		l.Errorw("[SubscribeLogic] Get user subscribe failed", logger.Field("error", err.Error()), logger.Field("token", req.Token))
+		return nil, err
+	}
+
+	var subscribeStatus = false
+	defer func() {
+		l.logSubscribeActivity(subscribeStatus, userSubscribe, req)
+	}()
+	// find subscribe info
+	subscribeInfo, err := l.svc.SubscribeModel.FindOne(l.ctx.Request.Context(), userSubscribe.SubscribeId)
+	if err != nil {
+		l.Errorw("[SubscribeLogic] Find subscribe info failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSubscribe.SubscribeId))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Find subscribe info failed: %v", err.Error())
+	}
+
+	// Find server list by user subscribe
+	servers, err := l.getServers(userSubscribe)
+	if err != nil {
+		return nil, err
+	}
+	a := adapter.NewAdapter(
+		targetApp.SubscribeTemplate,
+		adapter.WithServers(servers),
+		adapter.WithSiteName(l.svc.Config.Site.SiteName),
+		adapter.WithSubscribeName(subscribeInfo.Name),
+		adapter.WithOutputFormat(targetApp.OutputFormat),
+		adapter.WithUserInfo(adapter.User{
+			Password:     userSubscribe.UUID,
+			ExpiredAt:    userSubscribe.ExpireTime,
+			Download:     userSubscribe.Download,
+			Upload:       userSubscribe.Upload,
+			Traffic:      userSubscribe.Traffic,
+			SubscribeURL: l.getSubscribeV2URL(req.Token),
+		}),
+	)
+
+	// Get client config
+	adapterClient, err := a.Client()
+	if err != nil {
+		l.Errorw("[SubscribeLogic] Client error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(500), "Client error: %v", err.Error())
+	}
+	bytes, err := adapterClient.Build()
+	if err != nil {
+		l.Errorw("[SubscribeLogic] Build client config failed", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(500), "Build client config failed: %v", err.Error())
+	}
+
+	var formats = []string{"json", "yaml", "conf"}
+
+	for _, format := range formats {
+		if format == strings.ToLower(targetApp.OutputFormat) {
+			l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.%s", url.QueryEscape(l.svc.Config.Site.SiteName), format))
+			l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
+
+		}
+	}
+
+	resp = &types.SubscribeResponse{
+		Config: bytes,
+		Header: fmt.Sprintf(
+			"upload=%d;download=%d;total=%d;expire=%d",
+			userSubscribe.Upload, userSubscribe.Download, userSubscribe.Traffic, userSubscribe.ExpireTime.Unix(),
+		),
+	}
+	subscribeStatus = true
+	return
+}
+
+func (l *SubscribeLogic) getSubscribeV2URL(token string) string {
+	if l.svc.Config.Subscribe.PanDomain {
+		return fmt.Sprintf("https://%s", l.ctx.Request.Host)
+	}
+
+	if l.svc.Config.Subscribe.SubscribeDomain != "" {
+		domains := strings.Split(l.svc.Config.Subscribe.SubscribeDomain, "\n")
+		return fmt.Sprintf("https://%s%s?token=%s", domains[0], l.svc.Config.Subscribe.SubscribePath, token)
+	}
+
+	return fmt.Sprintf("https://%s%s?token=%s&", l.ctx.Request.Host, l.svc.Config.Subscribe.SubscribePath, token)
+}
 
 func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
 	userSub, err := l.svc.UserModel.FindOneSubscribeByToken(l.ctx.Request.Context(), token)
@@ -163,175 +248,3 @@ func (l *SubscribeLogic) getFirstHostLine() string {
 	}
 	return host
 }
-
-//func (l *SubscribeLogic) getRules() ([]*server.RuleGroup, error) {
-//	rules, err := l.svc.ServerModel.QueryAllRuleGroup(l.ctx)
-//	if err != nil {
-//		l.Errorw("[Generate Subscribe]find rule group error: %v", logger.Field("error", err.Error()))
-//		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find rule group error: %v", err.Error())
-//	}
-//	return rules, nil
-//}
-//
-//func (l *SubscribeLogic) buildClientConfig(req *types.SubscribeRequest, userSub *user.Subscribe, servers []*server.Server, rules []*server.RuleGroup) ([]byte, string, error) {
-//	tags := make(map[string][]*server.Server)
-//
-//	serverTags, err := l.svc.ServerModel.FindServerTags(l.ctx)
-//	if err != nil {
-//		l.Errorw("[Generate Subscribe]find server tags error: %v", logger.Field("error", err.Error()))
-//		return nil, "", errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server tags error: %v", err.Error())
-//	}
-//	// Deduplicate tags
-//	serverTags = tool.RemoveDuplicateElements(serverTags...)
-//	for _, tag := range serverTags {
-//		s, err := l.svc.ServerModel.FindServersByTag(l.ctx.Request.Context(), tag)
-//		if err != nil {
-//			l.Errorw("[Generate Subscribe]find servers by tag error: %v", logger.Field("error", err.Error()))
-//			continue
-//		}
-//		if len(s) > 0 {
-//			tags[tag] = s
-//		}
-//	}
-//
-//	proxyManager := adapter.NewAdapter(&adapter.Config{
-//		Nodes: servers,
-//		Rules: rules,
-//		Tags:  tags,
-//	})
-//	clientType := l.getClientType(req)
-//	var resp []byte
-//
-//	l.Logger.Info(fmt.Sprintf("[Generate Subscribe] %s", clientType), logger.Field("ua", req.UA), logger.Field("flag", req.Flag))
-//
-//	switch clientType {
-//	case "clash":
-//		resp, err = proxyManager.BuildClash(userSub.UUID)
-//		if err != nil {
-//			l.Errorw("[Generate Subscribe] build clash error", logger.Field("error", err.Error()))
-//			return nil, "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "build clash error: %v", err.Error())
-//		}
-//		l.setClashHeaders()
-//	case "sing-box":
-//		resp, err = proxyManager.BuildSingbox(userSub.UUID)
-//		if err != nil {
-//			l.Errorw("[Generate Subscribe] build sing-box error", logger.Field("error", err.Error()))
-//			return nil, "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "build sing-box error: %v", err.Error())
-//		}
-//	case "quantumult":
-//		resp = []byte(proxyManager.BuildQuantumultX(userSub.UUID))
-//	case "shadowrocket":
-//		resp = proxyManager.BuildShadowrocket(userSub.UUID, shadowrocket.UserInfo{
-//			Upload:       userSub.Upload,
-//			Download:     userSub.Download,
-//			TotalTraffic: userSub.Traffic,
-//			ExpiredDate:  userSub.ExpireTime,
-//		})
-//	case "loon":
-//		resp = proxyManager.BuildLoon(userSub.UUID)
-//		l.setLoonHeaders()
-//	case "surfboard":
-//		subsURL := l.getSubscribeURL(userSub.Token, "surfboard")
-//		resp = proxyManager.BuildSurfboard(l.svc.Config.Site.SiteName, surfboard.UserInfo{
-//			Upload:       userSub.Upload,
-//			Download:     userSub.Download,
-//			TotalTraffic: userSub.Traffic,
-//			ExpiredDate:  userSub.ExpireTime,
-//			UUID:         userSub.UUID,
-//			SubscribeURL: subsURL,
-//		})
-//		l.setSurfboardHeaders()
-//	case "v2rayn":
-//		resp = proxyManager.BuildV2rayN(userSub.UUID)
-//	case "surge":
-//		subsURL := l.getSubscribeURL(userSub.Token, "surge")
-//		resp = proxyManager.BuildSurge(l.svc.Config.Site.SiteName, surge.UserInfo{
-//			UUID:         userSub.UUID,
-//			Upload:       userSub.Upload,
-//			Download:     userSub.Download,
-//			TotalTraffic: userSub.Traffic,
-//			ExpiredDate:  userSub.ExpireTime,
-//			SubscribeURL: subsURL,
-//		})
-//		l.setSurgeHeaders()
-//	default:
-//		resp = proxyManager.BuildGeneral(userSub.UUID)
-//	}
-//
-//	headerInfo := fmt.Sprintf("upload=%d;download=%d;total=%d;expire=%d",
-//		userSub.Upload, userSub.Download, userSub.Traffic, userSub.ExpireTime.Unix())
-//
-//	return resp, headerInfo, nil
-//}
-//
-//func (l *SubscribeLogic) setClashHeaders() {
-//	l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s", url.QueryEscape(l.svc.Config.Site.SiteName)))
-//	l.ctx.Header("Profile-Update-Interval", "24")
-//	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
-//}
-//
-//func (l *SubscribeLogic) setSurfboardHeaders() {
-//	l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.conf", url.QueryEscape(l.svc.Config.Site.SiteName)))
-//	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
-//}
-//
-//func (l *SubscribeLogic) setSurgeHeaders() {
-//	l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.conf", url.QueryEscape(l.svc.Config.Site.SiteName)))
-//	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
-//}
-//
-//func (l *SubscribeLogic) setLoonHeaders() {
-//	l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.conf", url.QueryEscape(l.svc.Config.Site.SiteName)))
-//	l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
-//}
-
-//func (l *SubscribeLogic) getSubscribeURL(token, flag string) string {
-//	if l.svc.Config.Subscribe.PanDomain {
-//		return fmt.Sprintf("https://%s", l.ctx.Request.Host)
-//	}
-//
-//	if l.svc.Config.Subscribe.SubscribeDomain != "" {
-//		domains := strings.Split(l.svc.Config.Subscribe.SubscribeDomain, "\n")
-//		return fmt.Sprintf("https://%s%s?token=%s&flag=%s", domains[0], l.svc.Config.Subscribe.SubscribePath, token, flag)
-//	}
-//
-//	return fmt.Sprintf("https://%s%s?token=%s&flag=surfboard", l.ctx.Request.Host, l.svc.Config.Subscribe.SubscribePath, token)
-//}
-
-//func (l *SubscribeLogic) getClientType(req *types.SubscribeRequest) string {
-//	clientTypeMap := map[string]string{
-//		"clash":        "clash",
-//		"meta":         "clash",
-//		"sing-box":     "sing-box",
-//		"hiddify":      "sing-box",
-//		"surge":        "surge",
-//		"quantumult":   "quantumult",
-//		"shadowrocket": "shadowrocket",
-//		"loon":         "loon",
-//		"surfboard":    "surfboard",
-//		"v2rayn":       "v2rayn",
-//	}
-//
-//	findClient := func(s string) string {
-//		s = strings.ToLower(strings.TrimSpace(s))
-//		if s == "" {
-//			return ""
-//		}
-//
-//		for key, clientType := range clientTypeMap {
-//			if strings.Contains(s, key) {
-//				return clientType
-//			}
-//		}
-//
-//		return ""
-//	}
-//
-//	// 优先检查Flag参数
-//	if typ := findClient(req.Flag); typ != "" {
-//		return typ
-//	}
-//
-//	// 其次检查UA参数
-//	return findClient(req.UA)
-//}
