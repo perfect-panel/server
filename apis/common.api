@@ -35,10 +35,6 @@ type (
 	GetTosResponse {
 		TosContent string `json:"tos_content"`
 	}
-	GetAppcationResponse {
-		Config       ApplicationConfig         `json:"config"`
-		Applications []ApplicationResponseInfo `json:"applications"`
-	}
 	// GetCodeRequest Get code request
 	SendCodeRequest {
 		Email string `json:"email" validate:"required"`
@@ -101,10 +97,6 @@ service ppanel {
 	@doc "Get global config"
 	@handler GetGlobalConfig
 	get /site/config returns (GetGlobalConfigResponse)
-
-	@doc "Get Tos Content"
-	@handler GetApplication
-	get /application returns (GetAppcationResponse)
 
 	@doc "Get Tos Content"
 	@handler GetTos

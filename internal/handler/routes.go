@@ -22,15 +22,6 @@ import (
 	adminTicket "github.com/perfect-panel/server/internal/handler/admin/ticket"
 	adminTool "github.com/perfect-panel/server/internal/handler/admin/tool"
 	adminUser "github.com/perfect-panel/server/internal/handler/admin/user"
-	appAnnouncement "github.com/perfect-panel/server/internal/handler/app/announcement"
-	appAuth "github.com/perfect-panel/server/internal/handler/app/auth"
-	appDocument "github.com/perfect-panel/server/internal/handler/app/document"
-	appNode "github.com/perfect-panel/server/internal/handler/app/node"
-	appOrder "github.com/perfect-panel/server/internal/handler/app/order"
-	appPayment "github.com/perfect-panel/server/internal/handler/app/payment"
-	appSubscribe "github.com/perfect-panel/server/internal/handler/app/subscribe"
-	appUser "github.com/perfect-panel/server/internal/handler/app/user"
-	appWs "github.com/perfect-panel/server/internal/handler/app/ws"
 	auth "github.com/perfect-panel/server/internal/handler/auth"
 	authOauth "github.com/perfect-panel/server/internal/handler/auth/oauth"
 	common "github.com/perfect-panel/server/internal/handler/common"
@@ -357,33 +348,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	adminSystemGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
 	{
-		// Get application
-		adminSystemGroupRouter.GET("/application", adminSystem.GetApplicationHandler(serverCtx))
-
-		// Update application
-		adminSystemGroupRouter.PUT("/application", adminSystem.UpdateApplicationHandler(serverCtx))
-
-		// Create application
-		adminSystemGroupRouter.POST("/application", adminSystem.CreateApplicationHandler(serverCtx))
-
-		// Delete application
-		adminSystemGroupRouter.DELETE("/application", adminSystem.DeleteApplicationHandler(serverCtx))
-
-		// update application config
-		adminSystemGroupRouter.PUT("/application_config", adminSystem.UpdateApplicationConfigHandler(serverCtx))
-
-		// get application config
-		adminSystemGroupRouter.GET("/application_config", adminSystem.GetApplicationConfigHandler(serverCtx))
-
-		// Update application version
-		adminSystemGroupRouter.PUT("/application_version", adminSystem.UpdateApplicationVersionHandler(serverCtx))
-
-		// Create application version
-		adminSystemGroupRouter.POST("/application_version", adminSystem.CreateApplicationVersionHandler(serverCtx))
-
-		// Delete application
-		adminSystemGroupRouter.DELETE("/application_version", adminSystem.DeleteApplicationVersionHandler(serverCtx))
-
 		// Get Currency Config
 		adminSystemGroupRouter.GET("/currency_config", adminSystem.GetCurrencyConfigHandler(serverCtx))
 
@@ -565,153 +529,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		adminUserGroupRouter.GET("/subscribe/traffic_logs", adminUser.GetUserSubscribeTrafficLogsHandler(serverCtx))
 	}
 
-	appAnnouncementGroupRouter := router.Group("/v1/app/announcement")
-	appAnnouncementGroupRouter.Use(middleware.AppMiddleware(serverCtx), middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Query announcement
-		appAnnouncementGroupRouter.GET("/list", appAnnouncement.QueryAnnouncementHandler(serverCtx))
-	}
-
-	appAuthGroupRouter := router.Group("/v1/app/auth")
-	appAuthGroupRouter.Use(middleware.AppMiddleware(serverCtx))
-
-	{
-		// Check Account
-		appAuthGroupRouter.POST("/check", appAuth.CheckHandler(serverCtx))
-
-		// GetAppConfig
-		appAuthGroupRouter.POST("/config", appAuth.GetAppConfigHandler(serverCtx))
-
-		// Login
-		appAuthGroupRouter.POST("/login", appAuth.LoginHandler(serverCtx))
-
-		// Register
-		appAuthGroupRouter.POST("/register", appAuth.RegisterHandler(serverCtx))
-
-		// Reset Password
-		appAuthGroupRouter.POST("/reset_password", appAuth.ResetPasswordHandler(serverCtx))
-	}
-
-	appDocumentGroupRouter := router.Group("/v1/app/document")
-	appDocumentGroupRouter.Use(middleware.AppMiddleware(serverCtx), middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Get document detail
-		appDocumentGroupRouter.GET("/detail", appDocument.QueryDocumentDetailHandler(serverCtx))
-
-		// Get document list
-		appDocumentGroupRouter.GET("/list", appDocument.QueryDocumentListHandler(serverCtx))
-	}
-
-	appNodeGroupRouter := router.Group("/v1/app/node")
-	appNodeGroupRouter.Use(middleware.AppMiddleware(serverCtx), middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Get Node list
-		appNodeGroupRouter.GET("/list", appNode.GetNodeListHandler(serverCtx))
-
-		// Get rule group list
-		appNodeGroupRouter.GET("/rule_group_list", appNode.GetRuleGroupListHandler(serverCtx))
-	}
-
-	appOrderGroupRouter := router.Group("/v1/app/order")
-	appOrderGroupRouter.Use(middleware.AppMiddleware(serverCtx), middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Checkout order
-		appOrderGroupRouter.POST("/checkout", appOrder.CheckoutOrderHandler(serverCtx))
-
-		// Close order
-		appOrderGroupRouter.POST("/close", appOrder.CloseOrderHandler(serverCtx))
-
-		// Get order
-		appOrderGroupRouter.GET("/detail", appOrder.QueryOrderDetailHandler(serverCtx))
-
-		// Get order list
-		appOrderGroupRouter.GET("/list", appOrder.QueryOrderListHandler(serverCtx))
-
-		// Pre create order
-		appOrderGroupRouter.POST("/pre", appOrder.PreCreateOrderHandler(serverCtx))
-
-		// purchase Subscription
-		appOrderGroupRouter.POST("/purchase", appOrder.PurchaseHandler(serverCtx))
-
-		// Recharge
-		appOrderGroupRouter.POST("/recharge", appOrder.RechargeHandler(serverCtx))
-
-		// Renewal Subscription
-		appOrderGroupRouter.POST("/renewal", appOrder.RenewalHandler(serverCtx))
-
-		// Reset traffic
-		appOrderGroupRouter.POST("/reset", appOrder.ResetTrafficHandler(serverCtx))
-	}
-
-	appPaymentGroupRouter := router.Group("/v1/app/payment")
-	appPaymentGroupRouter.Use(middleware.AppMiddleware(serverCtx), middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Get available payment methods
-		appPaymentGroupRouter.GET("/methods", appPayment.GetAvailablePaymentMethodsHandler(serverCtx))
-	}
-
-	appSubscribeGroupRouter := router.Group("/v1/app/subscribe")
-	appSubscribeGroupRouter.Use(middleware.AppMiddleware(serverCtx), middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Get application config
-		appSubscribeGroupRouter.GET("/application/config", appSubscribe.QueryApplicationConfigHandler(serverCtx))
-
-		// Get subscribe group list
-		appSubscribeGroupRouter.GET("/group/list", appSubscribe.QuerySubscribeGroupListHandler(serverCtx))
-
-		// Get subscribe list
-		appSubscribeGroupRouter.GET("/list", appSubscribe.QuerySubscribeListHandler(serverCtx))
-
-		// Reset user subscription period
-		appSubscribeGroupRouter.POST("/reset/period", appSubscribe.ResetUserSubscribePeriodHandler(serverCtx))
-
-		// Get  Already subscribed to package
-		appSubscribeGroupRouter.GET("/user/already_subscribe", appSubscribe.QueryUserAlreadySubscribeHandler(serverCtx))
-
-		// Get Available subscriptions for users
-		appSubscribeGroupRouter.GET("/user/available_subscribe", appSubscribe.QueryUserAvailableUserSubscribeHandler(serverCtx))
-	}
-
-	appUserGroupRouter := router.Group("/v1/app/user")
-	appUserGroupRouter.Use(middleware.AppMiddleware(serverCtx), middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Delete Account
-		appUserGroupRouter.DELETE("/account", appUser.DeleteAccountHandler(serverCtx))
-
-		// Query User Affiliate Count
-		appUserGroupRouter.GET("/affiliate/count", appUser.QueryUserAffiliateHandler(serverCtx))
-
-		// Query User Affiliate List
-		appUserGroupRouter.GET("/affiliate/list", appUser.QueryUserAffiliateListHandler(serverCtx))
-
-		// query user info
-		appUserGroupRouter.GET("/info", appUser.QueryUserInfoHandler(serverCtx))
-
-		// Get user online time total
-		appUserGroupRouter.GET("/online_time/statistics", appUser.GetUserOnlineTimeStatisticsHandler(serverCtx))
-
-		// Update Password
-		appUserGroupRouter.PUT("/password", appUser.UpdatePasswordHandler(serverCtx))
-
-		// Get user subcribe traffic logs
-		appUserGroupRouter.GET("/subscribe/traffic_logs", appUser.GetUserSubscribeTrafficLogsHandler(serverCtx))
-	}
-
-	appWsGroupRouter := router.Group("/v1/app/ws")
-	appWsGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
-
-	{
-		// App heartbeat
-		appWsGroupRouter.GET("/:userid/:identifier", appWs.AppWsHandler(serverCtx))
-	}
-
 	authGroupRouter := router.Group("/v1/auth")
 
 	{
@@ -758,9 +575,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	{
 		// Get Ads
 		commonGroupRouter.GET("/ads", common.GetAdsHandler(serverCtx))
-
-		// Get Tos Content
-		commonGroupRouter.GET("/application", common.GetApplicationHandler(serverCtx))
 
 		// Check verification code
 		commonGroupRouter.POST("/check_verification_code", common.CheckVerificationCodeHandler(serverCtx))
@@ -869,9 +683,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	publicSubscribeGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
 	{
-		// Get application config
-		publicSubscribeGroupRouter.GET("/application/config", publicSubscribe.QueryApplicationConfigHandler(serverCtx))
-
 		// Get subscribe group list
 		publicSubscribeGroupRouter.GET("/group/list", publicSubscribe.QuerySubscribeGroupListHandler(serverCtx))
 

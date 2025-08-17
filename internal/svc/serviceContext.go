@@ -9,11 +9,8 @@ import (
 	"github.com/perfect-panel/server/internal/model/ads"
 	"github.com/perfect-panel/server/internal/model/cache"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/announcement"
-	"github.com/perfect-panel/server/internal/model/application"
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/internal/model/coupon"
 	"github.com/perfect-panel/server/internal/model/document"
@@ -30,6 +27,9 @@ import (
 	"github.com/perfect-panel/server/pkg/limit"
 	"github.com/perfect-panel/server/pkg/nodeMultiplier"
 	"github.com/perfect-panel/server/pkg/orm"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -54,7 +54,6 @@ type ServiceContext struct {
 	DocumentModel      document.Model
 	SubscribeModel     subscribe.Model
 	TrafficLogModel    traffic.Model
-	ApplicationModel   application.Model
 	AnnouncementModel  announcement.Model
 	SubscribeTypeModel subscribeType.Model
 
@@ -106,7 +105,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		DocumentModel:     document.NewModel(db, rds),
 		SubscribeModel:    subscribe.NewModel(db, rds),
 		TrafficLogModel:   traffic.NewModel(db),
-		ApplicationModel:  application.NewModel(db, rds),
 		AnnouncementModel: announcement.NewModel(db, rds),
 	}
 	srv.DeviceManager = NewDeviceManager(srv)

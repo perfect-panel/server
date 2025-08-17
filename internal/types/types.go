@@ -37,80 +37,6 @@ type AnyTLS struct {
 	SecurityConfig SecurityConfig `json:"security_config"`
 }
 
-type AppAuthCheckRequest struct {
-	Method     string `json:"method" validate:"required" validate:"required,oneof=device email mobile"`
-	Account    string `json:"account"`
-	Identifier string `json:"identifier" validate:"required"`
-	UserAgent  string `json:"user_agent" validate:"required,oneof=windows mac linux android ios harmony"`
-	AreaCode   string `json:"area_code"`
-}
-
-type AppAuthCheckResponse struct {
-	Status bool
-}
-
-type AppAuthRequest struct {
-	Method     string `json:"method" validate:"required" validate:"required,oneof=device email mobile"`
-	Account    string `json:"account"`
-	Password   string `json:"password"`
-	Identifier string `json:"identifier" validate:"required"`
-	UserAgent  string `json:"user_agent" validate:"required,oneof=windows mac linux android ios harmony"`
-	Code       string `json:"code"`
-	Invite     string `json:"invite"`
-	AreaCode   string `json:"area_code"`
-	CfToken    string `json:"cf_token,optional"`
-}
-
-type AppAuthRespone struct {
-	Token string `json:"token"`
-}
-
-type AppConfigRequest struct {
-	UserAgent string `json:"user_agent" validate:"required,oneof=windows mac linux android ios harmony"`
-}
-
-type AppConfigResponse struct {
-	EncryptionKey          string   `json:"encryption_key"`
-	EncryptionMethod       string   `json:"encryption_method"`
-	Domains                []string `json:"domains"`
-	StartupPicture         string   `json:"startup_picture"`
-	StartupPictureSkipTime int64    `json:"startup_picture_skip_time"`
-	Application            AppInfo  `json:"applications"`
-	OfficialEmail          string   `json:"official_email"`
-	OfficialWebsite        string   `json:"official_website"`
-	OfficialTelegram       string   `json:"official_telegram"`
-	OfficialTelephone      string   `json:"official_telephone"`
-	InvitationLink         string   `json:"invitation_link"`
-	KrWebsiteId            string   `json:"kr_website_id"`
-}
-
-type AppInfo struct {
-	Id                 int64  `json:"id"`
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	Url                string `json:"url"`
-	Version            string `json:"version"`
-	VersionDescription string `json:"version_description"`
-	IsDefault          bool   `json:"is_default"`
-}
-
-type AppRuleGroupListResponse struct {
-	Total int64             `json:"total"`
-	List  []ServerRuleGroup `json:"list"`
-}
-
-type AppSendCodeRequest struct {
-	Method   string `json:"method" validate:"required" validate:"required,oneof=email mobile"`
-	Account  string `json:"account"`
-	AreaCode string `json:"area_code"`
-	CfToken  string `json:"cf_token,optional"`
-}
-
-type AppSendCodeRespone struct {
-	Status bool   `json:"status"`
-	Code   string `json:"code,omitempty"`
-}
-
 type AppUserSubcbribe struct {
 	Id          int64                   `json:"id"`
 	Name        string                  `json:"name"`
@@ -145,22 +71,6 @@ type AppUserSubscbribeNode struct {
 	Download     int64    `json:"download"`
 }
 
-type AppUserSubscbribeNodeRequest struct {
-	Id int64 `form:"id"  validate:"required"`
-}
-
-type AppUserSubscbribeNodeResponse struct {
-	List []AppUserSubscbribeNode `json:"list"`
-}
-
-type AppUserSubscbribeResponse struct {
-	List []AppUserSubcbribe `json:"list"`
-}
-
-type AppUserSubscribeRequest struct {
-	ContainsNodes *bool `form:"contains_nodes"`
-}
-
 type AppleLoginCallbackRequest struct {
 	Code    string `form:"code"`
 	IDToken string `form:"id_token"`
@@ -173,15 +83,6 @@ type Application struct {
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	SubscribeType string `json:"subscribe_type"`
-}
-
-type ApplicationConfig struct {
-	AppId                  int64    `json:"app_id"`
-	EncryptionKey          string   `json:"encryption_key"`
-	EncryptionMethod       string   `json:"encryption_method"`
-	Domains                []string `json:"domains" validate:"required"`
-	StartupPicture         string   `json:"startup_picture"`
-	StartupPictureSkipTime int64    `json:"startup_picture_skip_time"`
 }
 
 type ApplicationPlatform struct {
@@ -336,12 +237,6 @@ type CommissionLog struct {
 	CreatedAt int64  `json:"created_at"`
 }
 
-type ConnectionRecords struct {
-	CurrentContinuousDays   int64 `json:"current_continuous_days"`
-	HistoryContinuousDays   int64 `json:"history_continuous_days"`
-	LongestSingleConnection int64 `json:"longest_single_connection"`
-}
-
 type Coupon struct {
 	Id         int64   `json:"id"`
 	Name       string  `json:"name"`
@@ -373,23 +268,6 @@ type CreateAdsRequest struct {
 type CreateAnnouncementRequest struct {
 	Title   string `json:"title" validate:"required"`
 	Content string `json:"content" validate:"required"`
-}
-
-type CreateApplicationRequest struct {
-	Icon          string              `json:"icon"`
-	Name          string              `json:"name"`
-	Description   string              `json:"description"`
-	SubscribeType string              `json:"subscribe_type"`
-	Platform      ApplicationPlatform `json:"platform"`
-}
-
-type CreateApplicationVersionRequest struct {
-	Url           string `json:"url"`
-	Version       string `json:"version" validate:"required"`
-	Description   string `json:"description"`
-	Platform      string `json:"platform" validate:"required,oneof=windows mac linux android ios harmony"`
-	IsDefault     bool   `json:"is_default"`
-	ApplicationId int64  `json:"application_id" validate:"required"`
 }
 
 type CreateBatchSendEmailTaskRequest struct {
@@ -585,24 +463,11 @@ type CurrencyConfig struct {
 	CurrencySymbol string `json:"currency_symbol"`
 }
 
-type DeleteAccountRequest struct {
-	Method string `json:"method" validate:"required" validate:"required,oneof=email telephone device"`
-	Code   string `json:"code"`
-}
-
 type DeleteAdsRequest struct {
 	Id int64 `json:"id"`
 }
 
 type DeleteAnnouncementRequest struct {
-	Id int64 `json:"id" validate:"required"`
-}
-
-type DeleteApplicationRequest struct {
-	Id int64 `json:"id" validate:"required"`
-}
-
-type DeleteApplicationVersionRequest struct {
 	Id int64 `json:"id" validate:"required"`
 }
 
@@ -744,11 +609,6 @@ type GetAnnouncementListResponse struct {
 
 type GetAnnouncementRequest struct {
 	Id int64 `form:"id" validate:"required"`
-}
-
-type GetAppcationResponse struct {
-	Config       ApplicationConfig         `json:"config"`
-	Applications []ApplicationResponseInfo `json:"applications"`
 }
 
 type GetAuthMethodConfigRequest struct {
@@ -1059,11 +919,6 @@ type GetUserLoginLogsRequest struct {
 type GetUserLoginLogsResponse struct {
 	List  []UserLoginLog `json:"list"`
 	Total int64          `json:"total"`
-}
-
-type GetUserOnlineTimeStatisticsResponse struct {
-	WeeklyStats       []WeeklyStat      `json:"weekly_stats"`
-	ConnectionRecords ConnectionRecords `json:"connection_records"`
 }
 
 type GetUserSubscribeByIdRequest struct {
@@ -1524,10 +1379,6 @@ type QueryUserCommissionLogListResponse struct {
 type QueryUserSubscribeListResponse struct {
 	List  []UserSubscribe `json:"list"`
 	Total int64           `json:"total"`
-}
-
-type QueryUserSubscribeResp struct {
-	Data []UserSubscribeData `json:"data"`
 }
 
 type RechargeOrderRequest struct {
@@ -1998,25 +1849,6 @@ type UpdateAnnouncementRequest struct {
 	Popup   *bool  `json:"popup"`
 }
 
-type UpdateApplicationRequest struct {
-	Id            int64               `json:"id" validate:"required"`
-	Icon          string              `json:"icon"`
-	Name          string              `json:"name"`
-	Description   string              `json:"description"`
-	SubscribeType string              `json:"subscribe_type"`
-	Platform      ApplicationPlatform `json:"platform"`
-}
-
-type UpdateApplicationVersionRequest struct {
-	Id            int64  `json:"id" validate:"required"`
-	Url           string `json:"url"`
-	Version       string `json:"version" validate:"required"`
-	Description   string `json:"description"`
-	Platform      string `json:"platform" validate:"required,oneof=windows mac linux android ios harmony"`
-	IsDefault     bool   `json:"is_default"`
-	ApplicationId int64  `json:"application_id" validate:"required"`
-}
-
 type UpdateAuthMethodConfigRequest struct {
 	Id      int64       `json:"id"`
 	Method  string      `json:"method"`
@@ -2086,11 +1918,6 @@ type UpdateOrderStatusRequest struct {
 	Status    uint8  `json:"status" validate:"required"`
 	PaymentId int64  `json:"payment_id,omitempty"`
 	TradeNo   string `json:"trade_no,omitempty"`
-}
-
-type UpdatePasswordRequeset struct {
-	Password    string `json:"password"`
-	NewPassword string `json:"new_password"`
 }
 
 type UpdatePaymentMethodRequest struct {
@@ -2277,19 +2104,6 @@ type UserDevice struct {
 	UpdatedAt  int64  `json:"updated_at"`
 }
 
-type UserInfoResponse struct {
-	Id          int64            `json:"id"`
-	Balance     int64            `json:"balance"`
-	Email       string           `json:"email"`
-	RefererId   int64            `json:"referer_id"`
-	ReferCode   string           `json:"refer_code"`
-	Avatar      string           `json:"avatar"`
-	AreaCode    string           `json:"area_code"`
-	Telephone   string           `json:"telephone"`
-	Devices     []UserDevice     `json:"devices"`
-	AuthMethods []UserAuthMethod `json:"auth_methods"`
-}
-
 type UserLoginLog struct {
 	Id        int64  `json:"id"`
 	UserId    int64  `json:"user_id"`
@@ -2350,11 +2164,6 @@ type UserSubscribe struct {
 	UpdatedAt   int64     `json:"updated_at"`
 }
 
-type UserSubscribeData struct {
-	SubscribeId     int64 `json:"subscribe_id"`
-	UserSubscribeId int64 `json:"user_subscribe_id"`
-}
-
 type UserSubscribeDetail struct {
 	Id          int64     `json:"id"`
 	UserId      int64     `json:"user_id"`
@@ -2382,14 +2191,6 @@ type UserSubscribeLog struct {
 	IP              string `json:"ip"`
 	UserAgent       string `json:"user_agent"`
 	CreatedAt       int64  `json:"created_at"`
-}
-
-type UserSubscribeResetPeriodRequest struct {
-	UserSubscribeId int64 `json:"user_subscribe_id"`
-}
-
-type UserSubscribeResetPeriodResponse struct {
-	Status bool `json:"status"`
 }
 
 type UserTraffic struct {
@@ -2468,10 +2269,4 @@ type VmessProtocol struct {
 	TLSConfig string `json:"tls_config"`
 	Network   string `json:"network"`
 	Transport string `json:"transport"`
-}
-
-type WeeklyStat struct {
-	Day     int     `json:"day"`
-	DayName string  `json:"day_name"`
-	Hours   float64 `json:"hours"`
 }

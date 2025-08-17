@@ -11,50 +11,6 @@ info (
 import "../types.api"
 
 type (
-	// Update application request
-	UpdateApplicationRequest {
-		Id            int64               `json:"id" validate:"required"`
-		Icon          string              `json:"icon"`
-		Name          string              `json:"name"`
-		Description   string              `json:"description"`
-		SubscribeType string              `json:"subscribe_type"`
-		Platform      ApplicationPlatform `json:"platform"`
-	}
-	// Create application request
-	CreateApplicationRequest {
-		Icon          string              `json:"icon"`
-		Name          string              `json:"name"`
-		Description   string              `json:"description"`
-		SubscribeType string              `json:"subscribe_type"`
-		Platform      ApplicationPlatform `json:"platform"`
-	}
-	// Update application request
-	UpdateApplicationVersionRequest {
-		Id            int64  `json:"id" validate:"required"`
-		Url           string `json:"url"`
-		Version       string `json:"version" validate:"required"`
-		Description   string `json:"description"`
-		Platform      string `json:"platform" validate:"required,oneof=windows mac linux android ios harmony"`
-		IsDefault     bool   `json:"is_default"`
-		ApplicationId int64  `json:"application_id" validate:"required"`
-	}
-	// Create application request
-	CreateApplicationVersionRequest {
-		Url           string `json:"url"`
-		Version       string `json:"version" validate:"required"`
-		Description   string `json:"description"`
-		Platform      string `json:"platform" validate:"required,oneof=windows mac linux android ios harmony"`
-		IsDefault     bool   `json:"is_default"`
-		ApplicationId int64  `json:"application_id" validate:"required"`
-	}
-	// Delete application request
-	DeleteApplicationRequest {
-		Id int64 `json:"id" validate:"required"`
-	}
-	// Delete application request
-	DeleteApplicationVersionRequest {
-		Id int64 `json:"id" validate:"required"`
-	}
 	GetNodeMultiplierResponse {
 		Periods []TimePeriod `json:"periods"`
 	}
@@ -89,42 +45,6 @@ service ppanel {
 	@doc "Get subscribe type"
 	@handler GetSubscribeType
 	get /subscribe_type returns (SubscribeType)
-
-	@doc "update application config"
-	@handler UpdateApplicationConfig
-	put /application_config (ApplicationConfig)
-
-	@doc "get application config"
-	@handler GetApplicationConfig
-	get /application_config returns (ApplicationConfig)
-
-	@doc "Get application"
-	@handler GetApplication
-	get /application returns (ApplicationResponse)
-
-	@doc "Update application"
-	@handler UpdateApplication
-	put /application (UpdateApplicationRequest)
-
-	@doc "Create application"
-	@handler CreateApplication
-	post /application (CreateApplicationRequest)
-
-	@doc "Delete application"
-	@handler DeleteApplication
-	delete /application (DeleteApplicationRequest)
-
-	@doc "Update application version"
-	@handler UpdateApplicationVersion
-	put /application_version (UpdateApplicationVersionRequest)
-
-	@doc "Create application version"
-	@handler CreateApplicationVersion
-	post /application_version (CreateApplicationVersionRequest)
-
-	@doc "Delete application"
-	@handler DeleteApplicationVersion
-	delete /application_version (DeleteApplicationVersionRequest)
 
 	@doc "Get register config"
 	@handler GetRegisterConfig

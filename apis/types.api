@@ -475,14 +475,6 @@ type (
 		Port   int    `json:"port"`
 		Prefix string `json:"prefix"`
 	}
-	ApplicationConfig {
-		AppId                  int64    `json:"app_id"`
-		EncryptionKey          string   `json:"encryption_key"`
-		EncryptionMethod       string   `json:"encryption_method"`
-		Domains                []string `json:"domains" validate:"required"`
-		StartupPicture         string   `json:"startup_picture"`
-		StartupPictureSkipTime int64    `json:"startup_picture_skip_time"`
-	}
 	UserDevice {
 		Id         int64  `json:"id"`
 		Ip         string `json:"ip"`
