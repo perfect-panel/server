@@ -45,6 +45,7 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 		l := subscribe.NewSubscribeLogic(c, svcCtx)
 		resp, err := l.Handler(&req)
 		if err != nil {
+			c.String(http.StatusInternalServerError, "Internal Server")
 			return
 		}
 		c.Header("subscription-userinfo", resp.Header)

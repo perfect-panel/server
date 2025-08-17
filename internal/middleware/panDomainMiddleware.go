@@ -14,7 +14,6 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		if svc.Config.Subscribe.PanDomain && c.Request.URL.Path == "/" {
-
 			// intercept browser
 			ua := c.GetHeader("User-Agent")
 
