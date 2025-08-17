@@ -44,7 +44,6 @@ jobs:
         run: |
           test -f ./swagger/common.json
           test -f ./swagger/user.json
-          test -f ./swagger/app.json
           test -f ./swagger/admin.json
 
       - name: Checkout target repository
