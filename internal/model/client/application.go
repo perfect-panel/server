@@ -6,7 +6,7 @@ import (
 )
 
 type SubscribeApplication struct {
-	Id                int64     `gorm:"primary_key"`
+	Id                int64     `gorm:"primaryKey"`
 	Name              string    `gorm:"type:varchar(255);default:'';not null;comment:Application Name"`
 	Icon              string    `gorm:"type:MEDIUMTEXT;default:null;comment:Application Icon"`
 	Description       string    `gorm:"type:varchar(255);default:null;comment:Application Description"`
