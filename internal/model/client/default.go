@@ -55,7 +55,7 @@ func (m *DefaultSubscribeApplicationModel) Update(ctx context.Context, data *Sub
 }
 
 func (m *DefaultSubscribeApplicationModel) Delete(ctx context.Context, id int64) error {
-	if err := m.WithContext(ctx).Delete(&SubscribeApplication{}, id).Error; err != nil {
+	if err := m.WithContext(ctx).Where("`id` = ?", id).Delete(&SubscribeApplication{}).Error; err != nil {
 		return err
 	}
 	return nil
