@@ -28,9 +28,9 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 				c.Abort()
 				return
 			}
-			browserKeywords := strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")
+			clientUserAgents := strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")
 			var allow = false
-			for _, keyword := range browserKeywords {
+			for _, keyword := range clientUserAgents {
 				if strings.Contains(strings.ToLower(ua), strings.ToLower(keyword)) {
 					allow = true
 				}

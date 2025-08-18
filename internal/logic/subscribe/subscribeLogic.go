@@ -53,7 +53,12 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		if item.IsDefault {
 			defaultApp = item
 		}
+
 		if strings.Contains(userAgent, u) {
+			// Special handling for Stash
+			if strings.Contains(userAgent, "stash") && !strings.Contains(u, "stash") {
+				continue
+			}
 			targetApp = item
 			break
 		}
