@@ -12,14 +12,10 @@ import "../types.api"
 
 type (
 	GetMessageLogListRequest {
-		Page     int    `form:"page"`
-		Size     int    `form:"size"`
-		Type     string `form:"type"`
-		Platform string `form:"platform,omitempty"`
-		To       string `form:"to,omitempty"`
-		Subject  string `form:"subject,omitempty"`
-		Content  string `form:"content,omitempty"`
-		Status   int    `form:"status,omitempty"`
+		Page   int    `form:"page"`
+		Size   int    `form:"size"`
+		Type   uint8  `form:"type"`
+		Search string `form:"search,optional"`
 	}
 	GetMessageLogListResponse {
 		Total int64        `json:"total"`

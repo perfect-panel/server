@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
 	"gorm.io/gorm"
@@ -163,16 +164,24 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 				return err
 			}
 			// create deduction record
-			deductionLog := user.GiftAmountLog{
-				UserId:  orderInfo.UserId,
-				OrderNo: orderInfo.OrderNo,
-				Amount:  orderInfo.GiftAmount,
-				Type:    2,
-				Balance: u.GiftAmount,
-				Remark:  "Renewal order deduction",
+			giftLog := log.Gift{
+				Type:        log.GiftTypeReduce,
+				OrderNo:     orderInfo.OrderNo,
+				SubscribeId: 0,
+				Amount:      orderInfo.GiftAmount,
+				Balance:     u.GiftAmount,
+				Remark:      "Renewal order deduction",
+				CreatedAt:   time.Now().UnixMilli(),
 			}
-			if err := db.Model(&user.GiftAmountLog{}).Create(&deductionLog).Error; err != nil {
-				l.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", deductionLog))
+			content, _ := giftLog.Marshal()
+
+			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Type:     log.TypeGift.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: u.Id,
+				Content:  string(content),
+			}).Error; err != nil {
+				l.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", giftLog))
 				return err
 			}
 		}

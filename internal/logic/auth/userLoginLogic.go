@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/internal/config"
@@ -41,29 +42,44 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	// Record login status
 	defer func(svcCtx *svc.ServiceContext) {
 		if userInfo.Id != 0 {
-			if err := svcCtx.UserModel.InsertLoginLog(l.ctx, &user.LoginLog{
-				UserId:    userInfo.Id,
+			loginLog := log.Login{
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
-				Success:   &loginStatus,
+				Success:   loginStatus,
+			}
+			content, _ := loginLog.Marshal()
+			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+				Id:       0,
+				Type:     log.TypeLogin.Uint8(),
+				Date:     time.Now().Format("2006-01-02"),
+				ObjectID: userInfo.Id,
+				Content:  string(content),
 			}); err != nil {
-				l.Logger.Error("[UserLogin] insert login log error", logger.Field("error", err.Error()))
+				l.Errorw("failed to insert login log",
+					logger.Field("user_id", userInfo.Id),
+					logger.Field("ip", req.IP),
+					logger.Field("error", err.Error()),
+				)
 			}
 		}
 	}(l.svcCtx)
 
 	userInfo, err = l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
+
+	l.Debugf("[用户登陆] user email: %v, user info: %v", req.Email, userInfo)
 	if err != nil {
 		if errors.As(err, &gorm.ErrRecordNotFound) {
-			logger.WithContext(l.ctx).Error(err)
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)
 		}
+		logger.WithContext(l.ctx).Error(err)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
 	}
+
 	// Verify password
 	if !tool.VerifyPassWord(req.Password, userInfo.Password) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
 	}
+	l.Debugf("[用户登陆] 密码验证成功")
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
 	// Generate token
@@ -80,6 +96,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	}
 	sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
 	if err = l.svcCtx.Redis.Set(l.ctx, sessionIdCacheKey, userInfo.Id, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
+		l.Errorf("[用户登陆] set session id error: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
 	}
 	loginStatus = true

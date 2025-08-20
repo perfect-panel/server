@@ -701,14 +701,10 @@ type GetLoginLogResponse struct {
 }
 
 type GetMessageLogListRequest struct {
-	Page     int    `form:"page"`
-	Size     int    `form:"size"`
-	Type     string `form:"type"`
-	Platform string `form:"platform,omitempty"`
-	To       string `form:"to,omitempty"`
-	Subject  string `form:"subject,omitempty"`
-	Content  string `form:"content,omitempty"`
-	Status   int    `form:"status,omitempty"`
+	Page   int    `form:"page"`
+	Size   int    `form:"size"`
+	Type   uint8  `form:"type"`
+	Search string `form:"search,optional"`
 }
 
 type GetMessageLogListResponse struct {
@@ -1022,15 +1018,14 @@ type LoginResponse struct {
 }
 
 type MessageLog struct {
-	Id        int64  `json:"id"`
-	Type      string `json:"type"`
-	Platform  string `json:"platform"`
-	To        string `json:"to"`
-	Subject   string `json:"subject"`
-	Content   string `json:"content"`
-	Status    int    `json:"status"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	Id        int64                  `json:"id"`
+	Type      uint8                  `json:"type"`
+	Platform  string                 `json:"platform"`
+	To        string                 `json:"to"`
+	Subject   string                 `json:"subject"`
+	Content   map[string]interface{} `json:"content"`
+	Status    uint8                  `json:"status"`
+	CreatedAt int64                  `json:"created_at"`
 }
 
 type MobileAuthenticateConfig struct {

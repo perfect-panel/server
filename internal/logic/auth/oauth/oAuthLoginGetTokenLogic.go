@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/auth"
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -52,7 +53,6 @@ func NewOAuthLoginGetTokenLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTokenRequest, ip, userAgent string) (resp *types.LoginResponse, err error) {
-	startTime := time.Now()
 	requestID := uuidx.NewUUID().String()
 	loginStatus := false
 	var userInfo *user.User
@@ -65,24 +65,7 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTok
 	)
 
 	defer func() {
-		duration := time.Since(startTime)
-		l.recordLoginStatus(&loginStatus, &userInfo, ip, userAgent, requestID)
-
-		if loginStatus {
-			l.Infow("oauth login completed successfully",
-				logger.Field("request_id", requestID),
-				logger.Field("method", req.Method),
-				logger.Field("user_id", userInfo.Id),
-				logger.Field("duration_ms", duration.Milliseconds()),
-			)
-		} else {
-			l.Errorw("oauth login failed",
-				logger.Field("request_id", requestID),
-				logger.Field("method", req.Method),
-				logger.Field("error", err),
-				logger.Field("duration_ms", duration.Milliseconds()),
-			)
-		}
+		l.recordLoginStatus(loginStatus, userInfo, ip, userAgent, requestID)
 	}()
 
 	userInfo, err = l.handleOAuthProvider(req, requestID)
@@ -504,26 +487,27 @@ func (l *OAuthLoginGetTokenLogic) createAuthMethod(db *gorm.DB, userID int64, au
 	return nil
 }
 
-func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus *bool, userInfo **user.User, ip, userAgent, requestID string) {
-	if *userInfo != nil && (*userInfo).Id != 0 {
-		if err := l.svcCtx.UserModel.InsertLoginLog(l.ctx, &user.LoginLog{
-			UserId:    (*userInfo).Id,
+func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *user.User, ip, userAgent, requestID string) {
+
+	if userInfo != nil && userInfo.Id != 0 {
+		loginLog := log.Login{
 			LoginIP:   ip,
 			UserAgent: userAgent,
 			Success:   loginStatus,
+		}
+		content, _ := loginLog.Marshal()
+		if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			Id:       0,
+			Type:     log.TypeLogin.Uint8(),
+			Date:     time.Now().Format("2006-01-02"),
+			ObjectID: userInfo.Id,
+			Content:  string(content),
 		}); err != nil {
 			l.Errorw("failed to insert login log",
 				logger.Field("request_id", requestID),
-				logger.Field("user_id", (*userInfo).Id),
+				logger.Field("user_id", userInfo.Id),
 				logger.Field("ip", ip),
 				logger.Field("error", err.Error()),
-			)
-		} else {
-			l.Debugw("login log recorded successfully",
-				logger.Field("request_id", requestID),
-				logger.Field("user_id", (*userInfo).Id),
-				logger.Field("ip", ip),
-				logger.Field("success", *loginStatus),
 			)
 		}
 	}

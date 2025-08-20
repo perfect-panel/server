@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -28,10 +28,7 @@ func NewGetUserSubscribeLogsLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *GetUserSubscribeLogsLogic) GetUserSubscribeLogs(req *types.GetUserSubscribeLogsRequest) (resp *types.GetUserSubscribeLogsResponse, err error) {
-	data, total, err := l.svcCtx.UserModel.FilterSubscribeLogList(l.ctx, req.Page, req.Size, &user.SubscribeLogFilterParams{
-		UserSubscribeId: req.SubscribeId,
-		UserId:          req.UserId,
-	})
+	data, total, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{})
 
 	if err != nil {
 		l.Errorw("[GetUserSubscribeLogs] Get User Subscribe Logs Error:", logger.Field("err", err.Error()))

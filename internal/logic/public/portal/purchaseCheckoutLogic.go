@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
@@ -386,16 +388,21 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 
 		// Create gift amount log if gift amount was used
 		if giftUsed > 0 {
-			giftLog := &user.GiftAmountLog{
-				UserId:          u.Id,
-				UserSubscribeId: 0, // Will be updated when subscription is created
-				OrderNo:         o.OrderNo,
-				Type:            2, // Type 2 represents gift amount decrease/usage
-				Amount:          giftUsed,
-				Balance:         userInfo.GiftAmount,
-				Remark:          "Purchase payment",
+			giftLog := &log.Gift{
+				OrderNo: o.OrderNo,
+				Type:    2, // Type 2 represents gift amount decrease/usage
+				Amount:  giftUsed,
+				Balance: userInfo.GiftAmount,
+				Remark:  "Purchase payment",
 			}
-			err = db.Create(giftLog).Error
+			content, _ := giftLog.Marshal()
+
+			err = db.Create(&log.SystemLog{
+				Type:     log.TypeGift.Uint8(),
+				ObjectID: userInfo.Id,
+				Date:     time.Now().Format(time.DateOnly),
+				Content:  string(content),
+			}).Error
 			if err != nil {
 				return err
 			}
@@ -403,14 +410,19 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 
 		// Create balance log if regular balance was used
 		if balanceUsed > 0 {
-			balanceLog := &user.BalanceLog{
-				UserId:  u.Id,
+			balanceLog := &log.Balance{
 				Amount:  balanceUsed,
-				Type:    3, // Type 3 represents payment deduction
+				Type:    log.BalanceTypePayment, // Type 3 represents payment deduction
 				OrderId: o.Id,
 				Balance: userInfo.Balance,
 			}
-			err = db.Create(balanceLog).Error
+			content, _ := balanceLog.Marshal()
+			err = db.Create(&log.SystemLog{
+				Type:     log.TypeBalance.Uint8(),
+				ObjectID: userInfo.Id,
+				Date:     time.Now().Format(time.DateOnly),
+				Content:  string(content),
+			}).Error
 			if err != nil {
 				return err
 			}

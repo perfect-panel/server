@@ -2,7 +2,9 @@ package user
 
 import (
 	"context"
+	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -91,30 +93,43 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		// Create balance log entry only if there's an actual regular balance refund
 		balanceRefundAmount := balance - u.Balance
 		if balanceRefundAmount > 0 {
-			balanceLog := user.BalanceLog{
-				UserId:  userSub.UserId,
+			balanceLog := log.Balance{
 				OrderId: userSub.OrderId,
 				Amount:  balanceRefundAmount,
-				Type:    4, // Type 4 represents refund transaction
+				Type:    log.BalanceTypeRefund, // Type 4 represents refund transaction
 				Balance: balance,
 			}
-			if err := db.Model(&user.BalanceLog{}).Create(&balanceLog).Error; err != nil {
+			content, _ := balanceLog.Marshal()
+
+			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Type:     log.TypeBalance.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: u.Id,
+				Content:  string(content),
+			}).Error; err != nil {
 				return err
 			}
 		}
 
 		// Create gift amount log entry if there's a gift balance refund
 		if gift > 0 {
-			giftLog := user.GiftAmountLog{
-				UserId:          userSub.UserId,
-				UserSubscribeId: userSub.Id,
-				OrderNo:         orderInfo.OrderNo,
-				Type:            1, // Type 1 represents gift amount increase
-				Amount:          gift,
-				Balance:         u.GiftAmount + gift,
-				Remark:          "Unsubscribe refund",
+
+			giftLog := log.Gift{
+				SubscribeId: userSub.Id,
+				OrderNo:     orderInfo.OrderNo,
+				Type:        log.GiftTypeIncrease, // Type 1 represents gift amount increase
+				Amount:      gift,
+				Balance:     u.GiftAmount + gift,
+				Remark:      "Unsubscribe refund",
 			}
-			if err := db.Model(&user.GiftAmountLog{}).Create(&giftLog).Error; err != nil {
+			content, _ := giftLog.Marshal()
+
+			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Type:     log.TypeGift.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: u.Id,
+				Content:  string(content),
+			}).Error; err != nil {
 				return err
 			}
 			// Update user's gift amount

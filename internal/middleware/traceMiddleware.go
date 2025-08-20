@@ -9,14 +9,12 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/trace"
 )
 
@@ -71,19 +69,13 @@ func TraceMiddleware(_ *svc.ServiceContext) func(ctx *gin.Context) {
 		)
 		defer span.End()
 
-		requestId, err := uuid.NewV7()
-		if err != nil {
-			logger.Errorw(
-				"failed to generate request id in uuid v7 format, fallback to uuid v4",
-				logger.Field("error", err),
-			)
-			requestId = uuid.New()
-		}
-		c.Header(trace.RequestIdKey, requestId.String())
+		requestId := trace.TraceIDFromContext(ctx)
+
+		c.Header(trace.RequestIdKey, requestId)
 
 		span.SetAttributes(requestAttributes(c.Request)...)
 		span.SetAttributes(
-			attribute.String("http.request_id", requestId.String()),
+			attribute.String("http.request_id", requestId),
 			semconv.HTTPRouteKey.String(c.FullPath()),
 		)
 		// context with request host

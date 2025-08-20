@@ -3,7 +3,8 @@ package orm
 import (
 	"testing"
 
-	"github.com/perfect-panel/server/internal/model/task"
+	"github.com/perfect-panel/server/internal/model/log"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -30,7 +31,7 @@ func TestMysql(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to MySQL: %v", err)
 	}
-	err = db.Migrator().AutoMigrate(&task.EmailTask{})
+	err = db.Migrator().AutoMigrate(&log.SystemLog{})
 	if err != nil {
 		t.Fatalf("Failed to auto migrate: %v", err)
 		return

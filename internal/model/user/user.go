@@ -52,48 +52,6 @@ func (*Subscribe) TableName() string {
 	return "user_subscribe"
 }
 
-type BalanceLog struct {
-	Id        int64     `gorm:"primaryKey"`
-	UserId    int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
-	Amount    int64     `gorm:"not null;comment:Amount"`
-	Type      uint8     `gorm:"type:tinyint(1);not null;comment:Type: 1: Recharge 2: Withdraw 3: Payment 4: Refund 5: Reward"`
-	OrderId   int64     `gorm:"default:null;comment:Order ID"`
-	Balance   int64     `gorm:"not null;comment:Balance"`
-	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
-}
-
-func (BalanceLog) TableName() string {
-	return "user_balance_log"
-}
-
-type GiftAmountLog struct {
-	Id              int64     `gorm:"primaryKey"`
-	UserId          int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
-	UserSubscribeId int64     `gorm:"default:null;comment:Deduction User Subscribe ID"`
-	OrderNo         string    `gorm:"default:null;comment:Order No."`
-	Type            uint8     `gorm:"type:tinyint(1);not null;comment:Type: 1: Increase 2: Reduce"`
-	Amount          int64     `gorm:"not null;comment:Amount"`
-	Balance         int64     `gorm:"not null;comment:Balance"`
-	Remark          string    `gorm:"type:varchar(255);default:'';comment:Remark"`
-	CreatedAt       time.Time `gorm:"<-:create;comment:Creation Time"`
-}
-
-func (GiftAmountLog) TableName() string {
-	return "user_gift_amount_log"
-}
-
-type CommissionLog struct {
-	Id        int64     `gorm:"primaryKey"`
-	UserId    int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
-	OrderNo   string    `gorm:"default:null;comment:Order No."`
-	Amount    int64     `gorm:"not null;comment:Amount"`
-	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
-}
-
-func (*CommissionLog) TableName() string {
-	return "user_commission_log"
-}
-
 type AuthMethods struct {
 	Id             int64     `gorm:"primaryKey"`
 	UserId         int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
@@ -137,59 +95,4 @@ type DeviceOnlineRecord struct {
 
 func (DeviceOnlineRecord) TableName() string {
 	return "user_device_online_record"
-}
-
-type LoginLog struct {
-	Id        int64     `gorm:"primaryKey"`
-	UserId    int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
-	LoginIP   string    `gorm:"type:varchar(255);not null;comment:Login IP"`
-	UserAgent string    `gorm:"type:text;not null;comment:UserAgent"`
-	Success   *bool     `gorm:"default:false;not null;comment:Login Success"`
-	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
-}
-
-func (LoginLog) TableName() string {
-	return "user_login_log"
-}
-
-type SubscribeLog struct {
-	Id              int64     `gorm:"primaryKey"`
-	UserId          int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
-	UserSubscribeId int64     `gorm:"index:idx_user_subscribe_id;not null;comment:User Subscribe ID"`
-	Token           string    `gorm:"type:varchar(255);not null;comment:Token"`
-	IP              string    `gorm:"type:varchar(255);not null;comment:IP"`
-	UserAgent       string    `gorm:"type:text;not null;comment:UserAgent"`
-	CreatedAt       time.Time `gorm:"<-:create;comment:Creation Time"`
-}
-
-func (SubscribeLog) TableName() string {
-	return "user_subscribe_log"
-}
-
-const (
-	ResetSubscribeTypeAuto    uint8 = 1
-	ResetSubscribeTypeAdvance uint8 = 2
-	ResetSubscribeTypePaid    uint8 = 3
-)
-
-type FilterResetSubscribeLogParams struct {
-	Page            int
-	Size            int
-	Type            uint8
-	UserId          int64
-	OrderNo         string
-	UserSubscribeId int64
-}
-
-type ResetSubscribeLog struct {
-	Id              int64     `gorm:"primaryKey"`
-	UserId          int64     `gorm:"type:bigint;index:idx_user_id;not null;comment:User ID"`
-	Type            uint8     `gorm:"type:tinyint(1);not null;comment:Type: 1: Auto 2: Advance 3: Paid"`
-	OrderNo         string    `gorm:"type:varchar(255);default:null;comment:Order No."`
-	UserSubscribeId int64     `gorm:"type:bigint;index:idx_user_subscribe_id;not null;comment:User Subscribe ID"`
-	CreatedAt       time.Time `gorm:"<-:create;comment:Creation Time"`
-}
-
-func (ResetSubscribeLog) TableName() string {
-	return "user_reset_subscribe_log"
 }

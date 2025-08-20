@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/adapter"
 	"github.com/perfect-panel/server/internal/model/client"
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/server"
 
 	"github.com/perfect-panel/server/internal/model/user"
@@ -175,12 +176,19 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 		return
 	}
 
-	err := l.svc.UserModel.InsertSubscribeLog(l.ctx.Request.Context(), &user.SubscribeLog{
-		UserId:          userSub.UserId,
-		UserSubscribeId: userSub.Id,
-		Token:           req.Token,
-		IP:              l.ctx.ClientIP(),
-		UserAgent:       l.ctx.Request.UserAgent(),
+	subscribeLog := log.Subscribe{
+		Token:     req.Token,
+		UserAgent: req.UA,
+		ClientIP:  l.ctx.ClientIP(),
+	}
+
+	content, _ := subscribeLog.Marshal()
+
+	err := l.svc.LogModel.Insert(l.ctx.Request.Context(), &log.SystemLog{
+		Type:     log.TypeSubscribe.Uint8(),
+		ObjectID: userSub.Id,
+		Date:     time.Now().Format(time.DateOnly),
+		Content:  string(content),
 	})
 	if err != nil {
 		l.Errorw("[Generate Subscribe]insert subscribe log error: %v", logger.Field("error", err.Error()))

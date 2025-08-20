@@ -535,15 +535,14 @@ type (
 		CreatedAt int64  `json:"created_at"`
 	}
 	MessageLog {
-		Id        int64  `json:"id"`
-		Type      string `json:"type"`
-		Platform  string `json:"platform"`
-		To        string `json:"to"`
-		Subject   string `json:"subject"`
-		Content   string `json:"content"`
-		Status    int    `json:"status"`
-		CreatedAt int64  `json:"created_at"`
-		UpdatedAt int64  `json:"updated_at"`
+		Id        int64                  `json:"id"`
+		Type      uint8                  `json:"type"`
+		Platform  string                 `json:"platform"`
+		To        string                 `json:"to"`
+		Subject   string                 `json:"subject"`
+		Content   map[string]interface{} `json:"content"`
+		Status    uint8                  `json:"status"`
+		CreatedAt int64                  `json:"created_at"`
 	}
 	Ads {
 		Id          int    `json:"id"`

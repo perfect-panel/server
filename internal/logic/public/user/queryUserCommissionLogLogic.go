@@ -3,17 +3,15 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/perfect-panel/server/internal/model/user"
-	"github.com/perfect-panel/server/pkg/tool"
-	"github.com/perfect-panel/server/pkg/xerr"
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
-
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/pkg/errors"
 )
 
 type QueryUserCommissionLogLogic struct {
@@ -32,22 +30,40 @@ func NewQueryUserCommissionLogLogic(ctx context.Context, svcCtx *svc.ServiceCont
 }
 
 func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *types.QueryUserCommissionLogListRequest) (resp *types.QueryUserCommissionLogListResponse, err error) {
-	var data []*user.CommissionLog
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		return db.Order("id desc").Limit(req.Size).Offset((req.Page-1)*req.Size).Where("user_id = ?", u.Id).Find(&data).Error
+	data, total, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{
+		Page:     req.Page,
+		Size:     req.Size,
+		Type:     log.TypeCommission.Uint8(),
+		ObjectID: u.Id,
 	})
 	if err != nil {
 		l.Errorw("Query User Commission Log failed", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Commission Log failed: %v", err)
 	}
 	var list []types.CommissionLog
-	tool.DeepCopy(&list, data)
+
+	for _, datum := range data {
+		var content log.Commission
+		if err = content.Unmarshal([]byte(datum.Content)); err != nil {
+			l.Errorf("unmarshal commission log content failed: %v", err.Error())
+			continue
+		}
+		list = append(list, types.CommissionLog{
+			Id:        datum.Id,
+			UserId:    datum.ObjectID,
+			OrderNo:   content.OrderNo,
+			Amount:    content.Amount,
+			CreatedAt: content.CreatedAt,
+		})
+	}
+
 	return &types.QueryUserCommissionLogListResponse{
-		List: list,
+		List:  list,
+		Total: total,
 	}, nil
 }

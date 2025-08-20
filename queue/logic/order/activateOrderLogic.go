@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 
@@ -375,12 +376,28 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 			return err
 		}
 
-		commissionLog := &user.CommissionLog{
-			UserId:  referer.Id,
-			OrderNo: orderInfo.OrderNo,
-			Amount:  amount,
+		var commissionType uint8
+		switch orderInfo.Type {
+		case OrderTypeSubscribe:
+			commissionType = log.CommissionTypePurchase
+		case OrderTypeRenewal:
+			commissionType = log.CommissionTypeRenewal
 		}
-		return l.svc.UserModel.InsertCommissionLog(ctx, commissionLog, tx)
+
+		commissionLog := &log.Commission{
+			Type:      commissionType,
+			Amount:    amount,
+			OrderNo:   orderInfo.OrderNo,
+			CreatedAt: orderInfo.CreatedAt.UnixMilli(),
+		}
+
+		content, _ := commissionLog.Marshal()
+		return tx.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			Type:     log.TypeCommission.Uint8(),
+			Date:     time.Now().Format("2006-01-02"),
+			ObjectID: referer.Id,
+			Content:  string(content),
+		}).Error
 	})
 
 	if err != nil {
@@ -594,14 +611,20 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 			return err
 		}
 
-		balanceLog := &user.BalanceLog{
-			UserId:  orderInfo.UserId,
+		balanceLog := &log.Balance{
 			Amount:  orderInfo.Price,
 			Type:    CommissionTypeRecharge,
 			OrderId: orderInfo.Id,
 			Balance: userInfo.Balance,
 		}
-		return l.svc.UserModel.InsertBalanceLog(ctx, balanceLog, tx)
+		content, _ := balanceLog.Marshal()
+
+		return tx.Model(&log.Balance{}).Create(&log.SystemLog{
+			Type:     log.TypeBalance.Uint8(),
+			Date:     time.Now().Format("2006-01-02"),
+			ObjectID: userInfo.Id,
+			Content:  string(content),
+		}).Error
 	})
 
 	if err != nil {

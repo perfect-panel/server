@@ -1,10 +1,8 @@
 package subscription
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"text/template"
 	"time"
 
 	queue "github.com/perfect-panel/server/queue/types"
@@ -129,24 +127,14 @@ func (l *CheckSubscriptionLogic) sendExpiredNotify(ctx context.Context, subs []i
 			continue
 		}
 		var taskPayload queue.SendEmailPayload
+		taskPayload.Type = queue.EmailTypeExpiration
 		taskPayload.Email = method.AuthIdentifier
 		taskPayload.Subject = "Subscription Expired"
-		tpl, err := template.New("Expired").Parse(l.svc.Config.Email.ExpirationEmailTemplate)
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Parse template failed", logger.Field("error", err.Error()))
-			continue
-		}
-		var result bytes.Buffer
-		err = tpl.Execute(&result, map[string]interface{}{
+		taskPayload.Content = map[string]interface{}{
 			"SiteLogo":   l.svc.Config.Site.SiteLogo,
 			"SiteName":   l.svc.Config.Site.SiteName,
 			"ExpireDate": sub.ExpireTime.Format("2006-01-02 15:04:05"),
-		})
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Execute template failed", logger.Field("error", err.Error()))
-			continue
 		}
-		taskPayload.Content = result.String()
 		payloadBuy, err := json.Marshal(taskPayload)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] Marshal payload failed", logger.Field("error", err.Error()))
@@ -179,23 +167,13 @@ func (l *CheckSubscriptionLogic) sendTrafficNotify(ctx context.Context, subs []i
 			continue
 		}
 		var taskPayload queue.SendEmailPayload
+		taskPayload.Type = queue.EmailTypeTrafficExceed
 		taskPayload.Email = method.AuthIdentifier
 		taskPayload.Subject = "Subscription Traffic Exceed"
-		tpl, err := template.New("Traffic").Parse(l.svc.Config.Email.TrafficExceedEmailTemplate)
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Parse template failed", logger.Field("error", err.Error()))
-			continue
-		}
-		var result bytes.Buffer
-		err = tpl.Execute(&result, map[string]interface{}{
+		taskPayload.Content = map[string]interface{}{
 			"SiteLogo": l.svc.Config.Site.SiteLogo,
 			"SiteName": l.svc.Config.Site.SiteName,
-		})
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Execute template failed", logger.Field("error", err.Error()))
-			continue
 		}
-		taskPayload.Content = result.String()
 		payloadBuy, err := json.Marshal(taskPayload)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] Marshal payload failed", logger.Field("error", err.Error()))

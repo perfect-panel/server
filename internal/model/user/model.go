@@ -2,11 +2,11 @@ package user
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/subscribe"
+
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -76,7 +76,6 @@ type customUserLogicModel interface {
 	QueryUserSubscribe(ctx context.Context, userId int64, status ...int64) ([]*SubscribeDetails, error)
 	FindOneSubscribeDetailsById(ctx context.Context, id int64) (*SubscribeDetails, error)
 	FindOneUserSubscribe(ctx context.Context, id int64) (*SubscribeDetails, error)
-	InsertBalanceLog(ctx context.Context, data *BalanceLog, tx ...*gorm.DB) error
 	FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error)
 	UpdateUserSubscribeWithTraffic(ctx context.Context, id, download, upload int64, tx ...*gorm.DB) error
 	QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error)
@@ -85,7 +84,6 @@ type customUserLogicModel interface {
 	QueryAdminUsers(ctx context.Context) ([]*User, error)
 	UpdateUserCache(ctx context.Context, data *User) error
 	UpdateUserSubscribeCache(ctx context.Context, data *Subscribe) error
-	InsertCommissionLog(ctx context.Context, data *CommissionLog, tx ...*gorm.DB) error
 	QueryActiveSubscriptions(ctx context.Context, subscribeId ...int64) (map[int64]int64, error)
 	FindUserAuthMethods(ctx context.Context, userId int64) ([]*AuthMethods, error)
 	InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
@@ -101,19 +99,8 @@ type customUserLogicModel interface {
 	FindOneDeviceByIdentifier(ctx context.Context, id string) (*Device, error)
 	DeleteDevice(ctx context.Context, id int64, tx ...*gorm.DB) error
 
-	InsertSubscribeLog(ctx context.Context, log *SubscribeLog) error
-	FilterSubscribeLogList(ctx context.Context, page, size int, filter *SubscribeLogFilterParams) ([]*SubscribeLog, int64, error)
-	InsertLoginLog(ctx context.Context, log *LoginLog) error
-	FilterLoginLogList(ctx context.Context, page, size int, filter *LoginLogFilterParams) ([]*LoginLog, int64, error)
-
 	ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error
 	clearUserCache(ctx context.Context, data ...*User) error
-
-	InsertResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error
-	UpdateResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error
-	FindResetSubscribeLog(ctx context.Context, id int64) (*ResetSubscribeLog, error)
-	DeleteResetSubscribeLog(ctx context.Context, id int64, tx ...*gorm.DB) error
-	FilterResetSubscribeLogList(ctx context.Context, filter *FilterResetSubscribeLogParams) ([]*ResetSubscribeLog, int64, error)
 
 	QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
 	QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
@@ -180,27 +167,6 @@ func (m *customUserModel) BatchDeleteUser(ctx context.Context, ids []int64, tx .
 	}, m.batchGetCacheKeys(users...)...)
 }
 
-// InsertBalanceLog insert BalanceLog into the database.
-func (m *customUserModel) InsertBalanceLog(ctx context.Context, data *BalanceLog, tx ...*gorm.DB) error {
-	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
-		if len(tx) > 0 {
-			conn = tx[0]
-		}
-		return conn.Create(data).Error
-	})
-}
-
-// FindUserBalanceLogList returns a list of records that meet the conditions.
-func (m *customUserModel) FindUserBalanceLogList(ctx context.Context, userId int64, page, size int) ([]*BalanceLog, int64, error) {
-	var list []*BalanceLog
-	var total int64
-	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-
-		return conn.Model(&BalanceLog{}).Where("`user_id` = ?", userId).Count(&total).Limit(size).Offset((page - 1) * size).Find(&list).Error
-	})
-	return list, total, err
-}
-
 func (m *customUserModel) UpdateUserSubscribeWithTraffic(ctx context.Context, id, download, upload int64, tx ...*gorm.DB) error {
 	sub, err := m.FindOneSubscribe(ctx, id)
 	if err != nil {
@@ -265,15 +231,6 @@ func (m *customUserModel) UpdateUserCache(ctx context.Context, data *User) error
 	return m.ClearUserCache(ctx, data)
 }
 
-func (m *customUserModel) InsertCommissionLog(ctx context.Context, data *CommissionLog, tx ...*gorm.DB) error {
-	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
-		if len(tx) > 0 {
-			conn = tx[0]
-		}
-		return conn.Model(&CommissionLog{}).Create(data).Error
-	})
-}
-
 func (m *customUserModel) FindOneByReferCode(ctx context.Context, referCode string) (*User, error) {
 	var data User
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
@@ -288,85 +245,6 @@ func (m *customUserModel) FindOneSubscribeDetailsById(ctx context.Context, id in
 		return conn.Model(&Subscribe{}).Preload("Subscribe").Preload("User").Where("id = ?", id).First(&data).Error
 	})
 	return &data, err
-}
-
-func (m *customUserModel) InsertResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error {
-	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
-		if len(tx) > 0 {
-			conn = tx[0]
-		}
-		return conn.Model(&ResetSubscribeLog{}).Create(log).Error
-	})
-}
-
-func (m *customUserModel) UpdateResetSubscribeLog(ctx context.Context, log *ResetSubscribeLog, tx ...*gorm.DB) error {
-	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
-		if len(tx) > 0 {
-			conn = tx[0]
-		}
-		return conn.Model(&ResetSubscribeLog{}).Where("id = ?", log.Id).Updates(log).Error
-	})
-}
-
-func (m *customUserModel) FindResetSubscribeLog(ctx context.Context, id int64) (*ResetSubscribeLog, error) {
-	var data ResetSubscribeLog
-	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&ResetSubscribeLog{}).Where("id = ?", id).First(&data).Error
-	})
-	return &data, err
-}
-
-func (m *customUserModel) DeleteResetSubscribeLog(ctx context.Context, id int64, tx ...*gorm.DB) error {
-	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
-		if len(tx) > 0 {
-			conn = tx[0]
-		}
-		return conn.Model(&ResetSubscribeLog{}).Where("id = ?", id).Delete(&ResetSubscribeLog{}).Error
-	})
-}
-
-func (m *customUserModel) FilterResetSubscribeLogList(ctx context.Context, filter *FilterResetSubscribeLogParams) ([]*ResetSubscribeLog, int64, error) {
-	if filter == nil {
-		return nil, 0, errors.New("filter params is nil")
-	}
-
-	var list []*ResetSubscribeLog
-	var total int64
-
-	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		query := conn.Model(&ResetSubscribeLog{})
-
-		// 应用筛选条件
-		if filter.UserId != 0 {
-			query = query.Where("user_id = ?", filter.UserId)
-		}
-		if filter.UserSubscribeId != 0 {
-			query = query.Where("user_subscribe_id = ?", filter.UserSubscribeId)
-		}
-		if filter.Type != 0 {
-			query = query.Where("type = ?", filter.Type)
-		}
-		if filter.OrderNo != "" {
-			query = query.Where("order_no = ?", filter.OrderNo)
-		}
-
-		// 计算总数
-		if err := query.Count(&total).Error; err != nil {
-			return err
-		}
-
-		// 应用分页
-		if filter.Page > 0 && filter.Size > 0 {
-			query = query.Offset((filter.Page - 1) * filter.Size)
-		}
-		if filter.Size > 0 {
-			query = query.Limit(filter.Size)
-		}
-
-		return query.Find(&list).Error
-	})
-
-	return list, total, err
 }
 
 // QueryDailyUserStatisticsList Query daily user statistics list for the current month (from 1st to current date)

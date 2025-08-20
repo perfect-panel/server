@@ -1,7 +1,7 @@
 package types
 
 const (
-	// ForthwithSendEmail forthwith send email
+	// ForthwithSendSms forthwith send email
 	ForthwithSendSms = "forthwith:sms:send"
 )
 

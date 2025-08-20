@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/xerr"
 
@@ -104,16 +105,24 @@ func (l *ResetTrafficLogic) ResetTraffic(req *types.ResetTrafficOrderRequest) (r
 				return err
 			}
 			// create deduction record
-			deductionLog := user.GiftAmountLog{
-				UserId:  orderInfo.UserId,
-				OrderNo: orderInfo.OrderNo,
-				Amount:  orderInfo.GiftAmount,
-				Type:    2,
-				Balance: u.GiftAmount,
-				Remark:  "ResetTraffic order deduction",
+			giftLog := log.Gift{
+				Type:        log.GiftTypeReduce,
+				OrderNo:     orderInfo.OrderNo,
+				SubscribeId: 0,
+				Amount:      orderInfo.GiftAmount,
+				Balance:     u.GiftAmount,
+				Remark:      "Renewal order deduction",
+				CreatedAt:   time.Now().UnixMilli(),
 			}
-			if err := db.Model(&user.GiftAmountLog{}).Create(&deductionLog).Error; err != nil {
-				l.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", deductionLog))
+			content, _ := giftLog.Marshal()
+
+			if err = db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Type:     log.TypeGift.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: u.Id,
+				Content:  string(content),
+			}).Error; err != nil {
+				l.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", content))
 				return err
 			}
 		}
