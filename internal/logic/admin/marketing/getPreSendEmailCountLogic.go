@@ -2,6 +2,7 @@ package marketing
 
 import (
 	"context"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -37,10 +38,14 @@ func (l *GetPreSendEmailCountLogic) GetPreSendEmailCount(req *types.GetPreSendEm
 			Where("auth_type = ?", "email")
 
 		if req.RegisterStartTime != 0 {
-			query = query.Where("user.created_at >= ?", req.RegisterStartTime)
+
+			registerStartTime := time.UnixMilli(req.RegisterStartTime)
+
+			query = query.Where("user.created_at >= ?", registerStartTime)
 		}
 		if req.RegisterEndTime != 0 {
-			query = query.Where("user.created_at <= ?", req.RegisterEndTime)
+			registerEndTime := time.UnixMilli(req.RegisterEndTime)
+			query = query.Where("user.created_at <= ?", registerEndTime)
 		}
 		return query
 	}

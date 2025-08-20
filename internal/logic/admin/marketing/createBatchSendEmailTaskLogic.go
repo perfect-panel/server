@@ -45,10 +45,10 @@ func (l *CreateBatchSendEmailTaskLogic) CreateBatchSendEmailTask(req *types.Crea
 			Where("auth_type = ?", "email")
 
 		if req.RegisterStartTime != 0 {
-			query = query.Where("user.created_at >= ?", req.RegisterStartTime)
+			query = query.Where("user.created_at >= ?", time.UnixMilli(req.RegisterStartTime))
 		}
 		if req.RegisterEndTime != 0 {
-			query = query.Where("user.created_at <= ?", req.RegisterEndTime)
+			query = query.Where("user.created_at <= ?", time.UnixMilli(req.RegisterEndTime))
 		}
 		return query
 	}
