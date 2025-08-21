@@ -762,9 +762,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Query User Subscribe
 		publicUserGroupRouter.GET("/subscribe", publicUser.QueryUserSubscribeHandler(serverCtx))
 
-		// Reset Subscribe Traffic Log
-		publicUserGroupRouter.GET("/subscribe/reset/log", publicUser.ResetSubscribeTrafficLogHandler(serverCtx))
-
 		// Get Subscribe Log
 		publicUserGroupRouter.GET("/subscribe_log", publicUser.GetSubscribeLogHandler(serverCtx))
 

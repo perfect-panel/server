@@ -1435,17 +1435,6 @@ type ResetSubscribeTrafficLog struct {
 	ResetAt         int64  `json:"reset_at"`
 }
 
-type ResetSubscribeTrafficLogRequest struct {
-	Page            int   `form:"page"`
-	Size            int   `form:"size"`
-	UserSubscribeId int64 `form:"user_subscribe_id"`
-}
-
-type ResetSubscribeTrafficLogResponse struct {
-	List  []ResetSubscribeTrafficLog `json:"list"`
-	Total int64                      `json:"total"`
-}
-
 type ResetTrafficOrderRequest struct {
 	UserSubscribeID int64 `json:"user_subscribe_id"`
 	Payment         int64 `json:"payment"`
