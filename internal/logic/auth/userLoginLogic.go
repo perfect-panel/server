@@ -49,7 +49,6 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 			}
 			content, _ := loginLog.Marshal()
 			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
-				Id:       0,
 				Type:     log.TypeLogin.Uint8(),
 				Date:     time.Now().Format("2006-01-02"),
 				ObjectID: userInfo.Id,
