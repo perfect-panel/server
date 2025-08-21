@@ -35,6 +35,15 @@ type (
 		Amount    int64  `json:"amount"`
 		CreatedAt int64  `json:"created_at"`
 	}
+	ResetSubscribeTrafficLogRequest {
+		Page            int   `form:"page"`
+		Size            int   `form:"size"`
+		UserSubscribeId int64 `form:"user_subscribe_id"`
+	}
+	ResetSubscribeTrafficLogResponse {
+		List  []ResetSubscribeTrafficLog `json:"list"`
+		Total int64                      `json:"total"`
+	}
 	QueryUserCommissionLogListRequest {
 		Page int `form:"page"`
 		Size int `form:"size"`
@@ -135,6 +144,10 @@ service ppanel {
 	@doc "Unsubscribe"
 	@handler Unsubscribe
 	post /unsubscribe (UnsubscribeRequest)
+
+	@doc "Reset Subscribe Traffic Log"
+	@handler ResetSubscribeTrafficLog
+	get /subscribe/reset/log (ResetSubscribeTrafficLogRequest) returns (ResetSubscribeTrafficLogResponse)
 
 	@doc "Query User Balance Log"
 	@handler QueryUserBalanceLog

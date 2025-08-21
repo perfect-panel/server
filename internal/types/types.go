@@ -956,6 +956,17 @@ type GetUserSubscribeLogsResponse struct {
 	Total int64              `json:"total"`
 }
 
+type GetUserSubscribeResetTrafficLogsRequest struct {
+	Page            int   `form:"page"`
+	Size            int   `form:"size"`
+	UserSubscribeId int64 `form:"user_subscribe_id"`
+}
+
+type GetUserSubscribeResetTrafficLogsResponse struct {
+	List  []ResetSubscribeTrafficLog `json:"list"`
+	Total int64                      `json:"total"`
+}
+
 type GetUserSubscribeTrafficLogsRequest struct {
 	Page        int   `form:"page"`
 	Size        int   `form:"size"`
@@ -1414,6 +1425,25 @@ type ResetPasswordRequest struct {
 	IP        string `header:"X-Original-Forwarded-For"`
 	UserAgent string `header:"User-Agent"`
 	CfToken   string `json:"cf_token,optional"`
+}
+
+type ResetSubscribeTrafficLog struct {
+	Id              int64  `json:"id"`
+	Type            uint8  `json:"type"`
+	UserSubscribeId int64  `json:"user_subscribe_id"`
+	OrderNo         string `json:"order_no,omitempty"`
+	ResetAt         int64  `json:"reset_at"`
+}
+
+type ResetSubscribeTrafficLogRequest struct {
+	Page            int   `form:"page"`
+	Size            int   `form:"size"`
+	UserSubscribeId int64 `form:"user_subscribe_id"`
+}
+
+type ResetSubscribeTrafficLogResponse struct {
+	List  []ResetSubscribeTrafficLog `json:"list"`
+	Total int64                      `json:"total"`
 }
 
 type ResetTrafficOrderRequest struct {

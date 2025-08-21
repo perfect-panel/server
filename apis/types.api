@@ -754,5 +754,12 @@ type (
 		Linux   string `json:"linux,omitempty"`
 		Harmony string `json:"harmony,omitempty"`
 	}
+	ResetSubscribeTrafficLog {
+		Id              int64  `json:"id"`
+		Type            uint8  `json:"type"`
+		UserSubscribeId int64  `json:"user_subscribe_id"`
+		OrderNo         string `json:"order_no,omitempty"`
+		ResetAt         int64  `json:"reset_at"`
+	}
 )
 

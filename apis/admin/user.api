@@ -164,6 +164,15 @@ type (
 		List  []UserLoginLog `json:"list"`
 		Total int64          `json:"total"`
 	}
+	GetUserSubscribeResetTrafficLogsRequest {
+		Page            int   `form:"page"`
+		Size            int   `form:"size"`
+		UserSubscribeId int64 `form:"user_subscribe_id"`
+	}
+	GetUserSubscribeResetTrafficLogsResponse {
+		List  []ResetSubscribeTrafficLog `json:"list"`
+		Total int64                      `json:"total"`
+	}
 	DeleteUserSubscribeRequest {
 		UserSubscribeId int64 `json:"user_subscribe_id"`
 	}
@@ -250,6 +259,10 @@ service ppanel {
 	@doc "Get user subcribe logs"
 	@handler GetUserSubscribeLogs
 	get /subscribe/logs (GetUserSubscribeLogsRequest) returns (GetUserSubscribeLogsResponse)
+
+	@doc "Get user subcribe reset traffic logs"
+	@handler GetUserSubscribeResetTrafficLogs
+	get /subscribe/reset/logs (GetUserSubscribeResetTrafficLogsRequest) returns (GetUserSubscribeResetTrafficLogsResponse)
 
 	@doc "Get user subcribe traffic logs"
 	@handler GetUserSubscribeTrafficLogs
