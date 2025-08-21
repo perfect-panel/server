@@ -590,6 +590,23 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 	// Clear cache
 	l.clearServerCache(ctx, sub)
 
+	// insert reset traffic log
+	resetLog := &log.ResetSubscribe{
+		Type:    log.ResetSubscribeTypePaid,
+		OrderNo: orderInfo.OrderNo,
+		ResetAt: time.Now().UnixMilli(),
+	}
+
+	content, _ := resetLog.Marshal()
+	if err = l.svc.LogModel.Insert(ctx, &log.SystemLog{
+		Type:     log.TypeResetSubscribe.Uint8(),
+		Date:     time.Now().Format(time.DateOnly),
+		ObjectID: userSub.Id,
+		Content:  string(content),
+	}); err != nil {
+		logger.WithContext(ctx).Error("[Order Queue]Insert reset subscribe log failed", logger.Field("error", err.Error()))
+	}
+
 	// Send notifications
 	l.sendNotifications(ctx, orderInfo, userInfo, sub, userSub, telegram.ResetTrafficNotify)
 
