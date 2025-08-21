@@ -65,7 +65,6 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 
 	userInfo, err = l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
 
-	l.Debugf("[用户登陆] user email: %v, user info: %v", req.Email, userInfo)
 	if err != nil {
 		if errors.As(err, &gorm.ErrRecordNotFound) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)
@@ -78,7 +77,6 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	if !tool.VerifyPassWord(req.Password, userInfo.Password) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
 	}
-	l.Debugf("[用户登陆] 密码验证成功")
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
 	// Generate token
@@ -95,7 +93,6 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	}
 	sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
 	if err = l.svcCtx.Redis.Set(l.ctx, sessionIdCacheKey, userInfo.Id, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
-		l.Errorf("[用户登陆] set session id error: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
 	}
 	loginStatus = true
