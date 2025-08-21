@@ -50,11 +50,13 @@ func (l *SendEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) erro
 	case types.EmailTypeVerify:
 		tpl, _ := template.New("verify").Parse(l.svcCtx.Config.Email.VerifyEmailTemplate)
 		var result bytes.Buffer
+
+		payload.Content["Type"] = uint8(payload.Content["Type"].(float64))
+
 		err = tpl.Execute(&result, payload.Content)
 		if err != nil {
 			logger.WithContext(ctx).Error("[SendEmailLogic] Execute template failed",
 				logger.Field("error", err.Error()),
-				logger.Field("template", l.svcCtx.Config.Email.VerifyEmailTemplate),
 				logger.Field("data", payload.Content),
 			)
 			return nil
@@ -119,6 +121,7 @@ func (l *SendEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) erro
 			logger.Field("type", payload.Type),
 			logger.Field("payload", payload),
 		)
+		return nil
 	}
 
 	err = sender.Send([]string{payload.Email}, payload.Subject, content)

@@ -86,6 +86,7 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *types.SendCodeRequest) (resp *ty
 	var taskPayload queue.SendEmailPayload
 	// Generate verification code
 	code := random.Key(6, 0)
+	taskPayload.Type = queue.EmailTypeVerify
 	taskPayload.Email = req.Email
 	taskPayload.Subject = "Verification code"
 	taskPayload.Content = map[string]interface{}{
