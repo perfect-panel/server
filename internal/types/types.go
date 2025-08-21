@@ -1731,6 +1731,7 @@ type TelephoneLoginRequest struct {
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 	Password          string `json:"password"`
 	IP                string `header:"X-Original-Forwarded-For"`
+	UserAgent         string `header:"User-Agent"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
@@ -1741,6 +1742,7 @@ type TelephoneRegisterRequest struct {
 	Invite            string `json:"invite,optional"`
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For"`
+	UserAgent         string `header:"User-Agent"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
@@ -1750,6 +1752,7 @@ type TelephoneResetPasswordRequest struct {
 	Password          string `json:"password" validate:"required"`
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For"`
+	UserAgent         string `header:"User-Agent"`
 	CfToken           string `json:"cf_token,optional"`
 }
 

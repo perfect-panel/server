@@ -8,17 +8,19 @@ import (
 type Type uint8
 
 const (
-	TypeEmailMessage     Type = iota + 1 // Message log
-	TypeMobileMessage                    // Mobile message log
-	TypeSubscribe                        // Subscription log
-	TypeSubscribeTraffic                 // Subscription traffic log
-	TypeServerTraffic                    // Server traffic log
-	TypeLogin                            // Login log
-	TypeRegister                         // Registration log
-	TypeBalance                          // Balance log
-	TypeCommission                       // Commission log
-	TypeResetSubscribe                   // Reset subscription log
-	TypeGift                             // Gift log
+	TypeEmailMessage      Type = iota + 1 // Message log
+	TypeMobileMessage                     // Mobile message log
+	TypeSubscribe                         // Subscription log
+	TypeSubscribeTraffic                  // Subscription traffic log
+	TypeServerTraffic                     // Server traffic log
+	TypeLogin                             // Login log
+	TypeRegister                          // Registration log
+	TypeBalance                           // Balance log
+	TypeCommission                        // Commission log
+	TypeResetSubscribe                    // Reset subscription log
+	TypeGift                              // Gift log
+	TypeUserTrafficRank                   // Top 10 User traffic rank log
+	TypeServerTrafficRank                 // Top 10 Server traffic rank log
 )
 
 // Uint8 converts Type to uint8.
@@ -294,5 +296,99 @@ func (g *Gift) Marshal() ([]byte, error) {
 func (g *Gift) Unmarshal(data []byte) error {
 	type Alias Gift
 	aux := (*Alias)(g)
+	return json.Unmarshal(data, aux)
+}
+
+// UserTraffic represents a user traffic log entry.
+type UserTraffic struct {
+	SubscribeId int64 `json:"subscribe_id"` // Subscribe ID
+	UserId      int64 `json:"user_id"`      // User ID
+	Upload      int64 `json:"upload"`       // Upload traffic in bytes
+	Download    int64 `json:"download"`     // Download traffic in bytes
+	Total       int64 `json:"total"`        // Total traffic in bytes (Upload + Download)
+}
+
+// Marshal implements the json.Marshaler interface for UserTraffic.
+func (u *UserTraffic) Marshal() ([]byte, error) {
+	type Alias UserTraffic
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	})
+}
+
+// Unmarshal implements the json.Unmarshaler interface for UserTraffic.
+func (u *UserTraffic) Unmarshal(data []byte) error {
+	type Alias UserTraffic
+	aux := (*Alias)(u)
+	return json.Unmarshal(data, aux)
+}
+
+// UserTrafficRank represents a user traffic rank entry.
+type UserTrafficRank struct {
+	Rank map[uint8]UserTraffic `json:"rank"` // Key is rank ,type is UserTraffic
+}
+
+// Marshal implements the json.Marshaler interface for UserTrafficRank.
+func (u *UserTrafficRank) Marshal() ([]byte, error) {
+	type Alias UserTrafficRank
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	})
+}
+
+// Unmarshal implements the json.Unmarshaler interface for UserTrafficRank.
+func (u *UserTrafficRank) Unmarshal(data []byte) error {
+	type Alias UserTrafficRank
+	aux := (*Alias)(u)
+	return json.Unmarshal(data, aux)
+}
+
+// ServerTraffic represents a server traffic log entry.
+type ServerTraffic struct {
+	ServerId int64 `json:"server_id"` // Server ID
+	Upload   int64 `json:"upload"`    // Upload traffic in bytes
+	Download int64 `json:"download"`  // Download traffic in bytes
+}
+
+// Marshal implements the json.Marshaler interface for ServerTraffic.
+func (s *ServerTraffic) Marshal() ([]byte, error) {
+	type Alias ServerTraffic
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	})
+}
+
+// Unmarshal implements the json.Unmarshaler interface for ServerTraffic.
+func (s *ServerTraffic) Unmarshal(data []byte) error {
+	type Alias ServerTraffic
+	aux := (*Alias)(s)
+	return json.Unmarshal(data, aux)
+}
+
+// ServerTrafficRank represents a server traffic rank entry.
+type ServerTrafficRank struct {
+	Rank map[uint8]ServerTraffic `json:"rank"` // Key is rank ,type is ServerTraffic
+}
+
+// Marshal implements the json.Marshaler interface for ServerTrafficRank.
+func (s *ServerTrafficRank) Marshal() ([]byte, error) {
+	type Alias ServerTrafficRank
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	})
+}
+
+// Unmarshal implements the json.Unmarshaler interface for ServerTrafficRank.
+func (s *ServerTrafficRank) Unmarshal(data []byte) error {
+	type Alias ServerTrafficRank
+	aux := (*Alias)(s)
 	return json.Unmarshal(data, aux)
 }

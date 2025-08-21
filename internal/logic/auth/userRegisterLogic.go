@@ -165,6 +165,27 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 					logger.Field("error", err.Error()),
 				)
 			}
+
+			// Register log
+			registerLog := log.Register{
+				AuthMethod:   "email",
+				Identifier:   req.Email,
+				RegisterIP:   req.IP,
+				UserAgent:    req.UserAgent,
+				RegisterTime: time.Now().UnixMilli(),
+			}
+			content, _ = registerLog.Marshal()
+			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+				Type:     log.TypeRegister.Uint8(),
+				ObjectID: userInfo.Id,
+				Date:     time.Now().Format("2006-01-02"),
+				Content:  string(content),
+			}); err != nil {
+				l.Errorw("failed to insert login log",
+					logger.Field("user_id", userInfo.Id),
+					logger.Field("ip", req.IP),
+					logger.Field("error", err.Error()))
+			}
 		}
 	}()
 	return &types.LoginResponse{

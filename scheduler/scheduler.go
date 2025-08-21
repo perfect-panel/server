@@ -40,6 +40,12 @@ func (m *Service) Start() {
 		logger.Errorf("register reset traffic task failed: %s", err.Error())
 	}
 
+	// schedule traffic stat task: every day at 00:00
+	trafficStatTask := asynq.NewTask(types.SchedulerTrafficStat, nil)
+	if _, err := m.server.Register("0 0 * * *", trafficStatTask, asynq.MaxRetry(3)); err != nil {
+		logger.Errorf("register traffic stat task failed: %s", err.Error())
+	}
+
 	if err := m.server.Run(); err != nil {
 		logger.Errorf("run scheduler failed: %s", err.Error())
 	}

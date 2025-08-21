@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/perfect-panel/server/internal/config"
@@ -154,6 +155,51 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 	if err = l.svcCtx.Redis.Set(l.ctx, sessionIdCacheKey, userInfo.Id, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
 	}
+
+	defer func() {
+		if token != "" && userInfo.Id != 0 {
+			loginLog := log.Login{
+				LoginIP:   req.IP,
+				UserAgent: req.UserAgent,
+				Success:   token != "",
+			}
+			content, _ := loginLog.Marshal()
+			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+				Id:       0,
+				Type:     log.TypeLogin.Uint8(),
+				Date:     time.Now().Format("2006-01-02"),
+				ObjectID: userInfo.Id,
+				Content:  string(content),
+			}); err != nil {
+				l.Errorw("failed to insert login log",
+					logger.Field("user_id", userInfo.Id),
+					logger.Field("ip", req.IP),
+					logger.Field("error", err.Error()),
+				)
+			}
+
+			// Register log
+			registerLog := log.Register{
+				AuthMethod:   "mobile",
+				Identifier:   phoneNumber,
+				RegisterIP:   req.IP,
+				UserAgent:    req.UserAgent,
+				RegisterTime: time.Now().UnixMilli(),
+			}
+			content, _ = registerLog.Marshal()
+			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+				Type:     log.TypeRegister.Uint8(),
+				ObjectID: userInfo.Id,
+				Date:     time.Now().Format("2006-01-02"),
+				Content:  string(content),
+			}); err != nil {
+				l.Errorw("failed to insert login log",
+					logger.Field("user_id", userInfo.Id),
+					logger.Field("ip", req.IP),
+					logger.Field("error", err.Error()))
+			}
+		}
+	}()
 	return &types.LoginResponse{
 		Token: token,
 	}, nil
