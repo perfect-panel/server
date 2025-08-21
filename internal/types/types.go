@@ -1018,14 +1018,14 @@ type LoginResponse struct {
 }
 
 type MessageLog struct {
-	Id        int64                  `json:"id"`
-	Type      uint8                  `json:"type"`
-	Platform  string                 `json:"platform"`
-	To        string                 `json:"to"`
-	Subject   string                 `json:"subject"`
-	Content   map[string]interface{} `json:"content"`
-	Status    uint8                  `json:"status"`
-	CreatedAt int64                  `json:"created_at"`
+	Id        int64       `json:"id"`
+	Type      uint8       `json:"type"`
+	Platform  string      `json:"platform"`
+	To        string      `json:"to"`
+	Subject   string      `json:"subject"`
+	Content   interface{} `json:"content"`
+	Status    uint8       `json:"status"`
+	CreatedAt int64       `json:"created_at"`
 }
 
 type MobileAuthenticateConfig struct {
