@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -252,16 +253,7 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 				return err
 			}
 			// Clear cache for these subscriptions
-			for _, sub := range userSubs {
-				if sub.SubscribeId > 0 {
-					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
-					if err != nil {
-						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
-							logger.Field("subscribeId", sub.SubscribeId),
-							logger.Field("error", err.Error()))
-					}
-				}
-			}
+			l.clearCache(ctx, userSubs)
 			logger.Infow("[ResetTraffic] Monthly reset completed", logger.Field("count", len(monthlyResetUsers)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for monthly reset")
@@ -344,17 +336,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 			}
 
 			// Clear cache for these subscriptions
-			for _, sub := range userSubs {
-				if sub.SubscribeId > 0 {
-					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
-					if err != nil {
-						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
-							logger.Field("subscribeId", sub.SubscribeId),
-							logger.Field("error", err.Error()))
-					}
-				}
-			}
-
+			l.clearCache(ctx, userSubs)
 			logger.Infow("[ResetTraffic] 1st reset completed", logger.Field("count", len(users1stReset)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for 1st reset")
@@ -438,16 +420,7 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 				return err
 			}
 			// Clear cache for these subscriptions
-			for _, sub := range userSubs {
-				if sub.SubscribeId > 0 {
-					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
-					if err != nil {
-						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
-							logger.Field("subscribeId", sub.SubscribeId),
-							logger.Field("error", err.Error()))
-					}
-				}
-			}
+			l.clearCache(ctx, userSubs)
 			logger.Infow("[ResetTraffic] Yearly reset completed", logger.Field("count", len(usersYearReset)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for yearly reset")
@@ -600,4 +573,39 @@ func (l *ResetTrafficLogic) isRetryableError(err error) bool {
 	logger.Infow("[ResetTraffic] Unknown error type, treating as retryable",
 		logger.Field("error", err.Error()))
 	return true
+}
+
+// clearCache clears the reset traffic cache
+func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscribe) {
+	if len(list) != 0 {
+		for _, sub := range list {
+			if sub.SubscribeId > 0 {
+				err := l.svc.UserModel.ClearSubscribeCache(ctx, sub)
+				if err != nil {
+					logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
+						logger.Field("subscribeId", sub.SubscribeId),
+						logger.Field("error", err.Error()))
+				}
+			}
+			// Insert traffic reset log
+			l.insertLog(ctx, sub.Id)
+		}
+	}
+}
+
+// insertLog inserts a reset traffic log entry
+func (l *ResetTrafficLogic) insertLog(ctx context.Context, subId int64) {
+	trafficLog := log.ResetSubscribe{
+		Type:    log.ResetSubscribeTypeAuto,
+		ResetAt: time.Now().UnixMilli(),
+	}
+	content, _ := trafficLog.Marshal()
+	if err := l.svc.DB.Model(&log.SystemLog{}).Create(&log.SystemLog{
+		Type:     log.TypeResetSubscribe.Uint8(),
+		ObjectID: subId,
+		Date:     time.Now().Format(time.DateOnly),
+		Content:  string(content),
+	}).Error; err != nil {
+		logger.Errorw("[ResetTraffic] Failed to create system log for subscription", logger.Field("error", err.Error()))
+	}
 }
