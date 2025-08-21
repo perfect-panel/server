@@ -40,7 +40,7 @@ func (l *GetMessageLogListLogic) GetMessageLogList(req *types.GetMessageLogListR
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
 
-	var list []*types.MessageLog
+	var list []types.MessageLog
 
 	for _, datum := range data {
 		var content log.Message
@@ -49,7 +49,7 @@ func (l *GetMessageLogListLogic) GetMessageLogList(req *types.GetMessageLogListR
 			l.Errorf("[GetMessageLogList] failed to unmarshal content: %v", err.Error())
 			continue
 		}
-		list = append(list, &types.MessageLog{
+		list = append(list, types.MessageLog{
 			Id:        datum.Id,
 			Type:      datum.Type,
 			Platform:  content.Platform,
@@ -63,6 +63,6 @@ func (l *GetMessageLogListLogic) GetMessageLogList(req *types.GetMessageLogListR
 
 	return &types.GetMessageLogListResponse{
 		Total: total,
-		List:  nil,
+		List:  list,
 	}, nil
 }
