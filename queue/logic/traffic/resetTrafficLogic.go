@@ -238,8 +238,10 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 
 			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", monthlyResetUsers).
 				Updates(map[string]interface{}{
-					"upload":   0,
-					"download": 0,
+					"upload":      0,
+					"download":    0,
+					"status":      1, // Ensure status is active
+					"finished_at": nil,
 				}).Error
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update monthly reset users", logger.Field("error", err.Error()))
@@ -321,8 +323,10 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 			// Reset upload and download traffic to zero
 			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", users1stReset).
 				Updates(map[string]interface{}{
-					"upload":   0,
-					"download": 0,
+					"upload":      0,
+					"download":    0,
+					"status":      1, // Ensure status is active
+					"finished_at": nil,
 				}).Error
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update 1st reset users", logger.Field("error", err.Error()))
@@ -405,8 +409,10 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 			// Reset upload and download traffic to zero
 			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", usersYearReset).
 				Updates(map[string]interface{}{
-					"upload":   0,
-					"download": 0,
+					"upload":      0,
+					"download":    0,
+					"status":      1, // Ensure status is active
+					"finished_at": nil,
 				}).Error
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update yearly reset users", logger.Field("error", err.Error()))
