@@ -446,15 +446,6 @@ type (
 		CreatedAt   int64     `json:"created_at"`
 		UpdatedAt   int64     `json:"updated_at"`
 	}
-	UserBalanceLog {
-		Id        int64 `json:"id"`
-		UserId    int64 `json:"user_id"`
-		Amount    int64 `json:"amount"`
-		Type      uint8 `json:"type"`
-		OrderId   int64 `json:"order_id"`
-		Balance   int64 `json:"balance"`
-		CreatedAt int64 `json:"created_at"`
-	}
 	UserAffiliate {
 		Avatar       string `json:"avatar"`
 		Identifier   string `json:"identifier"`
@@ -756,10 +747,25 @@ type (
 	}
 	ResetSubscribeTrafficLog {
 		Id              int64  `json:"id"`
-		Type            uint8  `json:"type"`
+		Type            uint16 `json:"type"`
 		UserSubscribeId int64  `json:"user_subscribe_id"`
 		OrderNo         string `json:"order_no,omitempty"`
 		ResetAt         int64  `json:"reset_at"`
+	}
+	BalanceLog {
+		Type      uint16 `json:"type"`
+		UserId    int64  `json:"user_id"`
+		Amount    int64  `json:"amount"`
+		OrderId   int64  `json:"order_id,omitempty"`
+		Balance   int64  `json:"balance"`
+		Timestamp int64  `json:"timestamp"`
+	}
+	CommissionLog {
+		Type      uint16 `json:"type"`
+		UserId    int64  `json:"user_id"`
+		Amount    int64  `json:"amount"`
+		OrderNo   string `json:"order_no"`
+		CreatedAt int64  `json:"created_at"`
 	}
 )
 

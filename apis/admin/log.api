@@ -21,6 +21,149 @@ type (
 		Total int64        `json:"total"`
 		List  []MessageLog `json:"list"`
 	}
+	FilterLogParams {
+		Page   int    `form:"page"`
+		Size   int    `form:"size"`
+		Date   string `form:"date,optional"`
+		Search string `form:"search,optional"`
+	}
+	FilterEmailLogResponse {
+		Total int64        `json:"total"`
+		List  []MessageLog `json:"list"`
+	}
+	FilterMobileLogResponse {
+		Total int64        `json:"total"`
+		List  []MessageLog `json:"list"`
+	}
+	SubscribeLog {
+		UserId          int64  `json:"user_id"`
+		Token           string `json:"token"`
+		UserAgent       string `json:"user_agent"`
+		ClientIP        string `json:"client_ip"`
+		UserSubscribeId int64  `json:"user_subscribe_id"`
+		SubscribedAt    int64  `json:"subscribed_at"`
+	}
+	FilterSubscribeLogRequest {
+		FilterLogParams
+		UserId int64 `form:"user_id,optional"`
+	}
+	FilterSubscribeLogResponse {
+		Total int64          `json:"total"`
+		List  []SubscribeLog `json:"list"`
+	}
+	LoginLog {
+		UserId    int64  `json:"user_id"`
+		Method    string `json:"method"`
+		LoginIP   string `json:"login_ip"`
+		UserAgent string `json:"user_agent"`
+		Success   bool   `json:"success"`
+		LoginTime int64  `json:"login_time"`
+	}
+	FilterLoginLogRequest {
+		FilterLogParams
+		UserId int64 `form:"user_id,optional"`
+	}
+	FilterLoginLogResponse {
+		Total int64      `json:"total"`
+		List  []LoginLog `json:"list"`
+	}
+	RegisterLog {
+		UserId       int64  `json:"user_id"`
+		AuthMethod   string `json:"auth_method"`
+		Identifier   string `json:"identifier"`
+		RegisterIP   string `json:"register_ip"`
+		UserAgent    string `json:"user_agent"`
+		RegisterTime int64  `json:"register_time"`
+	}
+	FilterRegisterLogRequest {
+		FilterLogParams
+		UserId int64 `form:"user_id,optional"`
+	}
+	FilterRegisterLogResponse {
+		Total int64         `json:"total"`
+		List  []RegisterLog `json:"list"`
+	}
+	ResetSubscribeLog {
+		Type            uint16 `json:"type"`
+		UserId          int64  `json:"user_id"`
+		UserSubscribeId int64  `json:"user_subscribe_id"`
+		OrderNo         string `json:"order_no,omitempty"`
+		ResetAt         int64  `json:"reset_at"`
+	}
+	FilterResetSubscribeLogRequest {
+		FilterLogParams
+		UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+	}
+	FilterResetSubscribeLogResponse {
+		Total int64               `json:"total"`
+		List  []ResetSubscribeLog `json:"list"`
+	}
+	UserSubscribeTrafficLog {
+		SubscribeId int64  `json:"subscribe_id"` // Subscribe ID
+		UserId      int64  `json:"user_id"` // User ID
+		Upload      int64  `json:"upload"` // Upload traffic in bytes
+		Download    int64  `json:"download"` // Download traffic in bytes
+		Total       int64  `json:"total"` // Total traffic in bytes (Upload + Download)
+		Date        string `json:"date"` // Date in YYYY-MM-DD format
+	}
+	FilterSubscribeTrafficRequest {
+		FilterLogParams
+		UserId          int64 `form:"user_id,optional"`
+		UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+	}
+	FilterSubscribeTrafficResponse {
+		Total int64                     `json:"total"`
+		List  []UserSubscribeTrafficLog `json:"list"`
+	}
+	ServerTrafficLog {
+		ServerId int64  `json:"server_id"` // Server ID
+		Upload   int64  `json:"upload"` // Upload traffic in bytes
+		Download int64  `json:"download"` // Download traffic in bytes
+		Total    int64  `json:"total"` // Total traffic in bytes (Upload + Download)
+		Date     string `json:"date"` // Date in YYYY-MM-DD format
+	}
+	FilterServerTrafficLogRequest {
+		FilterLogParams
+		ServerId int64 `form:"server_id,optional"`
+	}
+	FilterServerTrafficLogResponse {
+		Total int64              `json:"total"`
+		List  []ServerTrafficLog `json:"list"`
+	}
+	FilterBalanceLogRequest {
+		FilterLogParams
+		UserId int64 `form:"user_id,optional"`
+	}
+	FilterBalanceLogResponse {
+		Total int64        `json:"total"`
+		List  []BalanceLog `json:"list"`
+	}
+	FilterCommissionLogRequest {
+		FilterLogParams
+		UserId int64 `form:"user_id,optional"`
+	}
+	FilterCommissionLogResponse {
+		Total int64           `json:"total"`
+		List  []CommissionLog `json:"list"`
+	}
+	GiftLog {
+		Type        uint16 `json:"type"`
+		userId      int64  `json:"user_id"`
+		OrderNo     string `json:"order_no"`
+		SubscribeId int64  `json:"subscribe_id"`
+		Amount      int64  `json:"amount"`
+		Balance     int64  `json:"balance"`
+		Remark      string `json:"remark,omitempty"`
+		CreatedAt   int64  `json:"created_at"`
+	}
+	FilterGiftLogRequest {
+		FilterLogParams
+		UserId int64 `form:"user_id,optional"`
+	}
+	FilterGiftLogResponse {
+		Total int64     `json:"total"`
+		List  []GiftLog `json:"list"`
+	}
 )
 
 @server (
@@ -32,5 +175,49 @@ service ppanel {
 	@doc "Get message log list"
 	@handler GetMessageLogList
 	get /message/list (GetMessageLogListRequest) returns (GetMessageLogListResponse)
+
+	@doc "Filter email log"
+	@handler FilterEmailLog
+	get /email/list (FilterLogParams) returns (FilterEmailLogResponse)
+
+	@doc "Filter mobile log"
+	@handler FilterMobileLog
+	get /mobile/list (FilterLogParams) returns (FilterMobileLogResponse)
+
+	@doc "Filter subscribe log"
+	@handler FilterSubscribeLog
+	get /subscribe/list (FilterSubscribeLogRequest) returns (FilterSubscribeLogResponse)
+
+	@doc "Filter login log"
+	@handler FilterLoginLog
+	get /login/list (FilterLoginLogRequest) returns (FilterLoginLogResponse)
+
+	@doc "Filter register log"
+	@handler FilterRegisterLog
+	get /register/list (FilterRegisterLogRequest) returns (FilterRegisterLogResponse)
+
+	@doc "Filter reset subscribe log"
+	@handler FilterResetSubscribeLog
+	get /subscribe/reset/list (FilterResetSubscribeLogRequest) returns (FilterResetSubscribeLogResponse)
+
+	@doc "Filter user subscribe traffic log"
+	@handler FilterUserSubscribeTrafficLog
+	get /subscribe/traffic/list (FilterSubscribeTrafficRequest) returns (FilterSubscribeTrafficResponse)
+
+	@doc "Filter server traffic log"
+	@handler FilterServerTrafficLog
+	get /server/traffic/list (FilterServerTrafficLogRequest) returns (FilterServerTrafficLogResponse)
+
+	@doc "Filter balance log"
+	@handler FilterBalanceLog
+	get /balance/list (FilterBalanceLogRequest) returns (FilterBalanceLogResponse)
+
+	@doc "Filter commission log"
+	@handler FilterCommissionLog
+	get /commission/list (FilterCommissionLogRequest) returns (FilterCommissionLogResponse)
+
+	@doc "Filter gift log"
+	@handler FilterGiftLog
+	get /gift/list (FilterGiftLogRequest) returns (FilterGiftLogResponse)
 }
 

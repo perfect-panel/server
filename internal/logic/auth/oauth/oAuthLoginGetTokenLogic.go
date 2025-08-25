@@ -65,7 +65,7 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTok
 	)
 
 	defer func() {
-		l.recordLoginStatus(loginStatus, userInfo, ip, userAgent, requestID)
+		l.recordLoginStatus(loginStatus, userInfo, ip, userAgent, requestID, req.Method)
 	}()
 
 	userInfo, err = l.handleOAuthProvider(req, requestID)
@@ -487,10 +487,11 @@ func (l *OAuthLoginGetTokenLogic) createAuthMethod(db *gorm.DB, userID int64, au
 	return nil
 }
 
-func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *user.User, ip, userAgent, requestID string) {
+func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *user.User, ip, userAgent, requestID, authType string) {
 
 	if userInfo != nil && userInfo.Id != 0 {
 		loginLog := log.Login{
+			Method:    authType,
 			LoginIP:   ip,
 			UserAgent: userAgent,
 			Success:   loginStatus,

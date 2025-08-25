@@ -39,14 +39,6 @@ const (
 	AllNodeUploadTrafficCacheKey = "node:all_node_upload_traffic"
 	// YesterdayTotalTrafficRank 昨日节点总流量排行榜
 	YesterdayNodeTotalTrafficRank = "node:yesterday_total_traffic_rank"
-	// YesterdayUploadTrafficRank 昨日节点上传流量排行榜
-	YesterdayNodeUploadTrafficRank = "node:yesterday_upload_traffic_rank"
-	// YesterdayDownloadTrafficRank 昨日节点下载流量排行榜
-	YesterdayNodeDownloadTrafficRank = "node:yesterday_download_traffic_rank"
 	// YesterdayUserTotalTrafficRank 昨日用户总流量排行榜
 	YesterdayUserTotalTrafficRank = "node:yesterday_user_total_traffic_rank"
-	// YesterdayUserUploadTrafficRank 昨日用户上传流量排行榜
-	YesterdayUserUploadTrafficRank = "node:yesterday_user_upload_traffic_rank"
-	// YesterdayUserDownloadTrafficRank 昨日用户下载流量排行榜
-	YesterdayUserDownloadTrafficRank = "node:yesterday_user_download_traffic_rank"
 )

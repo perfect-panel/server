@@ -594,19 +594,20 @@ func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscri
 				}
 			}
 			// Insert traffic reset log
-			l.insertLog(ctx, sub.Id)
+			l.insertLog(ctx, sub.Id, sub.UserId)
 		}
 	}
 }
 
 // insertLog inserts a reset traffic log entry
-func (l *ResetTrafficLogic) insertLog(ctx context.Context, subId int64) {
+func (l *ResetTrafficLogic) insertLog(ctx context.Context, subId, userId int64) {
 	trafficLog := log.ResetSubscribe{
 		Type:    log.ResetSubscribeTypeAuto,
+		UserId:  userId,
 		ResetAt: time.Now().UnixMilli(),
 	}
 	content, _ := trafficLog.Marshal()
-	if err := l.svc.DB.Model(&log.SystemLog{}).Create(&log.SystemLog{
+	if err := l.svc.DB.WithContext(ctx).Model(&log.SystemLog{}).Create(&log.SystemLog{
 		Type:     log.TypeResetSubscribe.Uint8(),
 		ObjectID: subId,
 		Date:     time.Now().Format(time.DateOnly),

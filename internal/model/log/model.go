@@ -16,6 +16,7 @@ type FilterParams struct {
 	Page     int
 	Size     int
 	Type     uint8
+	Data     string
 	Search   string
 	ObjectID int64
 }
@@ -43,6 +44,11 @@ func (m *customSystemLogModel) FilterSystemLog(ctx context.Context, filter *Filt
 	if filter.Type != 0 {
 		tx = tx.Where("`type` = ?", filter.Type)
 	}
+
+	if filter.Data != "" {
+		tx = tx.Where("`data` = ?", filter.Data)
+	}
+
 	if filter.ObjectID != 0 {
 		tx = tx.Where("`object_id` = ?", filter.ObjectID)
 	}

@@ -41,6 +41,7 @@ type (
 	}
 	Protocol {
 		Type                 string `json:"type"`
+		Port                 uint16 `json:"port"`
 		Security             string `json:"security,omitempty"`
 		SNI                  string `json:"sni,omitempty"`
 		AllowInsecure        bool   `json:"allow_insecure,omitempty"`
@@ -103,32 +104,39 @@ type (
 		Protocols []Protocol `json:"protocols"`
 	}
 	Node {
-		Id        int64  `json:"id"`
-		Name      string `json:"name"`
-		Tags      string `json:"tags"`
-		Port      uint16 `json:"port"`
-		Address   string `json:"address"`
-		ServerId  int64  `json:"server_id"`
-		Protocol  string `json:"protocol"`
-		CreatedAt int64  `json:"created_at"`
-		UpdatedAt int64  `json:"updated_at"`
+		Id        int64    `json:"id"`
+		Name      string   `json:"name"`
+		Tags      []string `json:"tags"`
+		Port      uint16   `json:"port"`
+		Address   string   `json:"address"`
+		ServerId  int64    `json:"server_id"`
+		Protocol  string   `json:"protocol"`
+		Enabled   *bool    `json:"enabled"`
+		CreatedAt int64    `json:"created_at"`
+		UpdatedAt int64    `json:"updated_at"`
 	}
 	CreateNodeRequest {
-		Name     string `json:"name"`
-		Tags     string `json:"tags,omitempty"`
-		Port     uint16 `json:"port"`
-		Address  string `json:"address"`
-		ServerId int64  `json:"server_id"`
-		Protocol string `json:"protocol"`
+		Name     string   `json:"name"`
+		Tags     []string `json:"tags,omitempty"`
+		Port     uint16   `json:"port"`
+		Address  string   `json:"address"`
+		ServerId int64    `json:"server_id"`
+		Protocol string   `json:"protocol"`
+		Enabled  *bool    `json:"enabled"`
 	}
 	UpdateNodeRequest {
-		Id       int64  `json:"id"`
-		Name     string `json:"name"`
-		Tags     string `json:"tags,omitempty"`
-		Port     uint16 `json:"port"`
-		Address  string `json:"address"`
-		ServerId int64  `json:"server_id"`
-		Protocol string `json:"protocol"`
+		Id       int64    `json:"id"`
+		Name     string   `json:"name"`
+		Tags     []string `json:"tags,omitempty"`
+		Port     uint16   `json:"port"`
+		Address  string   `json:"address"`
+		ServerId int64    `json:"server_id"`
+		Protocol string   `json:"protocol"`
+		Enabled  *bool    `json:"enabled"`
+	}
+	ToggleNodeStatusRequest {
+		Id     int64 `json:"id"`
+		Enable *bool `json:"enable"`
 	}
 	DeleteNodeRequest {
 		Id int64 `json:"id"`
@@ -185,5 +193,9 @@ service ppanel {
 	@doc "Filter Node List"
 	@handler FilterNodeList
 	get /node/list (FilterNodeListRequest) returns (FilterNodeListResponse)
+
+	@doc "Toggle Node Status"
+	@handler ToggleNodeStatus
+	post /node/status/toggle (ToggleNodeStatusRequest)
 }
 

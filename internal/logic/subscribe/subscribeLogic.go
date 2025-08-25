@@ -177,16 +177,17 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 	}
 
 	subscribeLog := log.Subscribe{
-		Token:     req.Token,
-		UserAgent: req.UA,
-		ClientIP:  l.ctx.ClientIP(),
+		Token:           req.Token,
+		UserAgent:       req.UA,
+		ClientIP:        l.ctx.ClientIP(),
+		UserSubscribeId: userSub.Id,
 	}
 
 	content, _ := subscribeLog.Marshal()
 
 	err := l.svc.LogModel.Insert(l.ctx.Request.Context(), &log.SystemLog{
 		Type:     log.TypeSubscribe.Uint8(),
-		ObjectID: userSub.Id,
+		ObjectID: userSub.UserId, // log user id
 		Date:     time.Now().Format(time.DateOnly),
 		Content:  string(content),
 	})

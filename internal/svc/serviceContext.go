@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/client"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/device"
 
 	"github.com/perfect-panel/server/internal/model/ads"
@@ -43,6 +44,7 @@ type ServiceContext struct {
 	AuthModel          auth.Model
 	AdsModel           ads.Model
 	LogModel           log.Model
+	NodeModel          node.Model
 	UserModel          user.Model
 	OrderModel         order.Model
 	ClientModel        client.Model
@@ -93,6 +95,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		AuthLimiter:       authLimiter,
 		AdsModel:          ads.NewModel(db, rds),
 		LogModel:          log.NewModel(db),
+		NodeModel:         node.NewModel(db),
 		AuthModel:         auth.NewModel(db, rds),
 		UserModel:         user.NewModel(db, rds),
 		OrderModel:        order.NewModel(db, rds),

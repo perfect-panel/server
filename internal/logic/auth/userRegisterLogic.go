@@ -147,6 +147,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	defer func() {
 		if token != "" && userInfo.Id != 0 {
 			loginLog := log.Login{
+				Method:    "email",
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   loginStatus,

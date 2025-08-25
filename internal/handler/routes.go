@@ -189,8 +189,41 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	adminLogGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
 	{
+		// Filter balance log
+		adminLogGroupRouter.GET("/balance/list", adminLog.FilterBalanceLogHandler(serverCtx))
+
+		// Filter commission log
+		adminLogGroupRouter.GET("/commission/list", adminLog.FilterCommissionLogHandler(serverCtx))
+
+		// Filter email log
+		adminLogGroupRouter.GET("/email/list", adminLog.FilterEmailLogHandler(serverCtx))
+
+		// Filter gift log
+		adminLogGroupRouter.GET("/gift/list", adminLog.FilterGiftLogHandler(serverCtx))
+
+		// Filter login log
+		adminLogGroupRouter.GET("/login/list", adminLog.FilterLoginLogHandler(serverCtx))
+
 		// Get message log list
 		adminLogGroupRouter.GET("/message/list", adminLog.GetMessageLogListHandler(serverCtx))
+
+		// Filter mobile log
+		adminLogGroupRouter.GET("/mobile/list", adminLog.FilterMobileLogHandler(serverCtx))
+
+		// Filter register log
+		adminLogGroupRouter.GET("/register/list", adminLog.FilterRegisterLogHandler(serverCtx))
+
+		// Filter server traffic log
+		adminLogGroupRouter.GET("/server/traffic/list", adminLog.FilterServerTrafficLogHandler(serverCtx))
+
+		// Filter subscribe log
+		adminLogGroupRouter.GET("/subscribe/list", adminLog.FilterSubscribeLogHandler(serverCtx))
+
+		// Filter reset subscribe log
+		adminLogGroupRouter.GET("/subscribe/reset/list", adminLog.FilterResetSubscribeLogHandler(serverCtx))
+
+		// Filter user subscribe traffic log
+		adminLogGroupRouter.GET("/subscribe/traffic/list", adminLog.FilterUserSubscribeTrafficLogHandler(serverCtx))
 	}
 
 	adminMarketingGroupRouter := router.Group("/v1/admin/marketing")
@@ -251,56 +284,35 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	adminServerGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
 	{
-		// Update node
-		adminServerGroupRouter.PUT("/", adminServer.UpdateNodeHandler(serverCtx))
+		// Create Server
+		adminServerGroupRouter.POST("/create", adminServer.CreateServerHandler(serverCtx))
 
-		// Create node
-		adminServerGroupRouter.POST("/", adminServer.CreateNodeHandler(serverCtx))
+		// Delete Server
+		adminServerGroupRouter.POST("/delete", adminServer.DeleteServerHandler(serverCtx))
 
-		// Delete node
-		adminServerGroupRouter.DELETE("/", adminServer.DeleteNodeHandler(serverCtx))
+		// Filter Server List
+		adminServerGroupRouter.GET("/list", adminServer.FilterServerListHandler(serverCtx))
 
-		// Batch delete node
-		adminServerGroupRouter.DELETE("/batch", adminServer.BatchDeleteNodeHandler(serverCtx))
+		// Create Node
+		adminServerGroupRouter.POST("/node/create", adminServer.CreateNodeHandler(serverCtx))
 
-		// Get node detail
-		adminServerGroupRouter.GET("/detail", adminServer.GetNodeDetailHandler(serverCtx))
+		// Delete Node
+		adminServerGroupRouter.POST("/node/delete", adminServer.DeleteNodeHandler(serverCtx))
 
-		// Create node group
-		adminServerGroupRouter.POST("/group", adminServer.CreateNodeGroupHandler(serverCtx))
+		// Filter Node List
+		adminServerGroupRouter.GET("/node/list", adminServer.FilterNodeListHandler(serverCtx))
 
-		// Update node group
-		adminServerGroupRouter.PUT("/group", adminServer.UpdateNodeGroupHandler(serverCtx))
+		// Toggle Node Status
+		adminServerGroupRouter.POST("/node/status/toggle", adminServer.ToggleNodeStatusHandler(serverCtx))
 
-		// Delete node group
-		adminServerGroupRouter.DELETE("/group", adminServer.DeleteNodeGroupHandler(serverCtx))
+		// Update Node
+		adminServerGroupRouter.POST("/node/update", adminServer.UpdateNodeHandler(serverCtx))
 
-		// Batch delete node group
-		adminServerGroupRouter.DELETE("/group/batch", adminServer.BatchDeleteNodeGroupHandler(serverCtx))
+		// Get Server Protocols
+		adminServerGroupRouter.GET("/protocols", adminServer.GetServerProtocolsHandler(serverCtx))
 
-		// Get node group list
-		adminServerGroupRouter.GET("/group/list", adminServer.GetNodeGroupListHandler(serverCtx))
-
-		// Get node list
-		adminServerGroupRouter.GET("/list", adminServer.GetNodeListHandler(serverCtx))
-
-		// Create rule group
-		adminServerGroupRouter.POST("/rule_group", adminServer.CreateRuleGroupHandler(serverCtx))
-
-		// Update rule group
-		adminServerGroupRouter.PUT("/rule_group", adminServer.UpdateRuleGroupHandler(serverCtx))
-
-		// Delete rule group
-		adminServerGroupRouter.DELETE("/rule_group", adminServer.DeleteRuleGroupHandler(serverCtx))
-
-		// Get rule group list
-		adminServerGroupRouter.GET("/rule_group_list", adminServer.GetRuleGroupListHandler(serverCtx))
-
-		// Node sort
-		adminServerGroupRouter.POST("/sort", adminServer.NodeSortHandler(serverCtx))
-
-		// Get node tag list
-		adminServerGroupRouter.GET("/tag/list", adminServer.GetNodeTagListHandler(serverCtx))
+		// Update Server
+		adminServerGroupRouter.POST("/update", adminServer.UpdateServerHandler(serverCtx))
 	}
 
 	adminSubscribeGroupRouter := router.Group("/v1/admin/subscribe")

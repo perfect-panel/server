@@ -159,6 +159,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 	defer func() {
 		if token != "" && userInfo.Id != 0 {
 			loginLog := log.Login{
+				Method:    "mobile",
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   token != "",

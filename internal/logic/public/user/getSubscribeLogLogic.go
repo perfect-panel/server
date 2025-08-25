@@ -20,7 +20,7 @@ type GetSubscribeLogLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Get Subscribe Log
+// NewGetSubscribeLogLogic Get Subscribe Log
 func NewGetSubscribeLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetSubscribeLogLogic {
 	return &GetSubscribeLogLogic{
 		Logger: logger.WithContext(ctx),
@@ -39,7 +39,7 @@ func (l *GetSubscribeLogLogic) GetSubscribeLog(req *types.GetSubscribeLogRequest
 		Page:     req.Page,
 		Size:     req.Size,
 		Type:     log.TypeSubscribe.Uint8(),
-		ObjectID: u.Id,
+		ObjectID: u.Id, // filter by current user id
 	})
 	if err != nil {
 		l.Errorw("[GetUserSubscribeLogs] Get User Subscribe Logs Error:", logger.Field("err", err.Error()))
@@ -56,7 +56,7 @@ func (l *GetSubscribeLogLogic) GetSubscribeLog(req *types.GetSubscribeLogRequest
 		list = append(list, types.UserSubscribeLog{
 			Id:              item.Id,
 			UserId:          item.ObjectID,
-			UserSubscribeId: content.SubscribeId,
+			UserSubscribeId: content.UserSubscribeId,
 			Token:           content.Token,
 			IP:              content.ClientIP,
 			UserAgent:       content.UserAgent,

@@ -25,15 +25,8 @@ type (
 		Total int64           `json:"total"`
 	}
 	QueryUserBalanceLogListResponse {
-		List  []UserBalanceLog `json:"list"`
-		Total int64            `json:"total"`
-	}
-	CommissionLog {
-		Id        int64  `json:"id"`
-		UserId    int64  `json:"user_id"`
-		OrderNo   string `json:"order_no"`
-		Amount    int64  `json:"amount"`
-		CreatedAt int64  `json:"created_at"`
+		List  []BalanceLog `json:"list"`
+		Total int64        `json:"total"`
 	}
 	QueryUserCommissionLogListRequest {
 		Page int `form:"page"`

@@ -43,6 +43,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	defer func(svcCtx *svc.ServiceContext) {
 		if userInfo.Id != 0 {
 			loginLog := log.Login{
+				Method:    "email",
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   loginStatus,

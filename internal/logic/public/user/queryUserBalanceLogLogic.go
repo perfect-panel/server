@@ -20,7 +20,7 @@ type QueryUserBalanceLogLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Query User Balance Log
+// NewQueryUserBalanceLogLogic Query User Balance Log
 func NewQueryUserBalanceLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *QueryUserBalanceLogLogic {
 	return &QueryUserBalanceLogLogic{
 		Logger: logger.WithContext(ctx),
@@ -51,21 +51,20 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserB
 		Total: total,
 	}
 
-	list := make([]types.UserBalanceLog, 0)
+	list := make([]types.BalanceLog, 0)
 	for _, datum := range data {
 		var content log.Balance
 		if err = content.Unmarshal([]byte(datum.Content)); err != nil {
 			l.Errorf("[QueryUserBalanceLog] unmarshal balance log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.UserBalanceLog{
-			Id:        datum.Id,
+		list = append(list, types.BalanceLog{
 			UserId:    datum.ObjectID,
 			Amount:    content.Amount,
 			Type:      content.Type,
 			OrderId:   content.OrderId,
 			Balance:   content.Balance,
-			CreatedAt: datum.CreatedAt.UnixMilli(),
+			Timestamp: content.Timestamp,
 		})
 	}
 

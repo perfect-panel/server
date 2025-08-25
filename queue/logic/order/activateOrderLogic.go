@@ -376,7 +376,7 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 			return err
 		}
 
-		var commissionType uint8
+		var commissionType uint16
 		switch orderInfo.Type {
 		case OrderTypeSubscribe:
 			commissionType = log.CommissionTypePurchase
@@ -593,6 +593,7 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 	// insert reset traffic log
 	resetLog := &log.ResetSubscribe{
 		Type:    log.ResetSubscribeTypePaid,
+		UserId:  userInfo.Id,
 		OrderNo: orderInfo.OrderNo,
 		ResetAt: time.Now().UnixMilli(),
 	}

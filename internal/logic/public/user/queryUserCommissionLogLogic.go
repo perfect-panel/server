@@ -54,10 +54,10 @@ func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *types.QueryUse
 			continue
 		}
 		list = append(list, types.CommissionLog{
-			Id:        datum.Id,
 			UserId:    datum.ObjectID,
-			OrderNo:   content.OrderNo,
+			Type:      content.Type,
 			Amount:    content.Amount,
+			OrderNo:   content.OrderNo,
 			CreatedAt: content.CreatedAt,
 		})
 	}

@@ -128,19 +128,20 @@ type AuthMethodConfig struct {
 	Enabled bool        `json:"enabled"`
 }
 
+type BalanceLog struct {
+	Type      uint16 `json:"type"`
+	UserId    int64  `json:"user_id"`
+	Amount    int64  `json:"amount"`
+	OrderId   int64  `json:"order_id,omitempty"`
+	Balance   int64  `json:"balance"`
+	Timestamp int64  `json:"timestamp"`
+}
+
 type BatchDeleteCouponRequest struct {
 	Ids []int64 `json:"ids" validate:"required"`
 }
 
 type BatchDeleteDocumentRequest struct {
-	Ids []int64 `json:"ids" validate:"required"`
-}
-
-type BatchDeleteNodeGroupRequest struct {
-	Ids []int64 `json:"ids" validate:"required"`
-}
-
-type BatchDeleteNodeRequest struct {
 	Ids []int64 `json:"ids" validate:"required"`
 }
 
@@ -230,10 +231,10 @@ type CloseOrderRequest struct {
 }
 
 type CommissionLog struct {
-	Id        int64  `json:"id"`
+	Type      uint16 `json:"type"`
 	UserId    int64  `json:"user_id"`
-	OrderNo   string `json:"order_no"`
 	Amount    int64  `json:"amount"`
+	OrderNo   string `json:"order_no"`
 	CreatedAt int64  `json:"created_at"`
 }
 
@@ -303,26 +304,14 @@ type CreateDocumentRequest struct {
 	Show    *bool    `json:"show"`
 }
 
-type CreateNodeGroupRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
-}
-
 type CreateNodeRequest struct {
-	Name         string      `json:"name" validate:"required"`
-	Tags         []string    `json:"tags"`
-	Country      string      `json:"country"`
-	City         string      `json:"city"`
-	ServerAddr   string      `json:"server_addr" validate:"required"`
-	RelayMode    string      `json:"relay_mode"`
-	RelayNode    []NodeRelay `json:"relay_node"`
-	SpeedLimit   int         `json:"speed_limit"`
-	TrafficRatio float32     `json:"traffic_ratio"`
-	GroupId      int64       `json:"group_id"`
-	Protocol     string      `json:"protocol" validate:"required"`
-	Config       interface{} `json:"config" validate:"required"`
-	Enable       *bool       `json:"enable"`
-	Sort         int64       `json:"sort"`
+	Name     string   `json:"name"`
+	Tags     []string `json:"tags,omitempty"`
+	Port     uint16   `json:"port"`
+	Address  string   `json:"address"`
+	ServerId int64    `json:"server_id"`
+	Protocol string   `json:"protocol"`
+	Enabled  *bool    `json:"enabled"`
 }
 
 type CreateOrderRequest struct {
@@ -355,14 +344,14 @@ type CreatePaymentMethodRequest struct {
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
-type CreateRuleGroupRequest struct {
-	Name    string   `json:"name" validate:"required"`
-	Icon    string   `json:"icon"`
-	Type    string   `json:"type"`
-	Tags    []string `json:"tags"`
-	Rules   string   `json:"rules"`
-	Default bool     `json:"default"`
-	Enable  bool     `json:"enable"`
+type CreateServerRequest struct {
+	Name      string     `json:"name"`
+	Country   string     `json:"country,omitempty"`
+	City      string     `json:"city,omitempty"`
+	Ratio     float32    `json:"ratio"`
+	Address   string     `json:"address"`
+	Sort      int        `json:"sort,omitempty"`
+	Protocols []Protocol `json:"protocols"`
 }
 
 type CreateSubscribeApplicationRequest struct {
@@ -479,20 +468,16 @@ type DeleteDocumentRequest struct {
 	Id int64 `json:"id" validate:"required"`
 }
 
-type DeleteNodeGroupRequest struct {
-	Id int64 `json:"id" validate:"required"`
-}
-
 type DeleteNodeRequest struct {
-	Id int64 `json:"id" validate:"required"`
+	Id int64 `json:"id"`
 }
 
 type DeletePaymentMethodRequest struct {
 	Id int64 `json:"id" validate:"required"`
 }
 
-type DeleteRuleGroupRequest struct {
-	Id int64 `json:"id" validate:"required"`
+type DeleteServerRequest struct {
+	Id int64 `json:"id"`
 }
 
 type DeleteSubscribeApplicationRequest struct {
@@ -557,6 +542,136 @@ type EmailAuthticateConfig struct {
 	EnableVerify       bool   `json:"enable_verify"`
 	EnableDomainSuffix bool   `json:"enable_domain_suffix"`
 	DomainSuffixList   string `json:"domain_suffix_list"`
+}
+
+type FilterBalanceLogRequest struct {
+	FilterLogParams
+	UserId int64 `form:"user_id,optional"`
+}
+
+type FilterBalanceLogResponse struct {
+	Total int64        `json:"total"`
+	List  []BalanceLog `json:"list"`
+}
+
+type FilterCommissionLogRequest struct {
+	FilterLogParams
+	UserId int64 `form:"user_id,optional"`
+}
+
+type FilterCommissionLogResponse struct {
+	Total int64           `json:"total"`
+	List  []CommissionLog `json:"list"`
+}
+
+type FilterEmailLogResponse struct {
+	Total int64        `json:"total"`
+	List  []MessageLog `json:"list"`
+}
+
+type FilterGiftLogRequest struct {
+	FilterLogParams
+	UserId int64 `form:"user_id,optional"`
+}
+
+type FilterGiftLogResponse struct {
+	Total int64     `json:"total"`
+	List  []GiftLog `json:"list"`
+}
+
+type FilterLogParams struct {
+	Page   int    `form:"page"`
+	Size   int    `form:"size"`
+	Date   string `form:"date,optional"`
+	Search string `form:"search,optional"`
+}
+
+type FilterLoginLogRequest struct {
+	FilterLogParams
+	UserId int64 `form:"user_id,optional"`
+}
+
+type FilterLoginLogResponse struct {
+	Total int64      `json:"total"`
+	List  []LoginLog `json:"list"`
+}
+
+type FilterMobileLogResponse struct {
+	Total int64        `json:"total"`
+	List  []MessageLog `json:"list"`
+}
+
+type FilterNodeListRequest struct {
+	Page   int    `form:"page"`
+	Size   int    `form:"size"`
+	Search string `form:"search,omitempty"`
+}
+
+type FilterNodeListResponse struct {
+	Total int64  `json:"total"`
+	List  []Node `json:"list"`
+}
+
+type FilterRegisterLogRequest struct {
+	FilterLogParams
+	UserId int64 `form:"user_id,optional"`
+}
+
+type FilterRegisterLogResponse struct {
+	Total int64         `json:"total"`
+	List  []RegisterLog `json:"list"`
+}
+
+type FilterResetSubscribeLogRequest struct {
+	FilterLogParams
+	UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+}
+
+type FilterResetSubscribeLogResponse struct {
+	Total int64               `json:"total"`
+	List  []ResetSubscribeLog `json:"list"`
+}
+
+type FilterServerListRequest struct {
+	Page   int    `form:"page"`
+	Size   int    `form:"size"`
+	Search string `form:"search,omitempty"`
+}
+
+type FilterServerListResponse struct {
+	Total int64    `json:"total"`
+	List  []Server `json:"list"`
+}
+
+type FilterServerTrafficLogRequest struct {
+	FilterLogParams
+	ServerId int64 `form:"server_id,optional"`
+}
+
+type FilterServerTrafficLogResponse struct {
+	Total int64              `json:"total"`
+	List  []ServerTrafficLog `json:"list"`
+}
+
+type FilterSubscribeLogRequest struct {
+	FilterLogParams
+	UserId int64 `form:"user_id,optional"`
+}
+
+type FilterSubscribeLogResponse struct {
+	Total int64          `json:"total"`
+	List  []SubscribeLog `json:"list"`
+}
+
+type FilterSubscribeTrafficRequest struct {
+	FilterLogParams
+	UserId          int64 `form:"user_id,optional"`
+	UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+}
+
+type FilterSubscribeTrafficResponse struct {
+	Total int64                     `json:"total"`
+	List  []UserSubscribeTrafficLog `json:"list"`
 }
 
 type Follow struct {
@@ -712,34 +827,8 @@ type GetMessageLogListResponse struct {
 	List  []MessageLog `json:"list"`
 }
 
-type GetNodeDetailRequest struct {
-	Id int64 `form:"id" validate:"required"`
-}
-
-type GetNodeGroupListResponse struct {
-	Total int64         `json:"total"`
-	List  []ServerGroup `json:"list"`
-}
-
 type GetNodeMultiplierResponse struct {
 	Periods []TimePeriod `json:"periods"`
-}
-
-type GetNodeServerListRequest struct {
-	Page    int    `form:"page" validate:"required"`
-	Size    int    `form:"size" validate:"required"`
-	Tags    string `form:"tags,omitempty"`
-	GroupId int64  `form:"group_id,omitempty"`
-	Search  string `form:"search,omitempty"`
-}
-
-type GetNodeServerListResponse struct {
-	Total int64    `json:"total"`
-	List  []Server `json:"list"`
-}
-
-type GetNodeTagListResponse struct {
-	Tags []string `json:"tags"`
 }
 
 type GetOAuthMethodsResponse struct {
@@ -783,11 +872,6 @@ type GetPreSendEmailCountResponse struct {
 	Count int64 `json:"count"`
 }
 
-type GetRuleGroupResponse struct {
-	Total int64             `json:"total"`
-	List  []ServerRuleGroup `json:"list"`
-}
-
 type GetServerConfigRequest struct {
 	ServerCommon
 }
@@ -796,6 +880,14 @@ type GetServerConfigResponse struct {
 	Basic    ServerBasic `json:"basic"`
 	Protocol string      `json:"protocol"`
 	Config   interface{} `json:"config"`
+}
+
+type GetServerProtocolsRequest struct {
+	Id int64 `form:"id"`
+}
+
+type GetServerProtocolsResponse struct {
+	Protocols []Protocol `json:"protocols"`
 }
 
 type GetServerUserListRequest struct {
@@ -997,6 +1089,17 @@ type GetUserTicketListResponse struct {
 	List  []Ticket `json:"list"`
 }
 
+type GiftLog struct {
+	Type        uint16 `json:"type"`
+	UserId      int64  `json:"user_id"`
+	OrderNo     string `json:"order_no"`
+	SubscribeId int64  `json:"subscribe_id"`
+	Amount      int64  `json:"amount"`
+	Balance     int64  `json:"balance"`
+	Remark      string `json:"remark,omitempty"`
+	CreatedAt   int64  `json:"created_at"`
+}
+
 type GoogleLoginCallbackRequest struct {
 	Code  string `form:"code"`
 	State string `form:"state"`
@@ -1024,6 +1127,15 @@ type LogResponse struct {
 	List interface{} `json:"list"`
 }
 
+type LoginLog struct {
+	UserId    int64  `json:"user_id"`
+	Method    string `json:"method"`
+	LoginIP   string `json:"login_ip"`
+	UserAgent string `json:"user_agent"`
+	Success   bool   `json:"success"`
+	LoginTime int64  `json:"login_time"`
+}
+
 type LoginResponse struct {
 	Token string `json:"token"`
 }
@@ -1045,6 +1157,19 @@ type MobileAuthenticateConfig struct {
 	Whitelist       []string `json:"whitelist"`
 }
 
+type Node struct {
+	Id        int64    `json:"id"`
+	Name      string   `json:"name"`
+	Tags      []string `json:"tags"`
+	Port      uint16   `json:"port"`
+	Address   string   `json:"address"`
+	ServerId  int64    `json:"server_id"`
+	Protocol  string   `json:"protocol"`
+	Enabled   *bool    `json:"enabled"`
+	CreatedAt int64    `json:"created_at"`
+	UpdatedAt int64    `json:"updated_at"`
+}
+
 type NodeConfig struct {
 	NodeSecret       string `json:"node_secret"`
 	NodePullInterval int64  `json:"node_pull_interval"`
@@ -1055,18 +1180,6 @@ type NodeRelay struct {
 	Host   string `json:"host"`
 	Port   int    `json:"port"`
 	Prefix string `json:"prefix"`
-}
-
-type NodeSortRequest struct {
-	Sort []SortItem `json:"sort"`
-}
-
-type NodeStatus struct {
-	Online    interface{} `json:"online"`
-	Cpu       float64     `json:"cpu"`
-	Mem       float64     `json:"mem"`
-	Disk      float64     `json:"disk"`
-	UpdatedAt int64       `json:"updated_at"`
 }
 
 type OAthLoginRequest struct {
@@ -1263,6 +1376,34 @@ type PrivacyPolicyConfig struct {
 	PrivacyPolicy string `json:"privacy_policy"`
 }
 
+type Protocol struct {
+	Type                 string `json:"type"`
+	Port                 uint16 `json:"port"`
+	Security             string `json:"security,omitempty"`
+	SNI                  string `json:"sni,omitempty"`
+	AllowInsecure        bool   `json:"allow_insecure,omitempty"`
+	Fingerprint          string `json:"fingerprint,omitempty"`
+	RealityServerAddr    string `json:"reality_server_addr,omitempty"`
+	RealityServerPort    int    `json:"reality_server_port,omitempty"`
+	RealityPrivateKey    string `json:"reality_private_key,omitempty"`
+	RealityPublicKey     string `json:"reality_public_key,omitempty"`
+	RealityShortId       string `json:"reality_short_id,omitempty"`
+	Transport            string `json:"transport,omitempty"`
+	Host                 string `json:"host,omitempty"`
+	Path                 string `json:"path,omitempty"`
+	ServiceName          string `json:"service_name,omitempty"`
+	Cipher               string `json:"cipher,omitempty"`
+	ServerKey            string `json:"server_key,omitempty"`
+	Flow                 string `json:"flow,omitempty"`
+	HopPorts             string `json:"hop_ports,omitempty"`
+	HopInterval          int    `json:"hop_interval,omitempty"`
+	ObfsPassword         string `json:"obfs_password,omitempty"`
+	DisableSNI           bool   `json:"disable_sni,omitempty"`
+	ReduceRtt            bool   `json:"reduce_rtt,omitempty"`
+	UDPRelayMode         string `json:"udp_relay_mode,omitempty"`
+	CongestionController string `json:"congestion_controller,omitempty"`
+}
+
 type PubilcRegisterConfig struct {
 	StopRegister            bool  `json:"stop_register"`
 	EnableIpRegisterLimit   bool  `json:"enable_ip_register_limit"`
@@ -1368,8 +1509,8 @@ type QueryUserAffiliateListResponse struct {
 }
 
 type QueryUserBalanceLogListResponse struct {
-	List  []UserBalanceLog `json:"list"`
-	Total int64            `json:"total"`
+	List  []BalanceLog `json:"list"`
+	Total int64        `json:"total"`
 }
 
 type QueryUserCommissionLogListRequest struct {
@@ -1407,6 +1548,15 @@ type RegisterConfig struct {
 	IpRegisterLimitDuration int64  `json:"ip_register_limit_duration"`
 }
 
+type RegisterLog struct {
+	UserId       int64  `json:"user_id"`
+	AuthMethod   string `json:"auth_method"`
+	Identifier   string `json:"identifier"`
+	RegisterIP   string `json:"register_ip"`
+	UserAgent    string `json:"user_agent"`
+	RegisterTime int64  `json:"register_time"`
+}
+
 type RenewalOrderRequest struct {
 	UserSubscribeID int64  `json:"user_subscribe_id"`
 	Quantity        int64  `json:"quantity"`
@@ -1427,9 +1577,17 @@ type ResetPasswordRequest struct {
 	CfToken   string `json:"cf_token,optional"`
 }
 
+type ResetSubscribeLog struct {
+	Type            uint16 `json:"type"`
+	UserId          int64  `json:"user_id"`
+	UserSubscribeId int64  `json:"user_subscribe_id"`
+	OrderNo         string `json:"order_no,omitempty"`
+	ResetAt         int64  `json:"reset_at"`
+}
+
 type ResetSubscribeTrafficLog struct {
 	Id              int64  `json:"id"`
-	Type            uint8  `json:"type"`
+	Type            uint16 `json:"type"`
 	UserSubscribeId int64  `json:"user_subscribe_id"`
 	OrderNo         string `json:"order_no,omitempty"`
 	ResetAt         int64  `json:"reset_at"`
@@ -1482,24 +1640,18 @@ type SendSmsCodeRequest struct {
 }
 
 type Server struct {
-	Id           int64       `json:"id"`
-	Tags         []string    `json:"tags"`
-	Country      string      `json:"country"`
-	City         string      `json:"city"`
-	Name         string      `json:"name"`
-	ServerAddr   string      `json:"server_addr"`
-	RelayMode    string      `json:"relay_mode"`
-	RelayNode    []NodeRelay `json:"relay_node"`
-	SpeedLimit   int         `json:"speed_limit"`
-	TrafficRatio float32     `json:"traffic_ratio"`
-	GroupId      int64       `json:"group_id"`
-	Protocol     string      `json:"protocol"`
-	Config       interface{} `json:"config"`
-	Enable       *bool       `json:"enable"`
-	CreatedAt    int64       `json:"created_at"`
-	UpdatedAt    int64       `json:"updated_at"`
-	Status       *NodeStatus `json:"status"`
-	Sort         int64       `json:"sort"`
+	Id             int64        `json:"id"`
+	Name           string       `json:"name"`
+	Country        string       `json:"country"`
+	City           string       `json:"city"`
+	Ratio          float32      `json:"ratio"`
+	Address        string       `json:"address"`
+	Sort           int          `json:"sort"`
+	Protocols      []Protocol   `json:"protocols"`
+	LastReportedAt int64        `json:"last_reported_at"`
+	Status         ServerStatus `json:"status"`
+	CreatedAt      int64        `json:"created_at"`
+	UpdatedAt      int64        `json:"updated_at"`
 }
 
 type ServerBasic struct {
@@ -1519,6 +1671,15 @@ type ServerGroup struct {
 	Description string `json:"description"`
 	CreatedAt   int64  `json:"created_at"`
 	UpdatedAt   int64  `json:"updated_at"`
+}
+
+type ServerOnlineUser struct {
+	IP          []string `json:"ip"`
+	UserId      int64    `json:"user_id"`
+	Subscribe   string   `json:"subscribe"`
+	SubscribeId int64    `json:"subscribe_id"`
+	Traffic     int64    `json:"traffic"`
+	ExpiredAt   int64    `json:"expired_at"`
 }
 
 type ServerPushStatusRequest struct {
@@ -1547,6 +1708,13 @@ type ServerRuleGroup struct {
 	UpdatedAt int64    `json:"updated_at"`
 }
 
+type ServerStatus struct {
+	Online []ServerOnlineUser `json:"online"`
+	Cpu    float64            `json:"cpu"`
+	Mem    float64            `json:"mem"`
+	Disk   float64            `json:"disk"`
+}
+
 type ServerTotalDataResponse struct {
 	OnlineUserIPs                 int64               `json:"online_user_ips"`
 	OnlineServers                 int64               `json:"online_servers"`
@@ -1567,6 +1735,14 @@ type ServerTrafficData struct {
 	Name     string `json:"name"`
 	Upload   int64  `json:"upload"`
 	Download int64  `json:"download"`
+}
+
+type ServerTrafficLog struct {
+	ServerId int64  `json:"server_id"` // Server ID
+	Upload   int64  `json:"upload"`    // Upload traffic in bytes
+	Download int64  `json:"download"`  // Download traffic in bytes
+	Total    int64  `json:"total"`     // Total traffic in bytes (Upload + Download)
+	Date     string `json:"date"`      // Date in YYYY-MM-DD format
 }
 
 type ServerUser struct {
@@ -1701,6 +1877,15 @@ type SubscribeItem struct {
 	Sold int64 `json:"sold"`
 }
 
+type SubscribeLog struct {
+	UserId          int64  `json:"user_id"`
+	Token           string `json:"token"`
+	UserAgent       string `json:"user_agent"`
+	ClientIP        string `json:"client_ip"`
+	UserSubscribeId int64  `json:"user_subscribe_id"`
+	SubscribedAt    int64  `json:"subscribed_at"`
+}
+
 type SubscribeSortRequest struct {
 	Sort []SortItem `json:"sort"`
 }
@@ -1784,6 +1969,11 @@ type TimePeriod struct {
 	StartTime  string  `json:"start_time"`
 	EndTime    string  `json:"end_time"`
 	Multiplier float32 `json:"multiplier"`
+}
+
+type ToggleNodeStatusRequest struct {
+	Id     int64 `json:"id"`
+	Enable *bool `json:"enable"`
 }
 
 type TosConfig struct {
@@ -1906,28 +2096,15 @@ type UpdateDocumentRequest struct {
 	Show    *bool    `json:"show"`
 }
 
-type UpdateNodeGroupRequest struct {
-	Id          int64  `json:"id" validate:"required"`
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
-}
-
 type UpdateNodeRequest struct {
-	Id           int64       `json:"id" validate:"required"`
-	Tags         []string    `json:"tags"`
-	Country      string      `json:"country"`
-	City         string      `json:"city"`
-	Name         string      `json:"name" validate:"required"`
-	ServerAddr   string      `json:"server_addr" validate:"required"`
-	RelayMode    string      `json:"relay_mode"`
-	RelayNode    []NodeRelay `json:"relay_node"`
-	SpeedLimit   int         `json:"speed_limit"`
-	TrafficRatio float32     `json:"traffic_ratio"`
-	GroupId      int64       `json:"group_id"`
-	Protocol     string      `json:"protocol" validate:"required"`
-	Config       interface{} `json:"config" validate:"required"`
-	Enable       *bool       `json:"enable"`
-	Sort         int64       `json:"sort"`
+	Id       int64    `json:"id"`
+	Name     string   `json:"name"`
+	Tags     []string `json:"tags,omitempty"`
+	Port     uint16   `json:"port"`
+	Address  string   `json:"address"`
+	ServerId int64    `json:"server_id"`
+	Protocol string   `json:"protocol"`
+	Enabled  *bool    `json:"enabled"`
 }
 
 type UpdateOrderStatusRequest struct {
@@ -1951,15 +2128,15 @@ type UpdatePaymentMethodRequest struct {
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
-type UpdateRuleGroupRequest struct {
-	Id      int64    `json:"id" validate:"required"`
-	Icon    string   `json:"icon"`
-	Type    string   `json:"type"`
-	Name    string   `json:"name" validate:"required"`
-	Tags    []string `json:"tags"`
-	Rules   string   `json:"rules"`
-	Default bool     `json:"default"`
-	Enable  bool     `json:"enable"`
+type UpdateServerRequest struct {
+	Id        int64      `json:"id"`
+	Name      string     `json:"name"`
+	Country   string     `json:"country,omitempty"`
+	City      string     `json:"city,omitempty"`
+	Ratio     float32    `json:"ratio"`
+	Address   string     `json:"address"`
+	Sort      int        `json:"sort,omitempty"`
+	Protocols []Protocol `json:"protocols"`
 }
 
 type UpdateSubscribeApplicationRequest struct {
@@ -2100,16 +2277,6 @@ type UserAuthMethod struct {
 	Verified       bool   `json:"verified"`
 }
 
-type UserBalanceLog struct {
-	Id        int64 `json:"id"`
-	UserId    int64 `json:"user_id"`
-	Amount    int64 `json:"amount"`
-	Type      uint8 `json:"type"`
-	OrderId   int64 `json:"order_id"`
-	Balance   int64 `json:"balance"`
-	CreatedAt int64 `json:"created_at"`
-}
-
 type UserDevice struct {
 	Id         int64  `json:"id"`
 	Ip         string `json:"ip"`
@@ -2208,6 +2375,15 @@ type UserSubscribeLog struct {
 	IP              string `json:"ip"`
 	UserAgent       string `json:"user_agent"`
 	CreatedAt       int64  `json:"created_at"`
+}
+
+type UserSubscribeTrafficLog struct {
+	SubscribeId int64  `json:"subscribe_id"` // Subscribe ID
+	UserId      int64  `json:"user_id"`      // User ID
+	Upload      int64  `json:"upload"`       // Upload traffic in bytes
+	Download    int64  `json:"download"`     // Download traffic in bytes
+	Total       int64  `json:"total"`        // Total traffic in bytes (Upload + Download)
+	Date        string `json:"date"`         // Date in YYYY-MM-DD format
 }
 
 type UserTraffic struct {
