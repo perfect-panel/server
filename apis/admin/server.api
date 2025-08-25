@@ -11,109 +11,136 @@ info (
 import "../types.api"
 
 type (
-	GetNodeServerListRequest {
-		Page    int    `form:"page" validate:"required"`
-		Size    int    `form:"size" validate:"required"`
-		Tags    string `form:"tags,omitempty"`
-		GroupId int64  `form:"group_id,omitempty"`
-		Search  string `form:"search,omitempty"`
+	OnlineUser {
+		IP          []string `json:"ip"`
+		UserId      int64    `json:"user_id"`
+		Subscribe   string   `json:"subscribe"`
+		SubscribeId int64    `json:"subscribe_id"`
+		Traffic     int64    `json:"traffic"`
+		ExpiredAt   int64    `json:"expired_at"`
 	}
-	GetNodeServerListResponse {
+	ServerStatus {
+		Online []OnlineUser `json:"online"`
+		Cpu    float64      `json:"cpu"`
+		Mem    float64      `json:"mem"`
+		Disk   float64      `json:"disk"`
+	}
+	Server {
+		Id             int64        `json:"id"`
+		Name           string       `json:"name"`
+		Country        string       `json:"country"`
+		City           string       `json:"city"`
+		Ratio          float32      `json:"ratio"`
+		Address        string       `json:"address"`
+		Sort           int          `json:"sort"`
+		Protocols      []Protocol   `json:"protocols"`
+		LastReportedAt int64        `json:"last_reported_at"`
+		Status         ServerStatus `json:"status"`
+		CreatedAt      int64        `json:"created_at"`
+		UpdatedAt      int64        `json:"updated_at"`
+	}
+	Protocol {
+		Type                 string `json:"type"`
+		Security             string `json:"security,omitempty"`
+		SNI                  string `json:"sni,omitempty"`
+		AllowInsecure        bool   `json:"allow_insecure,omitempty"`
+		Fingerprint          string `json:"fingerprint,omitempty"`
+		RealityServerAddr    string `json:"reality_server_addr,omitempty"`
+		RealityServerPort    int    `json:"reality_server_port,omitempty"`
+		RealityPrivateKey    string `json:"reality_private_key,omitempty"`
+		RealityPublicKey     string `json:"reality_public_key,omitempty"`
+		RealityShortId       string `json:"reality_short_id,omitempty"`
+		Transport            string `json:"transport,omitempty"`
+		Host                 string `json:"host,omitempty"`
+		Path                 string `json:"path,omitempty"`
+		ServiceName          string `json:"service_name,omitempty"`
+		Cipher               string `json:"cipher,omitempty"`
+		ServerKey            string `json:"server_key,omitempty"`
+		Flow                 string `json:"flow,omitempty"`
+		HopPorts             string `json:"hop_ports,omitempty"`
+		HopInterval          int    `json:"hop_interval,omitempty"`
+		ObfsPassword         string `json:"obfs_password,omitempty"`
+		DisableSNI           bool   `json:"disable_sni,omitempty"`
+		ReduceRtt            bool   `json:"reduce_rtt,omitempty"`
+		UDPRelayMode         string `json:"udp_relay_mode,omitempty"`
+		CongestionController string `json:"congestion_controller,omitempty"`
+	}
+	CreateServerRequest {
+		Name      string     `json:"name"`
+		Country   string     `json:"country,omitempty"`
+		City      string     `json:"city,omitempty"`
+		Ratio     float32    `json:"ratio"`
+		Address   string     `json:"address"`
+		Sort      int        `json:"sort,omitempty"`
+		Protocols []Protocol `json:"protocols"`
+	}
+	UpdateServerRequest {
+		Id        int64      `json:"id"`
+		Name      string     `json:"name"`
+		Country   string     `json:"country,omitempty"`
+		City      string     `json:"city,omitempty"`
+		Ratio     float32    `json:"ratio"`
+		Address   string     `json:"address"`
+		Sort      int        `json:"sort,omitempty"`
+		Protocols []Protocol `json:"protocols"`
+	}
+	DeleteServerRequest {
+		Id int64 `json:"id"`
+	}
+	FilterServerListRequest {
+		Page   int    `form:"page"`
+		Size   int    `form:"size"`
+		Search string `form:"search,omitempty"`
+	}
+	FilterServerListResponse {
 		Total int64    `json:"total"`
 		List  []Server `json:"list"`
 	}
-	UpdateNodeRequest {
-		Id           int64       `json:"id" validate:"required"`
-		Tags         []string    `json:"tags"`
-		Country      string      `json:"country"`
-		City         string      `json:"city"`
-		Name         string      `json:"name" validate:"required"`
-		ServerAddr   string      `json:"server_addr" validate:"required"`
-		RelayMode    string      `json:"relay_mode"`
-		RelayNode    []NodeRelay `json:"relay_node"`
-		SpeedLimit   int         `json:"speed_limit"`
-		TrafficRatio float32     `json:"traffic_ratio"`
-		GroupId      int64       `json:"group_id"`
-		Protocol     string      `json:"protocol" validate:"required"`
-		Config       interface{} `json:"config" validate:"required"`
-		Enable       *bool       `json:"enable"`
-		Sort         int64       `json:"sort"`
+	GetServerProtocolsRequest {
+		Id int64 `form:"id"`
+	}
+	GetServerProtocolsResponse {
+		Protocols []Protocol `json:"protocols"`
+	}
+	Node {
+		Id        int64  `json:"id"`
+		Name      string `json:"name"`
+		Tags      string `json:"tags"`
+		Port      uint16 `json:"port"`
+		Address   string `json:"address"`
+		ServerId  int64  `json:"server_id"`
+		Protocol  string `json:"protocol"`
+		CreatedAt int64  `json:"created_at"`
+		UpdatedAt int64  `json:"updated_at"`
 	}
 	CreateNodeRequest {
-		Name         string      `json:"name" validate:"required"`
-		Tags         []string    `json:"tags"`
-		Country      string      `json:"country"`
-		City         string      `json:"city"`
-		ServerAddr   string      `json:"server_addr" validate:"required"`
-		RelayMode    string      `json:"relay_mode"`
-		RelayNode    []NodeRelay `json:"relay_node"`
-		SpeedLimit   int         `json:"speed_limit"`
-		TrafficRatio float32     `json:"traffic_ratio"`
-		GroupId      int64       `json:"group_id"`
-		Protocol     string      `json:"protocol" validate:"required"`
-		Config       interface{} `json:"config" validate:"required"`
-		Enable       *bool       `json:"enable"`
-		Sort         int64       `json:"sort"`
+		Name     string `json:"name"`
+		Tags     string `json:"tags,omitempty"`
+		Port     uint16 `json:"port"`
+		Address  string `json:"address"`
+		ServerId int64  `json:"server_id"`
+		Protocol string `json:"protocol"`
+	}
+	UpdateNodeRequest {
+		Id       int64  `json:"id"`
+		Name     string `json:"name"`
+		Tags     string `json:"tags,omitempty"`
+		Port     uint16 `json:"port"`
+		Address  string `json:"address"`
+		ServerId int64  `json:"server_id"`
+		Protocol string `json:"protocol"`
 	}
 	DeleteNodeRequest {
-		Id int64 `json:"id" validate:"required"`
+		Id int64 `json:"id"`
 	}
-	GetNodeGroupListResponse {
-		Total int64         `json:"total"`
-		List  []ServerGroup `json:"list"`
+	FilterNodeListRequest {
+		Page   int    `form:"page"`
+		Size   int    `form:"size"`
+		Search string `form:"search,omitempty"`
 	}
-	CreateNodeGroupRequest {
-		Name        string `json:"name" validate:"required"`
-		Description string `json:"description"`
-	}
-	UpdateNodeGroupRequest {
-		Id          int64  `json:"id" validate:"required"`
-		Name        string `json:"name" validate:"required"`
-		Description string `json:"description"`
-	}
-	DeleteNodeGroupRequest {
-		Id int64 `json:"id" validate:"required"`
-	}
-	BatchDeleteNodeRequest {
-		Ids []int64 `json:"ids" validate:"required"`
-	}
-	BatchDeleteNodeGroupRequest {
-		Ids []int64 `json:"ids" validate:"required"`
-	}
-	GetNodeDetailRequest {
-		Id int64 `form:"id" validate:"required"`
-	}
-	NodeSortRequest {
-		Sort []SortItem `json:"sort"`
-	}
-	CreateRuleGroupRequest {
-		Name    string   `json:"name" validate:"required"`
-		Icon    string   `json:"icon"`
-		Type    string   `json:"type"`
-		Tags    []string `json:"tags"`
-		Rules   string   `json:"rules"`
-		Default bool     `json:"default"`
-		Enable  bool     `json:"enable"`
-	}
-	UpdateRuleGroupRequest {
-		Id      int64    `json:"id" validate:"required"`
-		Icon    string   `json:"icon"`
-		Type    string   `json:"type"`
-		Name    string   `json:"name" validate:"required"`
-		Tags    []string `json:"tags"`
-		Rules   string   `json:"rules"`
-		Default bool     `json:"default"`
-		Enable  bool     `json:"enable"`
-	}
-	DeleteRuleGroupRequest {
-		Id int64 `json:"id" validate:"required"`
-	}
-	GetRuleGroupResponse {
-		Total int64             `json:"total"`
-		List  []ServerRuleGroup `json:"list"`
-	}
-	GetNodeTagListResponse {
-		Tags []string `json:"tags"`
+	FilterNodeListResponse {
+		Total int64  `json:"total"`
+		List  []Node `json:"list"`
 	}
 )
 
@@ -123,72 +150,40 @@ type (
 	middleware: AuthMiddleware
 )
 service ppanel {
-	@doc "Get node tag list"
-	@handler GetNodeTagList
-	get /tag/list returns (GetNodeTagListResponse)
+	@doc "Create Server"
+	@handler CreateServer
+	post /create (CreateServerRequest)
 
-	@doc "Get node list"
-	@handler GetNodeList
-	get /list (GetNodeServerListRequest) returns (GetNodeServerListResponse)
+	@doc "Update Server"
+	@handler UpdateServer
+	post /update (UpdateServerRequest)
 
-	@doc "Get node detail"
-	@handler GetNodeDetail
-	get /detail (GetNodeDetailRequest) returns (Server)
+	@doc "Delete Server"
+	@handler DeleteServer
+	post /delete (DeleteServerRequest)
 
-	@doc "Update node"
-	@handler UpdateNode
-	put / (UpdateNodeRequest)
+	@doc "Filter Server List"
+	@handler FilterServerList
+	get /list (FilterServerListRequest) returns (FilterServerListResponse)
 
-	@doc "Create node"
+	@doc "Get Server Protocols"
+	@handler GetServerProtocols
+	get /protocols (GetServerProtocolsRequest) returns (GetServerProtocolsResponse)
+
+	@doc "Create Node"
 	@handler CreateNode
-	post / (CreateNodeRequest)
+	post /node/create (CreateNodeRequest)
 
-	@doc "Delete node"
+	@doc "Update Node"
+	@handler UpdateNode
+	post /node/update (UpdateNodeRequest)
+
+	@doc "Delete Node"
 	@handler DeleteNode
-	delete / (DeleteNodeRequest)
+	post /node/delete (DeleteNodeRequest)
 
-	@doc "Batch delete node"
-	@handler BatchDeleteNode
-	delete /batch (BatchDeleteNodeRequest)
-
-	@doc "Get node group list"
-	@handler GetNodeGroupList
-	get /group/list returns (GetNodeGroupListResponse)
-
-	@doc "Create node group"
-	@handler CreateNodeGroup
-	post /group (CreateNodeGroupRequest)
-
-	@doc "Update node group"
-	@handler UpdateNodeGroup
-	put /group (UpdateNodeGroupRequest)
-
-	@doc "Delete node group"
-	@handler DeleteNodeGroup
-	delete /group (DeleteNodeGroupRequest)
-
-	@doc "Batch delete node group"
-	@handler BatchDeleteNodeGroup
-	delete /group/batch (BatchDeleteNodeGroupRequest)
-
-	@doc "Node sort "
-	@handler NodeSort
-	post /sort (NodeSortRequest)
-
-	@doc "Create rule group"
-	@handler CreateRuleGroup
-	post /rule_group (CreateRuleGroupRequest)
-
-	@doc "Update rule group"
-	@handler UpdateRuleGroup
-	put /rule_group (UpdateRuleGroupRequest)
-
-	@doc "Delete rule group"
-	@handler DeleteRuleGroup
-	delete /rule_group (DeleteRuleGroupRequest)
-
-	@doc "Get rule group list"
-	@handler GetRuleGroupList
-	get /rule_group_list returns (GetRuleGroupResponse)
+	@doc "Filter Node List"
+	@handler FilterNodeList
+	get /node/list (FilterNodeListRequest) returns (FilterNodeListResponse)
 }
 

@@ -274,37 +274,37 @@ type (
 		Host        string `json:"host"`
 		ServiceName string `json:"service_name"`
 	}
-	Server {
-		Id           int64       `json:"id"`
-		Tags         []string    `json:"tags"`
-		Country      string      `json:"country"`
-		City         string      `json:"city"`
-		Name         string      `json:"name"`
-		ServerAddr   string      `json:"server_addr"`
-		RelayMode    string      `json:"relay_mode"`
-		RelayNode    []NodeRelay `json:"relay_node"`
-		SpeedLimit   int         `json:"speed_limit"`
-		TrafficRatio float32     `json:"traffic_ratio"`
-		GroupId      int64       `json:"group_id"`
-		Protocol     string      `json:"protocol"`
-		Config       interface{} `json:"config"`
-		Enable       *bool       `json:"enable"`
-		CreatedAt    int64       `json:"created_at"`
-		UpdatedAt    int64       `json:"updated_at"`
-		Status       *NodeStatus `json:"status"`
-		Sort         int64       `json:"sort"`
-	}
-	OnlineUser {
-		SID int64  `json:"uid"`
-		IP  string `json:"ip"`
-	}
-	NodeStatus {
-		Online    interface{} `json:"online"`
-		Cpu       float64     `json:"cpu"`
-		Mem       float64     `json:"mem"`
-		Disk      float64     `json:"disk"`
-		UpdatedAt int64       `json:"updated_at"`
-	}
+	// Server {
+	//  Id           int64       `json:"id"`
+	//  Tags         []string    `json:"tags"`
+	//  Country      string      `json:"country"`
+	//  City         string      `json:"city"`
+	//  Name         string      `json:"name"`
+	//  ServerAddr   string      `json:"server_addr"`
+	//  RelayMode    string      `json:"relay_mode"`
+	//  RelayNode    []NodeRelay `json:"relay_node"`
+	//  SpeedLimit   int         `json:"speed_limit"`
+	//  TrafficRatio float32     `json:"traffic_ratio"`
+	//  GroupId      int64       `json:"group_id"`
+	//  Protocol     string      `json:"protocol"`
+	//  Config       interface{} `json:"config"`
+	//  Enable       *bool       `json:"enable"`
+	//  CreatedAt    int64       `json:"created_at"`
+	//  UpdatedAt    int64       `json:"updated_at"`
+	//  Status       *NodeStatus `json:"status"`
+	//  Sort         int64       `json:"sort"`
+	// }
+	// OnlineUser {
+	//  SID int64  `json:"uid"`
+	//  IP  string `json:"ip"`
+	// }
+	// NodeStatus {
+	//  Online    interface{} `json:"online"`
+	//  Cpu       float64     `json:"cpu"`
+	//  Mem       float64     `json:"mem"`
+	//  Disk      float64     `json:"disk"`
+	//  UpdatedAt int64       `json:"updated_at"`
+	// }
 	ServerGroup {
 		Id          int64  `json:"id"`
 		Name        string `json:"name"`
