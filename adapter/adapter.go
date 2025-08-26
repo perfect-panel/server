@@ -1,26 +1,25 @@
 package adapter
 
 import (
-	"encoding/json"
+	"strings"
 
-	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/random"
 )
 
 type Adapter struct {
-	SiteName       string           // 站点名称
-	Servers        []*server.Server // 服务器列表
-	UserInfo       User             // 用户信息
-	ClientTemplate string           // 客户端配置模板
-	OutputFormat   string           // 输出格式，默认是 base64
-	SubscribeName  string           // 订阅名称
+	SiteName       string       // 站点名称
+	Servers        []*node.Node // 服务器列表
+	UserInfo       User         // 用户信息
+	ClientTemplate string       // 客户端配置模板
+	OutputFormat   string       // 输出格式，默认是 base64
+	SubscribeName  string       // 订阅名称
 }
 
 type Option func(*Adapter)
 
 // WithServers 设置服务器列表
-func WithServers(servers []*server.Server) Option {
+func WithServers(servers []*node.Node) Option {
 	return func(opts *Adapter) {
 		opts.Servers = servers
 	}
@@ -56,7 +55,7 @@ func WithSubscribeName(name string) Option {
 
 func NewAdapter(tpl string, opts ...Option) *Adapter {
 	adapter := &Adapter{
-		Servers:        []*server.Server{},
+		Servers:        []*node.Node{},
 		UserInfo:       User{},
 		ClientTemplate: tpl,
 		OutputFormat:   "base64", // 默认输出格式
@@ -87,51 +86,54 @@ func (adapter *Adapter) Client() (*Client, error) {
 	return client, nil
 }
 
-func (adapter *Adapter) Proxies(servers []*server.Server) ([]Proxy, error) {
+func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 	var proxies []Proxy
-	for _, srv := range servers {
-		switch srv.RelayMode {
-		case server.RelayModeAll:
-			var relays []server.NodeRelay
-			if err := json.Unmarshal([]byte(srv.RelayNode), &relays); err != nil {
-				logger.Errorw("Unmarshal RelayNode", logger.Field("error", err.Error()), logger.Field("node", srv.Name), logger.Field("relayNode", srv.RelayNode))
-				continue
-			}
-			for _, relay := range relays {
-				proxy, err := adapterProxy(*srv, relay.Host, uint64(relay.Port))
-				if err != nil {
-					logger.Errorw("Adapter Proxy", logger.Field("error", err.Error()), logger.Field("node", srv.Name), logger.Field("relayNode", relay))
-					continue
-				}
-				proxies = append(proxies, proxy)
-			}
 
-		case server.RelayModeRandom:
-			var relays []server.NodeRelay
-			if err := json.Unmarshal([]byte(srv.RelayNode), &relays); err != nil {
-				logger.Errorw("Unmarshal RelayNode", logger.Field("error", err.Error()), logger.Field("node", srv.Name), logger.Field("relayNode", srv.RelayNode))
-				continue
-			}
-			randNum := random.RandomInRange(0, len(relays)-1)
-			relay := relays[randNum]
-			proxy, err := adapterProxy(*srv, relay.Host, uint64(relay.Port))
-			if err != nil {
-				logger.Errorw("Adapter Proxy", logger.Field("error", err.Error()), logger.Field("node", srv.Name), logger.Field("relayNode", relay))
-				continue
-			}
-			proxies = append(proxies, proxy)
-
-		case server.RelayModeNone:
-			proxy, err := adapterProxy(*srv, srv.ServerAddr, 0)
-			if err != nil {
-				logger.Errorw("Adapter Proxy", logger.Field("error", err.Error()), logger.Field("node", srv.Name), logger.Field("serverAddr", srv.ServerAddr))
-				continue
-			}
-			proxies = append(proxies, proxy)
-		default:
-			logger.Errorw("Unknown RelayMode", logger.Field("node", srv.Name), logger.Field("relayMode", srv.RelayMode))
+	for _, item := range servers {
+		if item.Server == nil {
+			logger.Errorf("[Adapter] Server is nil for node ID: %d", item.Id)
+			continue
 		}
-
+		protocols, err := item.Server.UnmarshalProtocols()
+		if err != nil {
+			logger.Errorf("[Adapter] Unmarshal Protocols error: %s; server id : %d", err.Error(), item.ServerId)
+			continue
+		}
+		for _, protocol := range protocols {
+			if protocol.Type == item.Protocol {
+				proxies = append(proxies, Proxy{
+					Name:                 item.Name,
+					Server:               item.Address,
+					Port:                 item.Port,
+					Type:                 item.Protocol,
+					Tags:                 strings.Split(item.Tags, ","),
+					Security:             protocol.Security,
+					SNI:                  protocol.SNI,
+					AllowInsecure:        protocol.AllowInsecure,
+					Fingerprint:          protocol.Fingerprint,
+					RealityServerAddr:    protocol.RealityServerAddr,
+					RealityServerPort:    protocol.RealityServerPort,
+					RealityPrivateKey:    protocol.RealityPrivateKey,
+					RealityPublicKey:     protocol.RealityPublicKey,
+					RealityShortId:       protocol.RealityShortId,
+					Transport:            protocol.Transport,
+					Host:                 protocol.Host,
+					Path:                 protocol.Path,
+					ServiceName:          protocol.ServiceName,
+					Method:               protocol.Cipher,
+					ServerKey:            protocol.ServerKey,
+					Flow:                 protocol.Flow,
+					HopPorts:             protocol.HopPorts,
+					HopInterval:          protocol.HopInterval,
+					ObfsPassword:         protocol.ObfsPassword,
+					DisableSNI:           protocol.DisableSNI,
+					ReduceRtt:            protocol.ReduceRtt,
+					UDPRelayMode:         protocol.UDPRelayMode,
+					CongestionController: protocol.CongestionController,
+				})
+			}
+		}
 	}
+
 	return proxies, nil
 }

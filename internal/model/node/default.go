@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -35,19 +36,21 @@ type (
 	}
 	defaultServerModel struct {
 		*gorm.DB
+		Cache *redis.Client
 	}
 )
 
-func newServerModel(db *gorm.DB) *defaultServerModel {
+func newServerModel(db *gorm.DB, cache *redis.Client) *defaultServerModel {
 	return &defaultServerModel{
-		DB: db,
+		DB:    db,
+		Cache: cache,
 	}
 }
 
 // NewModel returns a model for the database table.
-func NewModel(conn *gorm.DB) Model {
+func NewModel(conn *gorm.DB, cache *redis.Client) Model {
 	return &customServerModel{
-		defaultServerModel: newServerModel(conn),
+		defaultServerModel: newServerModel(conn, cache),
 	}
 }
 

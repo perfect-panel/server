@@ -296,6 +296,12 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Filter Server List
 		adminServerGroupRouter.GET("/list", adminServer.FilterServerListHandler(serverCtx))
 
+		// Check if there is any server or node to migrate
+		adminServerGroupRouter.GET("/migrate/has", adminServer.HasMigrateSeverNodeHandler(serverCtx))
+
+		// Migrate server and node data to new database
+		adminServerGroupRouter.POST("/migrate/run", adminServer.MigrateServerNodeHandler(serverCtx))
+
 		// Create Node
 		adminServerGroupRouter.POST("/node/create", adminServer.CreateNodeHandler(serverCtx))
 

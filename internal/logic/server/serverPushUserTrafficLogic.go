@@ -32,7 +32,7 @@ func NewServerPushUserTrafficLogic(ctx context.Context, svcCtx *svc.ServiceConte
 
 func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPushUserTrafficRequest) error {
 	// Find server info
-	serverInfo, err := l.svcCtx.ServerModel.FindOne(l.ctx, req.ServerId)
+	serverInfo, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		l.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
 		return errors.New("server not found")

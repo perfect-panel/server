@@ -12,3 +12,17 @@ CREATE TABLE IF NOT EXISTS `servers` (
         `updated_at` datetime(3) DEFAULT NULL COMMENT 'Update Time',
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `nodes` (
+     `id` bigint NOT NULL AUTO_INCREMENT,
+     `name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'Node Name',
+     `tags` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'Tags',
+     `port` smallint unsigned NOT NULL DEFAULT '0' COMMENT 'Connect Port',
+     `address` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'Connect Address',
+     `server_id` bigint NOT NULL DEFAULT '0' COMMENT 'Server ID',
+     `protocol` varchar(100) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'Protocol',
+     `enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Enabled',
+     `created_at` datetime(3) DEFAULT NULL COMMENT 'Creation Time',
+     `updated_at` datetime(3) DEFAULT NULL COMMENT 'Update Time',
+     PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

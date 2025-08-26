@@ -384,8 +384,8 @@ type CreateSubscribeRequest struct {
 	DeviceLimit    int64               `json:"device_limit"`
 	Quota          int64               `json:"quota"`
 	GroupId        int64               `json:"group_id"`
-	ServerGroup    []int64             `json:"server_group"`
-	Server         []int64             `json:"server"`
+	Nodes          []int64             `json:"nodes"`
+	NodeTags       []string            `json:"node_tags"`
 	Show           *bool               `json:"show"`
 	Sell           *bool               `json:"sell"`
 	DeductionRatio int64               `json:"deduction_ratio"`
@@ -1117,6 +1117,10 @@ type GoogleLoginCallbackRequest struct {
 	State string `form:"state"`
 }
 
+type HasMigrateSeverNodeResponse struct {
+	HasMigrate bool `json:"has_migrate"`
+}
+
 type Hysteria2 struct {
 	Port           int            `json:"port" validate:"required"`
 	HopPorts       string         `json:"hop_ports" validate:"required"`
@@ -1161,6 +1165,12 @@ type MessageLog struct {
 	Content   interface{} `json:"content"`
 	Status    uint8       `json:"status"`
 	CreatedAt int64       `json:"created_at"`
+}
+
+type MigrateServerNodeResponse struct {
+	Succee  uint64 `json:"succee"`
+	Fail    uint64 `json:"fail"`
+	Message string `json:"message,omitempty"`
 }
 
 type MobileAuthenticateConfig struct {
@@ -1825,8 +1835,8 @@ type Subscribe struct {
 	DeviceLimit    int64               `json:"device_limit"`
 	Quota          int64               `json:"quota"`
 	GroupId        int64               `json:"group_id"`
-	ServerGroup    []int64             `json:"server_group"`
-	Server         []int64             `json:"server"`
+	Nodes          []int64             `json:"nodes"`
+	NodeTags       []string            `json:"node_tags"`
 	Show           bool                `json:"show"`
 	Sell           bool                `json:"sell"`
 	Sort           int64               `json:"sort"`
@@ -2195,8 +2205,8 @@ type UpdateSubscribeRequest struct {
 	DeviceLimit    int64               `json:"device_limit"`
 	Quota          int64               `json:"quota"`
 	GroupId        int64               `json:"group_id"`
-	ServerGroup    []int64             `json:"server_group"`
-	Server         []int64             `json:"server"`
+	Nodes          []int64             `json:"nodes"`
+	NodeTags       []string            `json:"node_tags"`
 	Show           *bool               `json:"show"`
 	Sell           *bool               `json:"sell"`
 	Sort           int64               `json:"sort"`

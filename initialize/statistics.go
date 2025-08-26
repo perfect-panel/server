@@ -18,7 +18,7 @@ func TrafficDataToRedis(svcCtx *svc.ServiceContext) {
 	}
 	var nodeCacheData []cache.NodeTodayTrafficRank
 	for _, node := range nodeData {
-		serverInfo, err := svcCtx.ServerModel.FindOne(ctx, node.ServerId)
+		serverInfo, err := svcCtx.NodeModel.FindOneServer(ctx, node.ServerId)
 		if err != nil {
 			logger.Errorw("查询节点信息失败", logger.Field("error", err.Error()))
 			continue

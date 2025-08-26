@@ -7,16 +7,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/logic/telegram"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/subscribe"
@@ -429,34 +430,18 @@ func (l *ActivateOrderLogic) calculateCommission(price int64) int64 {
 
 // clearServerCache clears user list cache for all servers associated with the subscription
 func (l *ActivateOrderLogic) clearServerCache(ctx context.Context, sub *subscribe.Subscribe) {
-	serverIds := tool.StringToInt64Slice(sub.Server)
-	groupServerIds := l.getServerIdsByGroups(ctx, sub.ServerGroup)
-	allServerIds := append(serverIds, groupServerIds...)
+	nodeIds := tool.StringToInt64Slice(sub.Nodes)
+	tags := strings.Split(sub.NodeTags, ",")
 
-	for _, id := range allServerIds {
-		cacheKey := fmt.Sprintf("%s%d", config.ServerUserListCacheKey, id)
-		if err := l.svc.Redis.Del(ctx, cacheKey).Err(); err != nil {
-			logger.WithContext(ctx).Error("Del server user list cache failed",
-				logger.Field("error", err.Error()),
-				logger.Field("cache_key", cacheKey),
-			)
-		}
-	}
-}
-
-// getServerIdsByGroups retrieves server IDs from server groups
-func (l *ActivateOrderLogic) getServerIdsByGroups(ctx context.Context, serverGroup string) []int64 {
-	data, err := l.svc.ServerModel.FindServerListByGroupIds(ctx, tool.StringToInt64Slice(serverGroup))
+	err := l.svc.NodeModel.ClearNodeCache(ctx, &node.FilterNodeParams{
+		Page:     1,
+		Size:     1000,
+		ServerId: nodeIds,
+		Tag:      tags,
+	})
 	if err != nil {
-		logger.WithContext(ctx).Error("Find server list failed", logger.Field("error", err.Error()))
-		return nil
+		logger.WithContext(ctx).Error("[Order Queue] Clear node cache failed", logger.Field("error", err.Error()))
 	}
-
-	serverIds := make([]int64, len(data))
-	for i, item := range data {
-		serverIds[i] = item.Id
-	}
-	return serverIds
 }
 
 // Renewal handles subscription renewal including subscription extension,

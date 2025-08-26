@@ -3,8 +3,10 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/internal/model/node"
 
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
@@ -33,28 +35,46 @@ func NewGetServerUserListLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *Ge
 func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
 	cacheKey := fmt.Sprintf("%s%d", config.ServerUserListCacheKey, req.ServerId)
 	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
-	if err == nil {
-		if cache != "" {
-			etag := tool.GenerateETag([]byte(cache))
-			resp := &types.GetServerUserListResponse{}
-			//  Check If-None-Match header
-			if match := l.ctx.GetHeader("If-None-Match"); match == etag {
-				return nil, xerr.StatusNotModified
-			}
-			l.ctx.Header("ETag", etag)
-			err = json.Unmarshal([]byte(cache), resp)
-			if err != nil {
-				l.Errorw("[ServerUserListCacheKey] json unmarshal error", logger.Field("error", err.Error()))
-				return nil, err
-			}
-			return resp, nil
+	if cache != "" {
+		etag := tool.GenerateETag([]byte(cache))
+		resp = &types.GetServerUserListResponse{}
+		//  Check If-None-Match header
+		if match := l.ctx.GetHeader("If-None-Match"); match == etag {
+			return nil, xerr.StatusNotModified
 		}
+		l.ctx.Header("ETag", etag)
+		err = json.Unmarshal([]byte(cache), resp)
+		if err != nil {
+			l.Errorw("[ServerUserListCacheKey] json unmarshal error", logger.Field("error", err.Error()))
+			return nil, err
+		}
+		return resp, nil
 	}
-	server, err := l.svcCtx.ServerModel.FindOne(l.ctx, req.ServerId)
+	server, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		return nil, err
 	}
-	subs, err := l.svcCtx.SubscribeModel.QuerySubscribeIdsByServerIdAndServerGroupId(l.ctx, server.Id, server.GroupId)
+
+	_, nodes, err := l.svcCtx.NodeModel.FilterNodeList(l.ctx, &node.FilterNodeParams{
+		Page:     1,
+		Size:     1000,
+		ServerId: []int64{server.Id},
+		Protocol: req.Protocol,
+	})
+	if err != nil {
+		l.Errorw("FilterNodeList error", logger.Field("error", err.Error()))
+		return nil, err
+	}
+	var nodeTag []string
+	var nodeIds []int64
+	for _, n := range nodes {
+		nodeIds = append(nodeIds, n.Id)
+		if n.Tags != "" {
+			nodeTag = append(nodeTag, strings.Split(n.Tags, ",")...)
+		}
+	}
+
+	subs, err := l.svcCtx.SubscribeModel.QuerySubscribeIdsByNodeIdAndNodeTag(l.ctx, nodeIds, nodeTag)
 	if err != nil {
 		l.Errorw("QuerySubscribeIdsByServerIdAndServerGroupId error", logger.Field("error", err.Error()))
 		return nil, err
@@ -76,16 +96,10 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 			return nil, err
 		}
 		for _, datum := range data {
-			speedLimit := server.SpeedLimit
-			if (int(sub.SpeedLimit) < server.SpeedLimit && sub.SpeedLimit != 0) ||
-				(int(sub.SpeedLimit) > server.SpeedLimit && sub.SpeedLimit == 0) {
-				speedLimit = int(sub.SpeedLimit)
-			}
-
 			users = append(users, types.ServerUser{
 				Id:          datum.Id,
 				UUID:        datum.UUID,
-				SpeedLimit:  int64(speedLimit),
+				SpeedLimit:  sub.SpeedLimit,
 				DeviceLimit: sub.DeviceLimit,
 			})
 		}
@@ -105,6 +119,10 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), -1).Err()
 	if err != nil {
 		l.Errorw("[ServerUserListCacheKey] redis set error", logger.Field("error", err.Error()))
+	}
+	//  Check If-None-Match header
+	if match := l.ctx.GetHeader("If-None-Match"); match == etag {
+		return nil, xerr.StatusNotModified
 	}
 	return resp, nil
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
-	"github.com/perfect-panel/server/internal/model/server"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/subscribeType"
 	"github.com/perfect-panel/server/internal/model/system"
@@ -36,20 +35,20 @@ import (
 )
 
 type ServiceContext struct {
-	DB                 *gorm.DB
-	Redis              *redis.Client
-	Config             config.Config
-	Queue              *asynq.Client
-	NodeCache          *cache.NodeCacheClient
-	AuthModel          auth.Model
-	AdsModel           ads.Model
-	LogModel           log.Model
-	NodeModel          node.Model
-	UserModel          user.Model
-	OrderModel         order.Model
-	ClientModel        client.Model
-	TicketModel        ticket.Model
-	ServerModel        server.Model
+	DB          *gorm.DB
+	Redis       *redis.Client
+	Config      config.Config
+	Queue       *asynq.Client
+	NodeCache   *cache.NodeCacheClient
+	AuthModel   auth.Model
+	AdsModel    ads.Model
+	LogModel    log.Model
+	NodeModel   node.Model
+	UserModel   user.Model
+	OrderModel  order.Model
+	ClientModel client.Model
+	TicketModel ticket.Model
+	//ServerModel        server.Model
 	SystemModel        system.Model
 	CouponModel        coupon.Model
 	PaymentModel       payment.Model
@@ -87,21 +86,21 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 	authLimiter := limit.NewPeriodLimit(86400, 15, rds, config.SendCountLimitKeyPrefix, limit.Align())
 	srv := &ServiceContext{
-		DB:                db,
-		Redis:             rds,
-		Config:            c,
-		Queue:             NewAsynqClient(c),
-		NodeCache:         cache.NewNodeCacheClient(rds),
-		AuthLimiter:       authLimiter,
-		AdsModel:          ads.NewModel(db, rds),
-		LogModel:          log.NewModel(db),
-		NodeModel:         node.NewModel(db),
-		AuthModel:         auth.NewModel(db, rds),
-		UserModel:         user.NewModel(db, rds),
-		OrderModel:        order.NewModel(db, rds),
-		ClientModel:       client.NewSubscribeApplicationModel(db),
-		TicketModel:       ticket.NewModel(db, rds),
-		ServerModel:       server.NewModel(db, rds),
+		DB:          db,
+		Redis:       rds,
+		Config:      c,
+		Queue:       NewAsynqClient(c),
+		NodeCache:   cache.NewNodeCacheClient(rds),
+		AuthLimiter: authLimiter,
+		AdsModel:    ads.NewModel(db, rds),
+		LogModel:    log.NewModel(db),
+		NodeModel:   node.NewModel(db, rds),
+		AuthModel:   auth.NewModel(db, rds),
+		UserModel:   user.NewModel(db, rds),
+		OrderModel:  order.NewModel(db, rds),
+		ClientModel: client.NewSubscribeApplicationModel(db),
+		TicketModel: ticket.NewModel(db, rds),
+		//ServerModel:       server.NewModel(db, rds),
 		SystemModel:       system.NewModel(db, rds),
 		CouponModel:       coupon.NewModel(db, rds),
 		PaymentModel:      payment.NewModel(db, rds),

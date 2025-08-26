@@ -9,7 +9,7 @@ import (
 	"github.com/perfect-panel/server/adapter"
 	"github.com/perfect-panel/server/internal/model/client"
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/internal/model/node"
 
 	"github.com/perfect-panel/server/internal/model/user"
 
@@ -196,7 +196,7 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 	}
 }
 
-func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*server.Server, error) {
+func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, error) {
 	if l.isSubscriptionExpired(userSub) {
 		return l.createExpiredServers(), nil
 	}
@@ -207,49 +207,61 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*server.Server, 
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe details error: %v", err.Error())
 	}
 
-	serverIds := tool.StringToInt64Slice(subDetails.Server)
-	groupIds := tool.StringToInt64Slice(subDetails.ServerGroup)
+	nodeIds := tool.StringToInt64Slice(subDetails.Nodes)
+	tags := strings.Split(subDetails.NodeTags, ",")
 
-	l.Debugf("[Generate Subscribe]serverIds: %v, groupIds: %v", serverIds, groupIds)
+	l.Debugf("[Generate Subscribe]nodes: %v, NodeTags: %v", nodeIds, tags)
 
-	servers, err := l.svc.ServerModel.FindServerDetailByGroupIdsAndIds(l.ctx.Request.Context(), groupIds, serverIds)
+	_, nodes, err := l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
+		Page:     1,
+		Size:     1000,
+		ServerId: nodeIds,
+		Tag:      tags,
+		Preload:  true,
+	})
 
-	l.Debugf("[Query Subscribe]found servers: %v", len(servers))
+	l.Debugf("[Query Subscribe]found servers: %v", len(nodes))
 
 	if err != nil {
 		l.Errorw("[Generate Subscribe]find server details error: %v", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server details error: %v", err.Error())
 	}
-	logger.Debugf("[Generate Subscribe]found servers: %v", len(servers))
-	return servers, nil
+	logger.Debugf("[Generate Subscribe]found servers: %v", len(nodes))
+	return nodes, nil
 }
 
 func (l *SubscribeLogic) isSubscriptionExpired(userSub *user.Subscribe) bool {
 	return userSub.ExpireTime.Unix() < time.Now().Unix() && userSub.ExpireTime.Unix() != 0
 }
 
-func (l *SubscribeLogic) createExpiredServers() []*server.Server {
+func (l *SubscribeLogic) createExpiredServers() []*node.Node {
 	enable := true
 	host := l.getFirstHostLine()
 
-	return []*server.Server{
+	return []*node.Node{
 		{
-			Name:       "Subscribe Expired",
-			ServerAddr: "127.0.0.1",
-			RelayMode:  "none",
-			Protocol:   "shadowsocks",
-			Config:     "{\"method\":\"aes-256-gcm\",\"port\":1}",
-			Enable:     &enable,
-			Sort:       0,
+			Name:    "Subscribe Expired",
+			Tags:    "",
+			Port:    18080,
+			Address: "127.0.0.1",
+			Server: &node.Server{
+				Name:      "Subscribe Expired",
+				Protocols: "[{\"type:\"\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
+			},
+			Protocol: "shadowsocks",
+			Enabled:  &enable,
 		},
 		{
-			Name:       host,
-			ServerAddr: "127.0.0.1",
-			RelayMode:  "none",
-			Protocol:   "shadowsocks",
-			Config:     "{\"method\":\"aes-256-gcm\",\"port\":1}",
-			Enable:     &enable,
-			Sort:       0,
+			Name:    host,
+			Tags:    "",
+			Port:    18080,
+			Address: "127.0.0.1",
+			Server: &node.Server{
+				Name:      "Subscribe Expired",
+				Protocols: "[{\"type:\"\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
+			},
+			Protocol: "shadowsocks",
+			Enabled:  &enable,
 		},
 	}
 }

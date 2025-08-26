@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 )
 
 type FilterServerListLogic struct {
@@ -68,7 +69,9 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64) types.ServerStatus
 	var result types.ServerStatus
 	nodeStatus, err := l.svcCtx.NodeCache.GetNodeStatus(l.ctx, id)
 	if err != nil {
-		l.Errorw("[handlerServerStatus] GetNodeStatus Error: ", logger.Field("error", err.Error()), logger.Field("node_id", id))
+		if !errors.Is(err, redis.Nil) {
+			l.Errorw("[handlerServerStatus] GetNodeStatus Error: ", logger.Field("error", err.Error()), logger.Field("node_id", id))
+		}
 		return result
 	}
 	result = types.ServerStatus{

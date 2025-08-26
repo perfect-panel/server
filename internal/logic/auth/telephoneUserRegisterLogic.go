@@ -165,7 +165,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 				Success:   token != "",
 			}
 			content, _ := loginLog.Marshal()
-			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
 				Id:       0,
 				Type:     log.TypeLogin.Uint8(),
 				Date:     time.Now().Format("2006-01-02"),
@@ -188,7 +188,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 				RegisterTime: time.Now().UnixMilli(),
 			}
 			content, _ = registerLog.Marshal()
-			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeRegister.Uint8(),
 				ObjectID: userInfo.Id,
 				Date:     time.Now().Format("2006-01-02"),

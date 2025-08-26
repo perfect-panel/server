@@ -3,7 +3,10 @@ package migrate
 import (
 	"testing"
 
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/orm"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func getDSN() string {
@@ -29,4 +32,18 @@ func TestMigrate(t *testing.T) {
 	} else {
 		t.Log("migrate success")
 	}
+}
+func TestMysql(t *testing.T) {
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		DSN: "root:mylove520@tcp(localhost:3306)/vpnboard",
+	}))
+	if err != nil {
+		t.Fatalf("Failed to connect to MySQL: %v", err)
+	}
+	err = db.Migrator().AutoMigrate(&node.Node{})
+	if err != nil {
+		t.Fatalf("Failed to auto migrate: %v", err)
+		return
+	}
+	t.Log("MySQL connection and migration successful")
 }

@@ -4,11 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/server"
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -61,42 +57,7 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 	if data == nil {
 		return []string{}
 	}
-	SubscribeIdKey := fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id)
-	serverKey := make([]string, 0)
-	if data.Server != "" {
-		cacheKey := strings.Split(data.Server, ",")
-		for _, v := range cacheKey {
-			if v != "" {
-				serverKey = append(serverKey, fmt.Sprintf("%s%v", config.ServerUserListCacheKey, v))
-			}
-		}
-	}
-	// Temporary solution waiting for refactoring
-	if data.ServerGroup != "" {
-		cacheKey := strings.Split(data.ServerGroup, ",")
-		groupIds := make([]int64, 0)
-		for _, v := range cacheKey {
-			if v != "" {
-				id, _ := strconv.ParseInt(v, 10, 64)
-				if id > 0 {
-					groupIds = append(groupIds, id)
-				}
-			}
-		}
-		var ids []int64
-		_ = m.Transaction(context.Background(), func(tx *gorm.DB) error {
-			return tx.Model(&server.Server{}).Where("group_id IN ?", groupIds).Pluck("id", &ids).Error
-		})
-		for _, id := range ids {
-			serverKey = append(serverKey, fmt.Sprintf("%s%v", config.ServerUserListCacheKey, id))
-		}
-	}
-
-	cacheKeys := []string{SubscribeIdKey}
-	if len(serverKey) > 0 {
-		cacheKeys = append(cacheKeys, serverKey...)
-	}
-	return cacheKeys
+	return []string{fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id)}
 }
 
 func (m *defaultSubscribeModel) Insert(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error {

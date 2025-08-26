@@ -46,8 +46,8 @@ type (
 		DeviceLimit    int64               `json:"device_limit"`
 		Quota          int64               `json:"quota"`
 		GroupId        int64               `json:"group_id"`
-		ServerGroup    []int64             `json:"server_group"`
-		Server         []int64             `json:"server"`
+		Nodes          []int64             `json:"nodes"`
+		NodeTags       []string            `json:"node_tags"`
 		Show           *bool               `json:"show"`
 		Sell           *bool               `json:"sell"`
 		DeductionRatio int64               `json:"deduction_ratio"`
@@ -69,8 +69,8 @@ type (
 		DeviceLimit    int64               `json:"device_limit"`
 		Quota          int64               `json:"quota"`
 		GroupId        int64               `json:"group_id"`
-		ServerGroup    []int64             `json:"server_group"`
-		Server         []int64             `json:"server"`
+		Nodes          []int64             `json:"nodes"`
+		NodeTags       []string            `json:"node_tags"`
 		Show           *bool               `json:"show"`
 		Sell           *bool               `json:"sell"`
 		Sort           int64               `json:"sort"`

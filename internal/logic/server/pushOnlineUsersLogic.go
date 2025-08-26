@@ -40,7 +40,7 @@ func (l *PushOnlineUsersLogic) PushOnlineUsers(req *types.OnlineUsersRequest) er
 	}
 
 	// Find server info
-	_, err := l.svcCtx.ServerModel.FindOne(l.ctx, req.ServerId)
+	_, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		l.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
 		return fmt.Errorf("server not found: %w", err)

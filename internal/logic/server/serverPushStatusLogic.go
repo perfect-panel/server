@@ -27,7 +27,7 @@ func NewServerPushStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 
 func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequest) error {
 	// Find server info
-	serverInfo, err := l.svcCtx.ServerModel.FindOne(l.ctx, req.ServerId)
+	serverInfo, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
 	if err != nil || serverInfo.Id <= 0 {
 		l.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
 		return errors.New("server not found")

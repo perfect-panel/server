@@ -150,6 +150,14 @@ type (
 		Total int64  `json:"total"`
 		List  []Node `json:"list"`
 	}
+	HasMigrateSeverNodeResponse {
+		HasMigrate bool `json:"has_migrate"`
+	}
+	MigrateServerNodeResponse {
+		Succee  uint64 `json:"succee"`
+		Fail    uint64 `json:"fail"`
+		Message string `json:"message,omitempty"`
+	}
 )
 
 @server (
@@ -197,5 +205,13 @@ service ppanel {
 	@doc "Toggle Node Status"
 	@handler ToggleNodeStatus
 	post /node/status/toggle (ToggleNodeStatusRequest)
+
+	@doc "Check if there is any server or node to migrate"
+	@handler HasMigrateSeverNode
+	get /migrate/has returns (HasMigrateSeverNodeResponse)
+
+	@doc "Migrate server and node data to new database"
+	@handler MigrateServerNode
+	post /migrate/run returns (MigrateServerNodeResponse)
 }
 

@@ -59,6 +59,7 @@ func Int64SliceToString(intSlice []int64) string {
 
 // string slice to string
 func StringSliceToString(stringSlice []string) string {
+	stringSlice = RemoveDuplicateElements(stringSlice...)
 	return strings.Join(stringSlice, ",")
 }
 

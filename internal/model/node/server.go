@@ -8,17 +8,17 @@ import (
 )
 
 type Server struct {
-	Id             int64     `gorm:"primary_key"`
-	Name           string    `gorm:"type:varchar(100);not null;default:'';comment:Server Name"`
-	Country        string    `gorm:"type:varchar(128);not null;default:'';comment:Country"`
-	City           string    `gorm:"type:varchar(128);not null;default:'';comment:City"`
-	Ratio          float32   `gorm:"type:DECIMAL(4,2);not null;default:0;comment:Traffic Ratio"`
-	Address        string    `gorm:"type:varchar(100);not null;default:'';comment:Server Address"`
-	Sort           int       `gorm:"type:int;not null;default:0;comment:Sort"`
-	Protocols      string    `gorm:"type:text;default:null;comment:Protocol"`
-	LastReportedAt time.Time `gorm:"comment:Last Reported Time"`
-	CreatedAt      time.Time `gorm:"<-:create;comment:Creation Time"`
-	UpdatedAt      time.Time `gorm:"comment:Update Time"`
+	Id             int64      `gorm:"primary_key"`
+	Name           string     `gorm:"type:varchar(100);not null;default:'';comment:Server Name"`
+	Country        string     `gorm:"type:varchar(128);not null;default:'';comment:Country"`
+	City           string     `gorm:"type:varchar(128);not null;default:'';comment:City"`
+	Ratio          float32    `gorm:"type:DECIMAL(4,2);not null;default:0;comment:Traffic Ratio"`
+	Address        string     `gorm:"type:varchar(100);not null;default:'';comment:Server Address"`
+	Sort           int        `gorm:"type:int;not null;default:0;comment:Sort"`
+	Protocols      string     `gorm:"type:text;default:null;comment:Protocol"`
+	LastReportedAt *time.Time `gorm:"comment:Last Reported Time"`
+	CreatedAt      time.Time  `gorm:"<-:create;comment:Creation Time"`
+	UpdatedAt      time.Time  `gorm:"comment:Update Time"`
 }
 
 func (*Server) TableName() string {

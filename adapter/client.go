@@ -13,7 +13,7 @@ import (
 type Proxy struct {
 	Name   string
 	Server string
-	Port   uint64
+	Port   uint16
 	Type   string
 	Tags   []string
 

@@ -28,7 +28,7 @@ func NewFilterNodeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fi
 }
 
 func (l *FilterNodeListLogic) FilterNodeList(req *types.FilterNodeListRequest) (resp *types.FilterNodeListResponse, err error) {
-	total, data, err := l.svcCtx.NodeModel.FilterNodeList(l.ctx, &node.FilterParams{
+	total, data, err := l.svcCtx.NodeModel.FilterNodeList(l.ctx, &node.FilterNodeParams{
 		Page:   req.Page,
 		Size:   req.Size,
 		Search: req.Search,

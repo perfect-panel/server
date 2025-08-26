@@ -9,6 +9,7 @@ type Node struct {
 	Port      uint16    `gorm:"not null;default:0;comment:Connect Port"`
 	Address   string    `gorm:"type:varchar(255);not null;default:'';comment:Connect Address"`
 	ServerId  int64     `gorm:"not null;default:0;comment:Server ID"`
+	Server    *Server   `gorm:"foreignKey:ServerId;references:Id"`
 	Protocol  string    `gorm:"type:varchar(100);not null;default:'';comment:Protocol"`
 	Enabled   *bool     `gorm:"type:boolean;not null;default:true;comment:Enabled"`
 	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`

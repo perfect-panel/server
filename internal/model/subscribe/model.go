@@ -7,32 +7,11 @@ import (
 	"gorm.io/gorm"
 )
 
-//	type Details struct {
-//		Id                   int64  `gorm:"primaryKey"`
-//		Name                 string `gorm:"type:varchar(255);not null;default:'';comment:Subscribe Name"`
-//		Description          string `gorm:"type:text;comment:Subscribe Description"`
-//		UnitPrice            int64  `gorm:"type:int;not null;default:0;comment:Unit Price"`
-//		UnitTime             string `gorm:"type:varchar(255);not null;default:'';comment:Unit Time"`
-//		Discount             string `gorm:"type:text;comment:Discount"`
-//		Replacement          int64  `gorm:"type:int;not null;default:0;comment:Replacement"`
-//		Inventory            int64  `gorm:"type:int;not null;default:0;comment:Inventory"`
-//		Traffic              int64  `gorm:"type:int;not null;default:0;comment:Traffic"`
-//		SpeedLimit           int64  `gorm:"type:int;not null;default:0;comment:Speed Limit"`
-//		DeviceLimit          int64  `gorm:"type:int;not null;default:0;comment:Device Limit"`
-//		GroupId              int64  `gorm:"type:bigint;comment:Group Id"`
-//		Quota                int64  `gorm:"type:int;not null;default:0;comment:Quota"`
-//		Show                 *bool  `gorm:"type:tinyint(1);not null;default:0;comment:Show"`
-//		Sell                 *bool  `gorm:"type:tinyint(1);not null;default:0;comment:Sell"`
-//		DeductionRatio       int64  `gorm:"type:int;default:0;comment:Deduction Ratio"`
-//		PurchaseWithDiscount bool   `gorm:"type:tinyint(1);default:0;comment:PurchaseWithDiscount"`
-//		ResetCycle           int64  `gorm:"type:int;default:0;comment:Reset Cycle"`
-//		RenewalReset         bool   `gorm:"type:tinyint(1);default:0;comment:Renew Reset"`
-//	}
 type customSubscribeLogicModel interface {
 	QuerySubscribeListByPage(ctx context.Context, page, size int, group int64, search string) (total int64, list []*Subscribe, err error)
 	QuerySubscribeList(ctx context.Context) ([]*Subscribe, error)
 	QuerySubscribeListByShow(ctx context.Context) ([]*Subscribe, error)
-	QuerySubscribeIdsByServerIdAndServerGroupId(ctx context.Context, serverId, serverGroupId int64) ([]*Subscribe, error)
+	QuerySubscribeIdsByNodeIdAndNodeTag(ctx context.Context, node []int64, tags []string) ([]*Subscribe, error)
 	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
 	QuerySubscribeListByIds(ctx context.Context, ids []int64) ([]*Subscribe, error)
 	ClearCache(ctx context.Context, id ...int64) error
@@ -75,10 +54,24 @@ func (m *customSubscribeModel) QuerySubscribeList(ctx context.Context) ([]*Subsc
 	return list, err
 }
 
-func (m *customSubscribeModel) QuerySubscribeIdsByServerIdAndServerGroupId(ctx context.Context, serverId, serverGroupId int64) ([]*Subscribe, error) {
+func (m *customSubscribeModel) QuerySubscribeIdsByNodeIdAndNodeTag(ctx context.Context, node []int64, tags []string) ([]*Subscribe, error) {
 	var data []*Subscribe
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Where("FIND_IN_SET(?, server)", serverId).Or("FIND_IN_SET(?, server_group)", serverGroupId).Find(v).Error
+		db := conn.Model(&Subscribe{})
+		if len(node) > 0 {
+			for _, id := range node {
+				db = db.Or("FIND_IN_SET(?, nodes)", id)
+			}
+		}
+
+		if len(tags) > 0 {
+			// 拼接多个 tag 条件
+			for _, t := range tags {
+				db = db.Or("FIND_IN_SET(?, node_tags)", t)
+			}
+		}
+
+		return db.Find(v).Error
 	})
 	return data, err
 }
