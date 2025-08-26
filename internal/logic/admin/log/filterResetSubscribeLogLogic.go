@@ -30,7 +30,7 @@ func (l *FilterResetSubscribeLogLogic) FilterResetSubscribeLog(req *types.Filter
 	data, total, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
-		Type:     log.TypeRegister.Uint8(),
+		Type:     log.TypeResetSubscribe.Uint8(),
 		ObjectID: req.UserSubscribeId,
 		Data:     req.Date,
 		Search:   req.Search,
