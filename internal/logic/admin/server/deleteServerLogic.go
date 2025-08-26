@@ -6,6 +6,8 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/pkg/errors"
 )
 
 type DeleteServerLogic struct {
@@ -24,7 +26,10 @@ func NewDeleteServerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Dele
 }
 
 func (l *DeleteServerLogic) DeleteServer(req *types.DeleteServerRequest) error {
-	// todo: add your logic here and delete this line
-
+	err := l.svcCtx.NodeModel.DeleteServer(l.ctx, req.Id)
+	if err != nil {
+		l.Errorw("[DeleteServer] Delete Server Error: ", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "[DeleteServer] Delete Server Error")
+	}
 	return nil
 }
