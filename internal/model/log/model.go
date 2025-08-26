@@ -26,7 +26,7 @@ type customSystemLogLogicModel interface {
 }
 
 func (m *customSystemLogModel) FilterSystemLog(ctx context.Context, filter *FilterParams) ([]*SystemLog, int64, error) {
-	tx := m.WithContext(ctx).Model(&SystemLog{})
+	tx := m.WithContext(ctx).Model(&SystemLog{}).Order("id DESC")
 	if filter == nil {
 		filter = &FilterParams{
 			Page: 1,

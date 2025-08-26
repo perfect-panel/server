@@ -352,6 +352,7 @@ type ServerTraffic struct {
 	ServerId int64 `json:"server_id"` // Server ID
 	Upload   int64 `json:"upload"`    // Upload traffic in bytes
 	Download int64 `json:"download"`  // Download traffic in bytes
+	Total    int64 `json:"total"`     // Total traffic in bytes (Upload + Download)
 }
 
 // Marshal implements the json.Marshaler interface for ServerTraffic.

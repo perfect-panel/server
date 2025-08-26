@@ -105,6 +105,7 @@ type (
 		Download    int64  `json:"download"` // Download traffic in bytes
 		Total       int64  `json:"total"` // Total traffic in bytes (Upload + Download)
 		Date        string `json:"date"` // Date in YYYY-MM-DD format
+		Details     bool   `json:"details"` // Whether to show detailed traffic
 	}
 	FilterSubscribeTrafficRequest {
 		FilterLogParams
@@ -121,6 +122,7 @@ type (
 		Download int64  `json:"download"` // Download traffic in bytes
 		Total    int64  `json:"total"` // Total traffic in bytes (Upload + Download)
 		Date     string `json:"date"` // Date in YYYY-MM-DD format
+		Details  bool   `json:"details"` // Whether to show detailed traffic
 	}
 	FilterServerTrafficLogRequest {
 		FilterLogParams
@@ -163,6 +165,25 @@ type (
 	FilterGiftLogResponse {
 		Total int64     `json:"total"`
 		List  []GiftLog `json:"list"`
+	}
+	TrafficLogDetails {
+		Id          int64 `json:"id"`
+		ServerId    int64 `json:"server_id"`
+		UserId      int64 `json:"user_id"`
+		SubscribeId int64 `json:"subscribe_id"`
+		Download    int64 `json:"download"`
+		Upload      int64 `json:"upload"`
+		Timestamp   int64 `json:"timestamp"`
+	}
+	FilterTrafficLogDetailsRequest {
+		FilterLogParams
+		ServerId    int64 `form:"server_id,optional"`
+		SubscribeId int64 `form:"subscribe_id,optional"`
+		UserId      int64 `form:"user_id,optional"`
+	}
+	FilterTrafficLogDetailsResponse {
+		Total int64               `json:"total"`
+		List  []TrafficLogDetails `json:"list"`
 	}
 )
 
@@ -219,5 +240,9 @@ service ppanel {
 	@doc "Filter gift log"
 	@handler FilterGiftLog
 	get /gift/list (FilterGiftLogRequest) returns (FilterGiftLogResponse)
+
+	@doc "Filter traffic log details"
+	@handler FilterTrafficLogDetails
+	get /traffic/details (FilterTrafficLogDetailsRequest) returns (FilterTrafficLogDetailsResponse)
 }
 

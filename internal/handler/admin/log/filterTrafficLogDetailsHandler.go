@@ -1,17 +1,17 @@
-package server_bak
+package log
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/server/internal/logic/admin/server_bak"
+	"github.com/perfect-panel/server/internal/logic/admin/log"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
-// Get node list
-func GetNodeListHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
+// Filter traffic log details
+func FilterTrafficLogDetailsHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		var req types.GetNodeServerListRequest
+		var req types.FilterTrafficLogDetailsRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
@@ -19,8 +19,8 @@ func GetNodeListHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 			return
 		}
 
-		l := server_bak.NewGetNodeListLogic(c.Request.Context(), svcCtx)
-		resp, err := l.GetNodeList(&req)
+		l := log.NewFilterTrafficLogDetailsLogic(c.Request.Context(), svcCtx)
+		resp, err := l.FilterTrafficLogDetails(&req)
 		result.HttpResult(c, resp, err)
 	}
 }

@@ -224,6 +224,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Filter user subscribe traffic log
 		adminLogGroupRouter.GET("/subscribe/traffic/list", adminLog.FilterUserSubscribeTrafficLogHandler(serverCtx))
+
+		// Filter traffic log details
+		adminLogGroupRouter.GET("/traffic/details", adminLog.FilterTrafficLogDetailsHandler(serverCtx))
 	}
 
 	adminMarketingGroupRouter := router.Group("/v1/admin/marketing")

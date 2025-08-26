@@ -674,6 +674,18 @@ type FilterSubscribeTrafficResponse struct {
 	List  []UserSubscribeTrafficLog `json:"list"`
 }
 
+type FilterTrafficLogDetailsRequest struct {
+	FilterLogParams
+	ServerId    int64 `form:"server_id,optional"`
+	SubscribeId int64 `form:"subscribe_id,optional"`
+	UserId      int64 `form:"user_id,optional"`
+}
+
+type FilterTrafficLogDetailsResponse struct {
+	Total int64               `json:"total"`
+	List  []TrafficLogDetails `json:"list"`
+}
+
 type Follow struct {
 	Id        int64  `json:"id"`
 	TicketId  int64  `json:"ticket_id"`
@@ -1743,6 +1755,7 @@ type ServerTrafficLog struct {
 	Download int64  `json:"download"`  // Download traffic in bytes
 	Total    int64  `json:"total"`     // Total traffic in bytes (Upload + Download)
 	Date     string `json:"date"`      // Date in YYYY-MM-DD format
+	Details  bool   `json:"details"`   // Whether to show detailed traffic
 }
 
 type ServerUser struct {
@@ -1981,6 +1994,16 @@ type TosConfig struct {
 }
 
 type TrafficLog struct {
+	Id          int64 `json:"id"`
+	ServerId    int64 `json:"server_id"`
+	UserId      int64 `json:"user_id"`
+	SubscribeId int64 `json:"subscribe_id"`
+	Download    int64 `json:"download"`
+	Upload      int64 `json:"upload"`
+	Timestamp   int64 `json:"timestamp"`
+}
+
+type TrafficLogDetails struct {
 	Id          int64 `json:"id"`
 	ServerId    int64 `json:"server_id"`
 	UserId      int64 `json:"user_id"`
@@ -2384,6 +2407,7 @@ type UserSubscribeTrafficLog struct {
 	Download    int64  `json:"download"`     // Download traffic in bytes
 	Total       int64  `json:"total"`        // Total traffic in bytes (Upload + Download)
 	Date        string `json:"date"`         // Date in YYYY-MM-DD format
+	Details     bool   `json:"details"`      // Whether to show detailed traffic
 }
 
 type UserTraffic struct {

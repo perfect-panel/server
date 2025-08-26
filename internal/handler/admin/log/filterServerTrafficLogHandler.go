@@ -11,7 +11,7 @@ import (
 // Filter server traffic log
 func FilterServerTrafficLogHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		var req types.FilterSubscribeTrafficRequest
+		var req types.FilterServerTrafficLogRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
