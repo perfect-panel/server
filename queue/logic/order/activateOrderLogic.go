@@ -389,7 +389,7 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 			Type:      commissionType,
 			Amount:    amount,
 			OrderNo:   orderInfo.OrderNo,
-			CreatedAt: orderInfo.CreatedAt.UnixMilli(),
+			Timestamp: orderInfo.CreatedAt.UnixMilli(),
 		}
 
 		content, _ := commissionLog.Marshal()
@@ -577,10 +577,10 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 
 	// insert reset traffic log
 	resetLog := &log.ResetSubscribe{
-		Type:    log.ResetSubscribeTypePaid,
-		UserId:  userInfo.Id,
-		OrderNo: orderInfo.OrderNo,
-		ResetAt: time.Now().UnixMilli(),
+		Type:      log.ResetSubscribeTypePaid,
+		UserId:    userInfo.Id,
+		OrderNo:   orderInfo.OrderNo,
+		Timestamp: time.Now().UnixMilli(),
 	}
 
 	content, _ := resetLog.Marshal()

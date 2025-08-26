@@ -60,7 +60,7 @@ func (l *GetSubscribeLogLogic) GetSubscribeLog(req *types.GetSubscribeLogRequest
 			Token:           content.Token,
 			IP:              content.ClientIP,
 			UserAgent:       content.UserAgent,
-			CreatedAt:       item.CreatedAt.UnixMilli(),
+			Timestamp:       item.CreatedAt.UnixMilli(),
 		})
 	}
 

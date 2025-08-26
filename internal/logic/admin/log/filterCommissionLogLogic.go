@@ -51,7 +51,7 @@ func (l *FilterCommissionLogLogic) FilterCommissionLog(req *types.FilterCommissi
 			Type:      content.Type,
 			Amount:    content.Amount,
 			OrderNo:   content.OrderNo,
-			CreatedAt: content.CreatedAt,
+			Timestamp: content.Timestamp,
 		})
 	}
 	return &types.FilterCommissionLogResponse{

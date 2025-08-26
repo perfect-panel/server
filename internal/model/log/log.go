@@ -123,7 +123,7 @@ type Login struct {
 	LoginIP   string `json:"login_ip"`
 	UserAgent string `json:"user_agent"`
 	Success   bool   `json:"success"`
-	LoginTime int64  `json:"login_time"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // Marshal implements the json.Marshaler interface for Login.
@@ -145,11 +145,11 @@ func (l *Login) Unmarshal(data []byte) error {
 
 // Register represents a registration log entry.
 type Register struct {
-	AuthMethod   string `json:"auth_method"`
-	Identifier   string `json:"identifier"`
-	RegisterIP   string `json:"register_ip"`
-	UserAgent    string `json:"user_agent"`
-	RegisterTime int64  `json:"register_time"`
+	AuthMethod string `json:"auth_method"`
+	Identifier string `json:"identifier"`
+	RegisterIP string `json:"register_ip"`
+	UserAgent  string `json:"user_agent"`
+	Timestamp  int64  `json:"timestamp"`
 }
 
 // Marshal implements the json.Marshaler interface for Register.
@@ -197,10 +197,10 @@ func (s *Subscribe) Unmarshal(data []byte) error {
 
 // ResetSubscribe represents a reset subscription log entry.
 type ResetSubscribe struct {
-	Type    uint16 `json:"type"`
-	UserId  int64  `json:"user_id"`
-	OrderNo string `json:"order_no,omitempty"`
-	ResetAt int64  `json:"reset_at"`
+	Type      uint16 `json:"type"`
+	UserId    int64  `json:"user_id"`
+	OrderNo   string `json:"order_no,omitempty"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // Marshal implements the json.Marshaler interface for ResetSubscribe.
@@ -251,7 +251,7 @@ type Commission struct {
 	Type      uint16 `json:"type"`
 	Amount    int64  `json:"amount"`
 	OrderNo   string `json:"order_no"`
-	CreatedAt int64  `json:"created_at"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // Marshal implements the json.Marshaler interface for Commission.
@@ -279,7 +279,7 @@ type Gift struct {
 	Amount      int64  `json:"amount"`
 	Balance     int64  `json:"balance"`
 	Remark      string `json:"remark,omitempty"`
-	CreatedAt   int64  `json:"created_at"`
+	Timestamp   int64  `json:"timestamp"`
 }
 
 // Marshal implements the json.Marshaler interface for Gift.

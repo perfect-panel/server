@@ -515,7 +515,7 @@ type (
 		Token           string `json:"token"`
 		IP              string `json:"ip"`
 		UserAgent       string `json:"user_agent"`
-		CreatedAt       int64  `json:"created_at"`
+		Timestamp       int64  `json:"timestamp"`
 	}
 	UserLoginLog {
 		Id        int64  `json:"id"`
@@ -523,7 +523,7 @@ type (
 		LoginIP   string `json:"login_ip"`
 		UserAgent string `json:"user_agent"`
 		Success   bool   `json:"success"`
-		CreatedAt int64  `json:"created_at"`
+		Timestamp int64  `json:"timestamp"`
 	}
 	MessageLog {
 		Id        int64       `json:"id"`
@@ -750,7 +750,7 @@ type (
 		Type            uint16 `json:"type"`
 		UserSubscribeId int64  `json:"user_subscribe_id"`
 		OrderNo         string `json:"order_no,omitempty"`
-		ResetAt         int64  `json:"reset_at"`
+		Timestamp       int64  `json:"timestamp"`
 	}
 	BalanceLog {
 		Type      uint16 `json:"type"`
@@ -765,7 +765,7 @@ type (
 		UserId    int64  `json:"user_id"`
 		Amount    int64  `json:"amount"`
 		OrderNo   string `json:"order_no"`
-		CreatedAt int64  `json:"created_at"`
+		Timestamp int64  `json:"timestamp"`
 	}
 )
 

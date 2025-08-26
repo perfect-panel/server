@@ -602,9 +602,9 @@ func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscri
 // insertLog inserts a reset traffic log entry
 func (l *ResetTrafficLogic) insertLog(ctx context.Context, subId, userId int64) {
 	trafficLog := log.ResetSubscribe{
-		Type:    log.ResetSubscribeTypeAuto,
-		UserId:  userId,
-		ResetAt: time.Now().UnixMilli(),
+		Type:      log.ResetSubscribeTypeAuto,
+		UserId:    userId,
+		Timestamp: time.Now().UnixMilli(),
 	}
 	content, _ := trafficLog.Marshal()
 	if err := l.svc.DB.WithContext(ctx).Model(&log.SystemLog{}).Create(&log.SystemLog{

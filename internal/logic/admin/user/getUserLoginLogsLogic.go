@@ -51,7 +51,7 @@ func (l *GetUserLoginLogsLogic) GetUserLoginLogs(req *types.GetUserLoginLogsRequ
 			LoginIP:   content.LoginIP,
 			UserAgent: content.UserAgent,
 			Success:   content.Success,
-			CreatedAt: datum.CreatedAt.UnixMilli(),
+			Timestamp: datum.CreatedAt.UnixMilli(),
 		})
 	}
 

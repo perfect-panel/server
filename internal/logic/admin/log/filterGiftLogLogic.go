@@ -57,7 +57,7 @@ func (l *FilterGiftLogLogic) FilterGiftLog(req *types.FilterGiftLogRequest) (res
 			Amount:      content.Amount,
 			Balance:     content.Balance,
 			Remark:      content.Remark,
-			CreatedAt:   content.CreatedAt,
+			Timestamp:   content.Timestamp,
 		})
 	}
 

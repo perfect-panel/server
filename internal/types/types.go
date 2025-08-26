@@ -235,7 +235,7 @@ type CommissionLog struct {
 	UserId    int64  `json:"user_id"`
 	Amount    int64  `json:"amount"`
 	OrderNo   string `json:"order_no"`
-	CreatedAt int64  `json:"created_at"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type Coupon struct {
@@ -1109,7 +1109,7 @@ type GiftLog struct {
 	Amount      int64  `json:"amount"`
 	Balance     int64  `json:"balance"`
 	Remark      string `json:"remark,omitempty"`
-	CreatedAt   int64  `json:"created_at"`
+	Timestamp   int64  `json:"timestamp"`
 }
 
 type GoogleLoginCallbackRequest struct {
@@ -1149,7 +1149,7 @@ type LoginLog struct {
 	LoginIP   string `json:"login_ip"`
 	UserAgent string `json:"user_agent"`
 	Success   bool   `json:"success"`
-	LoginTime int64  `json:"login_time"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type LoginResponse struct {
@@ -1571,12 +1571,12 @@ type RegisterConfig struct {
 }
 
 type RegisterLog struct {
-	UserId       int64  `json:"user_id"`
-	AuthMethod   string `json:"auth_method"`
-	Identifier   string `json:"identifier"`
-	RegisterIP   string `json:"register_ip"`
-	UserAgent    string `json:"user_agent"`
-	RegisterTime int64  `json:"register_time"`
+	UserId     int64  `json:"user_id"`
+	AuthMethod string `json:"auth_method"`
+	Identifier string `json:"identifier"`
+	RegisterIP string `json:"register_ip"`
+	UserAgent  string `json:"user_agent"`
+	Timestamp  int64  `json:"timestamp"`
 }
 
 type RenewalOrderRequest struct {
@@ -1604,7 +1604,7 @@ type ResetSubscribeLog struct {
 	UserId          int64  `json:"user_id"`
 	UserSubscribeId int64  `json:"user_subscribe_id"`
 	OrderNo         string `json:"order_no,omitempty"`
-	ResetAt         int64  `json:"reset_at"`
+	Timestamp       int64  `json:"timestamp"`
 }
 
 type ResetSubscribeTrafficLog struct {
@@ -1612,7 +1612,7 @@ type ResetSubscribeTrafficLog struct {
 	Type            uint16 `json:"type"`
 	UserSubscribeId int64  `json:"user_subscribe_id"`
 	OrderNo         string `json:"order_no,omitempty"`
-	ResetAt         int64  `json:"reset_at"`
+	Timestamp       int64  `json:"timestamp"`
 }
 
 type ResetTrafficOrderRequest struct {
@@ -1906,7 +1906,7 @@ type SubscribeLog struct {
 	UserAgent       string `json:"user_agent"`
 	ClientIP        string `json:"client_ip"`
 	UserSubscribeId int64  `json:"user_subscribe_id"`
-	SubscribedAt    int64  `json:"subscribed_at"`
+	Timestamp       int64  `json:"timestamp"`
 }
 
 type SubscribeSortRequest struct {
@@ -2327,7 +2327,7 @@ type UserLoginLog struct {
 	LoginIP   string `json:"login_ip"`
 	UserAgent string `json:"user_agent"`
 	Success   bool   `json:"success"`
-	CreatedAt int64  `json:"created_at"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type UserLoginRequest struct {
@@ -2407,7 +2407,7 @@ type UserSubscribeLog struct {
 	Token           string `json:"token"`
 	IP              string `json:"ip"`
 	UserAgent       string `json:"user_agent"`
-	CreatedAt       int64  `json:"created_at"`
+	Timestamp       int64  `json:"timestamp"`
 }
 
 type UserSubscribeTrafficLog struct {

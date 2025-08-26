@@ -102,7 +102,7 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 				Amount:      orderInfo.GiftAmount,
 				Balance:     deduction,
 				Remark:      "Order cancellation refund",
-				CreatedAt:   time.Now().UnixMilli(),
+				Timestamp:   time.Now().UnixMilli(),
 			}
 			content, _ := giftLog.Marshal()
 

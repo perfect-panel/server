@@ -55,7 +55,7 @@ func (l *FilterResetSubscribeLogLogic) FilterResetSubscribeLog(req *types.Filter
 			UserId:          content.UserId,
 			UserSubscribeId: item.ObjectID,
 			OrderNo:         content.OrderNo,
-			ResetAt:         content.ResetAt,
+			Timestamp:       content.Timestamp,
 		})
 	}
 

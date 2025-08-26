@@ -181,11 +181,11 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 
 			// Register log
 			registerLog := log.Register{
-				AuthMethod:   "mobile",
-				Identifier:   phoneNumber,
-				RegisterIP:   req.IP,
-				UserAgent:    req.UserAgent,
-				RegisterTime: time.Now().UnixMilli(),
+				AuthMethod: "mobile",
+				Identifier: phoneNumber,
+				RegisterIP: req.IP,
+				UserAgent:  req.UserAgent,
+				Timestamp:  time.Now().UnixMilli(),
 			}
 			content, _ = registerLog.Marshal()
 			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{

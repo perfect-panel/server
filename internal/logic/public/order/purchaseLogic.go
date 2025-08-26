@@ -204,7 +204,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 				Amount:      orderInfo.GiftAmount,
 				Balance:     u.GiftAmount,
 				Remark:      "Purchase order deduction",
-				CreatedAt:   time.Now().UnixMilli(),
+				Timestamp:   time.Now().UnixMilli(),
 			}
 			content, _ := giftLog.Marshal()
 

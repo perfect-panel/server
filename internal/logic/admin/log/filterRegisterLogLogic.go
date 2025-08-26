@@ -50,12 +50,12 @@ func (l *FilterRegisterLogLogic) FilterRegisterLog(req *types.FilterRegisterLogR
 			continue
 		}
 		list = append(list, types.RegisterLog{
-			UserId:       datum.ObjectID,
-			AuthMethod:   item.AuthMethod,
-			Identifier:   item.Identifier,
-			RegisterIP:   item.RegisterIP,
-			UserAgent:    item.UserAgent,
-			RegisterTime: item.RegisterTime,
+			UserId:     datum.ObjectID,
+			AuthMethod: item.AuthMethod,
+			Identifier: item.Identifier,
+			RegisterIP: item.RegisterIP,
+			UserAgent:  item.UserAgent,
+			Timestamp:  item.Timestamp,
 		})
 	}
 

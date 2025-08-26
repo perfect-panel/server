@@ -112,7 +112,7 @@ func (l *ResetTrafficLogic) ResetTraffic(req *types.ResetTrafficOrderRequest) (r
 				Amount:      orderInfo.GiftAmount,
 				Balance:     u.GiftAmount,
 				Remark:      "Renewal order deduction",
-				CreatedAt:   time.Now().UnixMilli(),
+				Timestamp:   time.Now().UnixMilli(),
 			}
 			content, _ := giftLog.Marshal()
 

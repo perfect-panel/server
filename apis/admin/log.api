@@ -41,7 +41,7 @@ type (
 		UserAgent       string `json:"user_agent"`
 		ClientIP        string `json:"client_ip"`
 		UserSubscribeId int64  `json:"user_subscribe_id"`
-		SubscribedAt    int64  `json:"subscribed_at"`
+		Timestamp       int64  `json:"timestamp"`
 	}
 	FilterSubscribeLogRequest {
 		FilterLogParams
@@ -57,7 +57,7 @@ type (
 		LoginIP   string `json:"login_ip"`
 		UserAgent string `json:"user_agent"`
 		Success   bool   `json:"success"`
-		LoginTime int64  `json:"login_time"`
+		Timestamp int64  `json:"timestamp"`
 	}
 	FilterLoginLogRequest {
 		FilterLogParams
@@ -68,12 +68,12 @@ type (
 		List  []LoginLog `json:"list"`
 	}
 	RegisterLog {
-		UserId       int64  `json:"user_id"`
-		AuthMethod   string `json:"auth_method"`
-		Identifier   string `json:"identifier"`
-		RegisterIP   string `json:"register_ip"`
-		UserAgent    string `json:"user_agent"`
-		RegisterTime int64  `json:"register_time"`
+		UserId     int64  `json:"user_id"`
+		AuthMethod string `json:"auth_method"`
+		Identifier string `json:"identifier"`
+		RegisterIP string `json:"register_ip"`
+		UserAgent  string `json:"user_agent"`
+		Timestamp  int64  `json:"timestamp"`
 	}
 	FilterRegisterLogRequest {
 		FilterLogParams
@@ -88,7 +88,7 @@ type (
 		UserId          int64  `json:"user_id"`
 		UserSubscribeId int64  `json:"user_subscribe_id"`
 		OrderNo         string `json:"order_no,omitempty"`
-		ResetAt         int64  `json:"reset_at"`
+		Timestamp       int64  `json:"timestamp"`
 	}
 	FilterResetSubscribeLogRequest {
 		FilterLogParams
@@ -156,7 +156,7 @@ type (
 		Amount      int64  `json:"amount"`
 		Balance     int64  `json:"balance"`
 		Remark      string `json:"remark,omitempty"`
-		CreatedAt   int64  `json:"created_at"`
+		Timestamp   int64  `json:"timestamp"`
 	}
 	FilterGiftLogRequest {
 		FilterLogParams

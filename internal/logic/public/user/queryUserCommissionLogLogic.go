@@ -58,7 +58,7 @@ func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *types.QueryUse
 			Type:      content.Type,
 			Amount:    content.Amount,
 			OrderNo:   content.OrderNo,
-			CreatedAt: content.CreatedAt,
+			Timestamp: content.Timestamp,
 		})
 	}
 

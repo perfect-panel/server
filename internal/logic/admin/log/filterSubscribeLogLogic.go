@@ -53,7 +53,7 @@ func (l *FilterSubscribeLogLogic) FilterSubscribeLog(req *types.FilterSubscribeL
 			UserAgent:       content.UserAgent,
 			ClientIP:        content.ClientIP,
 			UserSubscribeId: content.UserSubscribeId,
-			SubscribedAt:    datum.CreatedAt.UnixMilli(),
+			Timestamp:       datum.CreatedAt.UnixMilli(),
 		})
 	}
 

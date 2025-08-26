@@ -50,7 +50,7 @@ func (l *GetUserSubscribeResetTrafficLogsLogic) GetUserSubscribeResetTrafficLogs
 			Id:              item.Id,
 			Type:            content.Type,
 			OrderNo:         content.OrderNo,
-			ResetAt:         content.ResetAt,
+			Timestamp:       content.Timestamp,
 			UserSubscribeId: item.ObjectID,
 		})
 	}

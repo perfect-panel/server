@@ -169,11 +169,11 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 
 			// Register log
 			registerLog := log.Register{
-				AuthMethod:   "email",
-				Identifier:   req.Email,
-				RegisterIP:   req.IP,
-				UserAgent:    req.UserAgent,
-				RegisterTime: time.Now().UnixMilli(),
+				AuthMethod: "email",
+				Identifier: req.Email,
+				RegisterIP: req.IP,
+				UserAgent:  req.UserAgent,
+				Timestamp:  time.Now().UnixMilli(),
 			}
 			content, _ = registerLog.Marshal()
 			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{

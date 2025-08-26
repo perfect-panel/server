@@ -171,7 +171,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 				Amount:      orderInfo.GiftAmount,
 				Balance:     u.GiftAmount,
 				Remark:      "Renewal order deduction",
-				CreatedAt:   time.Now().UnixMilli(),
+				Timestamp:   time.Now().UnixMilli(),
 			}
 			content, _ := giftLog.Marshal()
 
