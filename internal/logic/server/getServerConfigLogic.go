@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/node"
 
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -31,7 +30,7 @@ func NewGetServerConfigLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *GetS
 }
 
 func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest) (resp *types.GetServerConfigResponse, err error) {
-	cacheKey := fmt.Sprintf("%s%d", config.ServerConfigCacheKey, req.ServerId)
+	cacheKey := fmt.Sprintf("%s%d:%s", node.ServerConfigCacheKey, req.ServerId, req.Protocol)
 	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 	if err == nil {
 		if cache != "" {
@@ -42,7 +41,7 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 				return nil, xerr.StatusNotModified
 			}
 			l.ctx.Header("ETag", etag)
-			resp := &types.GetServerConfigResponse{}
+			resp = &types.GetServerConfigResponse{}
 			err = json.Unmarshal([]byte(cache), resp)
 			if err != nil {
 				l.Errorw("[ServerConfigCacheKey] json unmarshal error", logger.Field("error", err.Error()))

@@ -15,16 +15,17 @@ type customServerLogicModel interface {
 
 const (
 	// ServerUserListCacheKey Server User List Cache Key
-	ServerUserListCacheKey = "server:user_list:id:"
+	ServerUserListCacheKey = "server:user:"
 
 	// ServerConfigCacheKey Server Config Cache Key
-	ServerConfigCacheKey = "server:config:id:"
+	ServerConfigCacheKey = "server:config:"
 )
 
 // FilterParams Filter Server Params
 type FilterParams struct {
 	Page   int
 	Size   int
+	Ids    []int64 // Server IDs
 	Search string
 }
 
@@ -53,7 +54,9 @@ func (m *customServerModel) FilterServerList(ctx context.Context, params *Filter
 		s := "%" + params.Search + "%"
 		query = query.Where("`name` LIKE ? OR `address` LIKE ?", s, s)
 	}
-
+	if len(params.Ids) > 0 {
+		query = query.Where("id IN ?", params.Ids)
+	}
 	err := query.Count(&total).Limit(params.Size).Offset((params.Page - 1) * params.Size).Find(&servers).Error
 	return total, servers, err
 }
@@ -101,7 +104,49 @@ func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNo
 	}
 	var cacheKeys []string
 	for _, node := range nodes {
-		cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, node.ServerId), fmt.Sprintf("%s%d", ServerConfigCacheKey, node.ServerId))
+		cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, node.ServerId))
+		if node.Protocol != "" {
+			var cursor uint64
+			for {
+				keys, newCursor, err := m.Cache.Scan(ctx, cursor, fmt.Sprintf("%s%d*", ServerConfigCacheKey, node.ServerId), 100).Result()
+				if err != nil {
+					return err
+				}
+				if len(keys) > 0 {
+					cacheKeys = append(keys, keys...)
+				}
+				cursor = newCursor
+				if cursor == 0 {
+					break
+				}
+			}
+		}
+	}
+
+	if len(cacheKeys) > 0 {
+		cacheKeys = tool.RemoveDuplicateElements(cacheKeys...)
+		return m.Cache.Del(ctx, cacheKeys...).Err()
+	}
+	return nil
+}
+
+// ClearServerCache Clear Server Cache
+func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64) error {
+	var cacheKeys []string
+	cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, serverId))
+	var cursor uint64
+	for {
+		keys, newCursor, err := m.Cache.Scan(ctx, 0, fmt.Sprintf("%s%d*", ServerConfigCacheKey, serverId), 100).Result()
+		if err != nil {
+			return err
+		}
+		if len(keys) > 0 {
+			cacheKeys = append(cacheKeys, keys...)
+		}
+		cursor = newCursor
+		if cursor == 0 {
+			break
+		}
 	}
 
 	if len(cacheKeys) > 0 {

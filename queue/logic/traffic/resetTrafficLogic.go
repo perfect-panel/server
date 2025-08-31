@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/queue/types"
 
 	"github.com/hibiken/asynq"
@@ -584,6 +586,8 @@ func (l *ResetTrafficLogic) isRetryableError(err error) bool {
 // clearCache clears the reset traffic cache
 func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscribe) {
 	if len(list) != 0 {
+		var subs map[int64]bool
+
 		for _, sub := range list {
 			if sub.SubscribeId > 0 {
 				err := l.svc.UserModel.ClearSubscribeCache(ctx, sub)
@@ -592,9 +596,41 @@ func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscri
 						logger.Field("subscribeId", sub.SubscribeId),
 						logger.Field("error", err.Error()))
 				}
+				if _, ok := subs[sub.SubscribeId]; !ok {
+					subs[sub.SubscribeId] = true
+				}
 			}
 			// Insert traffic reset log
 			l.insertLog(ctx, sub.Id, sub.UserId)
+		}
+
+		for sub, _ := range subs {
+			info, err := l.svc.SubscribeModel.FindOne(ctx, sub)
+			if err != nil {
+				logger.Errorw("[CheckSubscription] FindOne subscribe failed", logger.Field("error", err.Error()), logger.Field("subscribe_id", sub))
+				continue
+			}
+			if info != nil && info.Id == sub {
+				var nodes []int64
+				if info.Nodes != "" {
+					nodes = tool.StringToInt64Slice(info.Nodes)
+				}
+				var tag []string
+				if info.NodeTags != "" {
+					tag = strings.Split(info.NodeTags, ",")
+				}
+
+				err = l.svc.NodeModel.ClearNodeCache(ctx, &node.FilterNodeParams{
+					Page:     1,
+					Size:     1000,
+					Tag:      tag,
+					ServerId: nodes,
+				})
+				if err != nil {
+					logger.Errorw("[CheckSubscription] ClearNodeCache failed", logger.Field("error", err.Error()), logger.Field("subscribe_id", sub))
+					continue
+				}
+			}
 		}
 	}
 }

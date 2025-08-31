@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/config"
-
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -62,20 +60,23 @@ func (m *defaultServerModel) batchGetCacheKeys(Servers ...*Server) []string {
 	return keys
 
 }
+
 func (m *defaultServerModel) getCacheKeys(data *Server) []string {
 	if data == nil {
 		return []string{}
 	}
 	detailsKey := fmt.Sprintf("%s%v", CacheServerDetailPrefix, data.Id)
 	ServerIdKey := fmt.Sprintf("%s%v", cacheServerIdPrefix, data.Id)
-	configIdKey := fmt.Sprintf("%s%v", config.ServerConfigCacheKey, data.Id)
-	userIDKey := fmt.Sprintf("%s%d", config.ServerUserListCacheKey, data.Id)
+	//configIdKey := fmt.Sprintf("%s%v", config.ServerConfigCacheKey, data.Id)
+	//userIDKey := fmt.Sprintf("%s%d", config.ServerUserListCacheKey, data.Id)
+
+	// query protocols to get config keys
 
 	cacheKeys := []string{
 		ServerIdKey,
 		detailsKey,
-		configIdKey,
-		userIDKey,
+		//configIdKey,
+		//userIDKey,
 	}
 	return cacheKeys
 }

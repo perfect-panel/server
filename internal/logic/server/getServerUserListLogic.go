@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/node"
 
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -33,7 +32,7 @@ func NewGetServerUserListLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *Ge
 }
 
 func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
-	cacheKey := fmt.Sprintf("%s%d", config.ServerUserListCacheKey, req.ServerId)
+	cacheKey := fmt.Sprintf("%s%d", node.ServerUserListCacheKey, req.ServerId)
 	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 	if cache != "" {
 		etag := tool.GenerateETag([]byte(cache))
