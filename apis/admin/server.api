@@ -117,6 +117,7 @@ type (
 		ServerId  int64    `json:"server_id"`
 		Protocol  string   `json:"protocol"`
 		Enabled   *bool    `json:"enabled"`
+		Sort      int      `json:"sort,omitempty"`
 		CreatedAt int64    `json:"created_at"`
 		UpdatedAt int64    `json:"updated_at"`
 	}
