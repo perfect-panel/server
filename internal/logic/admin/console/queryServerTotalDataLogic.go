@@ -6,9 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/traffic"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type QueryServerTotalDataLogic struct {
@@ -32,11 +37,123 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		return l.mockRevenueStatistics(), nil
 	}
 
+	now := time.Now()
+
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	todayEnd := todayStart.Add(24 * time.Hour).Add(-time.Second)
+	query := l.svcCtx.DB.WithContext(l.ctx)
+	var todayTop10User []log.UserTraffic
+
+	err = query.Model(&traffic.TrafficLog{}).
+		Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
+		Where("timestamp BETWEEN ? AND ?", todayStart, todayEnd).
+		Group("user_id, subscribe_id").
+		Order("total DESC").
+		Limit(10).
+		Scan(&todayTop10User).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		logger.Errorf("[Traffic Stat Queue] Query user traffic failed: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " Query user traffic failed: %v", err.Error())
+	}
+	var userTodayTrafficRanking []types.UserTrafficData
+	for _, item := range todayTop10User {
+		userTodayTrafficRanking = append(userTodayTrafficRanking, types.UserTrafficData{
+			SID:      item.SubscribeId,
+			Upload:   item.Upload,
+			Download: item.Download,
+		})
+	}
+
+	// query yesterday user traffic rank log
+	yesterday := todayStart.Add(-24 * time.Hour).Format(time.DateOnly)
+
+	var yesterdayLog log.SystemLog
+	err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", yesterday, log.TypeUserTrafficRank).First(&yesterdayLog).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Query yesterday user traffic rank log error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday user traffic rank log error: %v", err)
+	}
+
+	var yesterdayUserRankData []types.UserTrafficData
+	if yesterdayLog.Id > 0 {
+		var rank log.UserTrafficRank
+		err = rank.Unmarshal([]byte(yesterdayLog.Content))
+		if err != nil {
+			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday user traffic rank log error", logger.Field("error", err.Error()))
+		}
+		yesterdayUserRankData = make([]types.UserTrafficData, 0, len(rank.Rank))
+		for i, v := range rank.Rank {
+			yesterdayUserRankData[i] = types.UserTrafficData{
+				SID:      v.SubscribeId,
+				Upload:   v.Upload,
+				Download: v.Download,
+			}
+		}
+	}
+
+	// query server traffic rank today
+	var todayTop10Server []log.ServerTraffic
+	err = query.Model(&traffic.TrafficLog{}).Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
+		Where("timestamp BETWEEN ? AND ?", todayStart, todayEnd).
+		Group("server_id").
+		Order("total DESC").
+		Limit(10).
+		Scan(&todayTop10Server).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		logger.Errorf("[Traffic Stat Queue] Query server traffic failed: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " Query server traffic failed: %v", err.Error())
+	}
+
+	var todayServerRanking []types.ServerTrafficData
+	for _, item := range todayTop10Server {
+		info, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, item.ServerId)
+		if err != nil {
+			l.Errorw("[QueryServerTotalDataLogic] FindOneServer error", logger.Field("error", err.Error()), logger.Field("server_id", item.ServerId))
+			continue
+		}
+		todayServerRanking = append(todayServerRanking, types.ServerTrafficData{
+			ServerId: item.ServerId,
+			Name:     info.Name,
+			Upload:   item.Upload,
+			Download: item.Download,
+		})
+	}
+
+	// query server traffic rank yesterday
+	var yesterdayTop10Server []types.ServerTrafficData
+	var yesterdayServerTrafficLog log.SystemLog
+	err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", yesterday, log.TypeServerTrafficRank).First(&yesterdayServerTrafficLog).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Query yesterday server traffic rank log error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday server traffic rank log error: %v", err)
+	}
+	if yesterdayServerTrafficLog.Id > 0 {
+		var rank log.ServerTrafficRank
+		err = rank.Unmarshal([]byte(yesterdayServerTrafficLog.Content))
+		if err != nil {
+			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday server traffic rank log error", logger.Field("error", err.Error()))
+		}
+		yesterdayTop10Server = make([]types.ServerTrafficData, 0, len(rank.Rank))
+		for i, v := range rank.Rank {
+			info, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, v.ServerId)
+			if err != nil {
+				l.Errorw("[QueryServerTotalDataLogic] FindOneServer error", logger.Field("error", err.Error()), logger.Field("server_id", v.ServerId))
+				continue
+			}
+			yesterdayTop10Server[i] = types.ServerTrafficData{
+				ServerId: v.ServerId,
+				Name:     info.Name,
+				Upload:   v.Upload,
+				Download: v.Download,
+			}
+		}
+	}
+
 	resp = &types.ServerTotalDataResponse{
-		ServerTrafficRankingToday:     make([]types.ServerTrafficData, 0),
-		ServerTrafficRankingYesterday: make([]types.ServerTrafficData, 0),
-		UserTrafficRankingToday:       make([]types.UserTrafficData, 0),
-		UserTrafficRankingYesterday:   make([]types.UserTrafficData, 0),
+		ServerTrafficRankingToday:     todayServerRanking,
+		ServerTrafficRankingYesterday: yesterdayTop10Server,
+		UserTrafficRankingToday:       userTodayTrafficRanking,
+		UserTrafficRankingYesterday:   yesterdayUserRankData,
 	}
 
 	return resp, nil
