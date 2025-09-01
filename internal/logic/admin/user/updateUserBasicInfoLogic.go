@@ -44,6 +44,8 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 	userInfo.Balance = req.Balance
 	userInfo.GiftAmount = req.GiftAmount
 	userInfo.Commission = req.Commission
+	userInfo.OnlyFirstPurchase = &req.OnlyFirstPurchase
+	userInfo.ReferralPercentage = req.ReferralPercentage
 
 	if req.Password != "" {
 		if userInfo.Id == 2 && isDemo {

@@ -368,7 +368,14 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 		return
 	}
 
-	amount := l.calculateCommission(orderInfo.Price)
+	var referralPercentage uint8
+	if userInfo.ReferralPercentage != 0 {
+		referralPercentage = userInfo.ReferralPercentage
+	} else {
+		referralPercentage = uint8(l.svc.Config.Invite.ReferralPercentage)
+	}
+
+	amount := l.calculateCommission(orderInfo.Price, referralPercentage)
 
 	// Use transaction for commission updates
 	err = l.svc.DB.Transaction(func(tx *gorm.DB) error {
@@ -420,12 +427,12 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 func (l *ActivateOrderLogic) shouldProcessCommission(userInfo *user.User, orderInfo *order.Order, isNewPurchase bool) bool {
 	return userInfo.RefererId != 0 &&
 		l.svc.Config.Invite.ReferralPercentage != 0 &&
-		(!l.svc.Config.Invite.OnlyFirstPurchase || (isNewPurchase && orderInfo.IsNew))
+		(!l.svc.Config.Invite.OnlyFirstPurchase || (isNewPurchase && orderInfo.IsNew) || !*userInfo.OnlyFirstPurchase)
 }
 
 // calculateCommission computes the commission amount based on order price and referral percentage
-func (l *ActivateOrderLogic) calculateCommission(price int64) int64 {
-	return int64(float64(price) * (float64(l.svc.Config.Invite.ReferralPercentage) / 100))
+func (l *ActivateOrderLogic) calculateCommission(price int64, percentage uint8) int64 {
+	return int64(float64(price) * (float64(percentage) / 100))
 }
 
 // clearServerCache clears user list cache for all servers associated with the subscription

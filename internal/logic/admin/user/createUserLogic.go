@@ -39,10 +39,12 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 	}
 	pwd := tool.EncodePassWord(req.Password)
 	newUser := &user.User{
-		Password:  pwd,
-		ReferCode: req.ReferCode,
-		Balance:   req.Balance,
-		IsAdmin:   &req.IsAdmin,
+		Password:           pwd,
+		ReferralPercentage: req.ReferralPercentage,
+		OnlyFirstPurchase:  &req.OnlyFirstPurchase,
+		ReferCode:          req.ReferCode,
+		Balance:            req.Balance,
+		IsAdmin:            &req.IsAdmin,
 	}
 	var ams []user.AuthMethods
 

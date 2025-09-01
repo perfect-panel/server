@@ -408,18 +408,20 @@ type CreateUserAuthMethodRequest struct {
 }
 
 type CreateUserRequest struct {
-	Email             string `json:"email"`
-	Telephone         string `json:"telephone"`
-	TelephoneAreaCode string `json:"telephone_area_code"`
-	Password          string `json:"password"`
-	ProductId         int64  `json:"product_id"`
-	Duration          int64  `json:"duration"`
-	RefererUser       string `json:"referer_user"`
-	ReferCode         string `json:"refer_code"`
-	Balance           int64  `json:"balance"`
-	Commission        int64  `json:"commission"`
-	GiftAmount        int64  `json:"gift_amount"`
-	IsAdmin           bool   `json:"is_admin"`
+	Email              string `json:"email"`
+	Telephone          string `json:"telephone"`
+	TelephoneAreaCode  string `json:"telephone_area_code"`
+	Password           string `json:"password"`
+	ProductId          int64  `json:"product_id"`
+	Duration           int64  `json:"duration"`
+	ReferralPercentage uint8  `json:"referral_percentage"`
+	OnlyFirstPurchase  bool   `json:"only_first_purchase"`
+	RefererUser        string `json:"referer_user"`
+	ReferCode          string `json:"refer_code"`
+	Balance            int64  `json:"balance"`
+	Commission         int64  `json:"commission"`
+	GiftAmount         int64  `json:"gift_amount"`
+	IsAdmin            bool   `json:"is_admin"`
 }
 
 type CreateUserSubscribeRequest struct {
@@ -2234,17 +2236,19 @@ type UpdateUserAuthMethodRequest struct {
 }
 
 type UpdateUserBasiceInfoRequest struct {
-	UserId     int64  `json:"user_id" validate:"required"`
-	Password   string `json:"password"`
-	Avatar     string `json:"avatar"`
-	Balance    int64  `json:"balance"`
-	Commission int64  `json:"commission"`
-	GiftAmount int64  `json:"gift_amount"`
-	Telegram   int64  `json:"telegram"`
-	ReferCode  string `json:"refer_code"`
-	RefererId  int64  `json:"referer_id"`
-	Enable     bool   `json:"enable"`
-	IsAdmin    bool   `json:"is_admin"`
+	UserId             int64  `json:"user_id" validate:"required"`
+	Password           string `json:"password"`
+	Avatar             string `json:"avatar"`
+	Balance            int64  `json:"balance"`
+	Commission         int64  `json:"commission"`
+	ReferralPercentage uint8  `json:"referral_percentage"`
+	OnlyFirstPurchase  bool   `json:"only_first_purchase"`
+	GiftAmount         int64  `json:"gift_amount"`
+	Telegram           int64  `json:"telegram"`
+	ReferCode          string `json:"refer_code"`
+	RefererId          int64  `json:"referer_id"`
+	Enable             bool   `json:"enable"`
+	IsAdmin            bool   `json:"is_admin"`
 }
 
 type UpdateUserNotifyRequest struct {
@@ -2285,6 +2289,8 @@ type User struct {
 	Avatar                string           `json:"avatar"`
 	Balance               int64            `json:"balance"`
 	Commission            int64            `json:"commission"`
+	ReferralPercentage    uint8            `json:"referral_percentage"`
+	OnlyFirstPurchase     bool             `json:"only_first_purchase"`
 	GiftAmount            int64            `json:"gift_amount"`
 	Telegram              int64            `json:"telegram"`
 	ReferCode             string           `json:"refer_code"`
