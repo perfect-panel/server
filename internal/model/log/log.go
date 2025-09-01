@@ -30,6 +30,7 @@ const (
 	TypeGift              Type = 34 // Gift log
 	TypeUserTrafficRank   Type = 40 // Top 10 User traffic rank log
 	TypeServerTrafficRank Type = 41 // Top 10 Server traffic rank log
+	TypeTrafficStat       Type = 42 // Daily traffic statistics log
 )
 const (
 	ResetSubscribeTypeAuto    uint16 = 231 // Auto reset
@@ -391,5 +392,29 @@ func (s *ServerTrafficRank) Marshal() ([]byte, error) {
 func (s *ServerTrafficRank) Unmarshal(data []byte) error {
 	type Alias ServerTrafficRank
 	aux := (*Alias)(s)
+	return json.Unmarshal(data, aux)
+}
+
+// TrafficStat represents a daily traffic statistics log entry.
+type TrafficStat struct {
+	Upload   int64 `json:"upload"`
+	Download int64 `json:"download"`
+	Total    int64 `json:"total"`
+}
+
+// Marshal implements the json.Marshaler interface for TrafficStat.
+func (t *TrafficStat) Marshal() ([]byte, error) {
+	type Alias TrafficStat
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	})
+}
+
+// Unmarshal implements the json.Unmarshaler interface for TrafficStat.
+func (t *TrafficStat) Unmarshal(data []byte) error {
+	type Alias TrafficStat
+	aux := (*Alias)(t)
 	return json.Unmarshal(data, aux)
 }

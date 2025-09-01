@@ -1739,7 +1739,7 @@ type ServerStatus struct {
 }
 
 type ServerTotalDataResponse struct {
-	OnlineUserIPs                 int64               `json:"online_user_ips"`
+	OnlineUsers                   int64               `json:"online_users"`
 	OnlineServers                 int64               `json:"online_servers"`
 	OfflineServers                int64               `json:"offline_servers"`
 	TodayUpload                   int64               `json:"today_upload"`

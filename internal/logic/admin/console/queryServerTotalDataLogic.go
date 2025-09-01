@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/model/traffic"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -149,7 +150,78 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		}
 	}
 
+	// query online user count
+	onlineUsers, err := l.svcCtx.NodeModel.OnlineUserSubscribeGlobal(l.ctx)
+	if err != nil {
+		l.Errorw("[QueryServerTotalDataLogic] OnlineUserSubscribeGlobal error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "OnlineUserSubscribeGlobal error: %v", err)
+	}
+
+	// query online/offline server count
+	var onlineServers, offlineServers int64
+	err = query.Model(&node.Server{}).Where("`last_reported_at` > ?", now.Add(-5*time.Minute)).Count(&onlineServers).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Count online servers error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count online servers error: %v", err)
+	}
+
+	err = query.Model(&node.Server{}).Where("`last_reported_at` <= ? OR `last_reported_at` IS NULL", now.Add(-5*time.Minute)).Count(&offlineServers).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Count offline servers error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count offline servers error: %v", err)
+	}
+	// TodayUpload, TodayDownload, MonthlyUpload, MonthlyDownload
+	var todayUpload, todayDownload, monthlyUpload, monthlyDownload int64
+
+	type trafficSum struct {
+		Upload   int64
+		Download int64
+	}
+	var todayTraffic trafficSum
+	// Today
+	err = query.Model(&traffic.TrafficLog{}).Select("SUM(upload) AS upload, SUM(download) AS download").
+		Where("timestamp BETWEEN ? AND ?", todayStart, todayEnd).
+		Scan(&todayTraffic).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Sum today traffic error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Sum today traffic error: %v", err)
+	}
+	todayUpload = todayTraffic.Upload
+	todayDownload = todayTraffic.Download
+
+	// Monthly
+	monthlyUpload += todayUpload
+	monthlyDownload += todayDownload
+
+	for i := now.Day() - 1; i >= 1; i-- {
+		var logInfo log.SystemLog
+		date := time.Date(now.Year(), now.Month(), i, 0, 0, 0, 0, now.Location()).Format(time.DateOnly)
+		err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", date, log.TypeTrafficStat).First(&logInfo).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			l.Errorw("[QueryServerTotalDataLogic] Query daily traffic stat log error", logger.Field("error", err.Error()), logger.Field("date", date))
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query daily traffic stat log error: %v", err)
+		}
+		if logInfo.Id > 0 {
+			var stat log.TrafficStat
+			err = stat.Unmarshal([]byte(logInfo.Content))
+			if err != nil {
+				l.Errorw("[QueryServerTotalDataLogic] Unmarshal daily traffic stat log error", logger.Field("error", err.Error()), logger.Field("date", date))
+				continue
+			}
+			monthlyUpload += stat.Upload
+			monthlyDownload += stat.Download
+		}
+	}
+
 	resp = &types.ServerTotalDataResponse{
+		OnlineUsers:                   onlineUsers,
+		OnlineServers:                 onlineServers,
+		OfflineServers:                offlineServers,
+		TodayUpload:                   todayUpload,
+		TodayDownload:                 todayDownload,
+		MonthlyUpload:                 monthlyUpload,
+		MonthlyDownload:               monthlyDownload,
+		UpdatedAt:                     now.Unix(),
 		ServerTrafficRankingToday:     todayServerRanking,
 		ServerTrafficRankingYesterday: yesterdayTop10Server,
 		UserTrafficRankingToday:       userTodayTrafficRanking,
@@ -214,7 +286,7 @@ func (l *QueryServerTotalDataLogic) mockRevenueStatistics() *types.ServerTotalDa
 	//}
 	//
 	return &types.ServerTotalDataResponse{
-		OnlineUserIPs:                 1688,
+		OnlineUsers:                   1688,
 		OnlineServers:                 8,
 		OfflineServers:                2,
 		TodayUpload:                   8888888888,   // ~8.3GB

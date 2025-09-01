@@ -141,6 +141,30 @@ func (l *StatLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 		return err
 	}
 
+	// traffic stat
+	var stat log.TrafficStat
+	err = tx.WithContext(ctx).Model(&traffic.TrafficLog{}).
+		Select("SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
+		Where("timestamp BETWEEN ? AND ?", start, end).
+		Scan(&stat).Error
+	if err != nil {
+		logger.Errorf("[Traffic Stat Queue] Query traffic stat failed: %v", err.Error())
+		return err
+	}
+
+	// 更新流量统计日志
+	content, _ := stat.Marshal()
+	err = tx.WithContext(ctx).Model(&log.SystemLog{}).Create(&log.SystemLog{
+		Type:     log.TypeTrafficStat.Uint8(),
+		Date:     date,
+		ObjectID: 0,
+		Content:  string(content),
+	}).Error
+	if err != nil {
+		logger.Errorf("[Traffic Stat Queue] Create traffic stat log failed: %v", err.Error())
+		return err
+	}
+
 	// Delete old traffic logs
 	err = tx.WithContext(ctx).Model(&traffic.TrafficLog{}).Where("created_at <= ?", end).Delete(&traffic.TrafficLog{}).Error
 	if err != nil {
