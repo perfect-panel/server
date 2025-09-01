@@ -63,6 +63,12 @@ type customOrderLogicModel interface {
 	QueryMonthlyOrdersList(ctx context.Context, date time.Time) ([]OrdersTotalWithDate, error)
 }
 
+// UserCounts  User counts for new and renewal users
+type UserCounts struct {
+	NewUsers     int64 `gorm:"column:new_users"`
+	RenewalUsers int64 `gorm:"column:renewal_users"`
+}
+
 // NewModel returns a model for the database table.
 func NewModel(conn *gorm.DB, c *redis.Client) Model {
 	return &customOrderModel{
@@ -165,65 +171,78 @@ func (m *customOrderModel) QueryDateOrders(ctx context.Context, date time.Time) 
 
 func (m *customOrderModel) QueryTotalOrders(ctx context.Context) (OrdersTotal, error) {
 	var result OrdersTotal
-	err := m.QueryNoCacheCtx(ctx, &result, func(conn *gorm.DB, v interface{}) error {
+
+	err := m.QueryNoCacheCtx(ctx, &result, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
 			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
-			Select(
-				"SUM(amount) as amount_total, " +
-					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
-					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
-			).
-			Scan(v).Error
+			Select(`
+				SUM(amount) AS amount_total,
+				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
+			`).
+			Scan(&result).Error
 	})
+
 	return result, err
 }
 
 func (m *customOrderModel) QueryMonthlyUserCounts(ctx context.Context, date time.Time) (int64, int64, error) {
+	// 获取当月第一天零点
 	firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
-	lastDay := firstDay.AddDate(0, 1, -1)
+	// 获取下个月第一天零点（避免漏掉最后一天的订单）
+	nextMonth := firstDay.AddDate(0, 1, 0)
 
-	var newUsers int64
-	var renewalUsers int64
+	var counts UserCounts
+
+	// 执行查询
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
-			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, firstDay, lastDay, "balance").
-			Select(
-				"COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) as new_users, "+
-					"COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) as renewal_users").
-			Row().Scan(&newUsers, &renewalUsers)
+			Select(`
+				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+			`).
+			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
+				[]int64{2, 5}, firstDay, nextMonth, "balance").
+			Scan(&counts).Error
 	})
-	return newUsers, renewalUsers, err
-}
 
+	return counts.NewUsers, counts.RenewalUsers, err
+}
 func (m *customOrderModel) QueryDateUserCounts(ctx context.Context, date time.Time) (int64, int64, error) {
-	start := date.Truncate(24 * time.Hour)
-	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
+	// 当天 00:00:00
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	// 下一天 00:00:00
+	nextDay := start.Add(24 * time.Hour)
 
-	var newUsers int64
-	var renewalUsers int64
+	var counts UserCounts
+
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
-			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, start, end, "balance").
-			Select(
-				"COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) as new_users, "+
-					"COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) as renewal_users").
-			Row().Scan(&newUsers, &renewalUsers)
+			Select(`
+				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+			`).
+			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
+				[]int64{2, 5}, start, nextDay, "balance").
+			Scan(&counts).Error
 	})
-	return newUsers, renewalUsers, err
-}
 
+	return counts.NewUsers, counts.RenewalUsers, err
+}
 func (m *customOrderModel) QueryTotalUserCounts(ctx context.Context) (int64, int64, error) {
-	var newUsers int64
-	var renewalUsers int64
+	var counts UserCounts
+
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
 			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
-			Select(
-				"COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) as new_users, "+
-					"COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) as renewal_users").
-			Row().Scan(&newUsers, &renewalUsers)
+			Select(`
+				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+			`).
+			Scan(&counts).Error
 	})
-	return newUsers, renewalUsers, err
+
+	return counts.NewUsers, counts.RenewalUsers, err
 }
 
 func (m *customOrderModel) IsUserEligibleForNewOrder(ctx context.Context, userID int64) (bool, error) {
@@ -236,19 +255,25 @@ func (m *customOrderModel) IsUserEligibleForNewOrder(ctx context.Context, userID
 	return count == 0, err
 }
 
-// QueryDailyOrdersList Query daily orders list for the current month (from 1st to current date)
+// QueryDailyOrdersList 查询当月每日订单统计
 func (m *customOrderModel) QueryDailyOrdersList(ctx context.Context, date time.Time) ([]OrdersTotalWithDate, error) {
 	var results []OrdersTotalWithDate
+
 	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		// 当月 1 号 00:00:00
 		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+		// 第二天 00:00:00
+		nextDay := date.AddDate(0, 0, 1).Truncate(24 * time.Hour)
+
 		return conn.Model(&Order{}).
-			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, firstDay, date, "balance").
-			Select(
-				"DATE(created_at) as date, " +
-					"SUM(amount) as amount_total, " +
-					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
-					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
-			).
+			Select(`
+				DATE(created_at) AS date,
+				SUM(amount) AS amount_total,
+				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
+			`).
+			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
+				[]int64{2, 5}, firstDay, nextDay, "balance").
 			Group("DATE(created_at)").
 			Order("date ASC").
 			Scan(v).Error
@@ -256,19 +281,25 @@ func (m *customOrderModel) QueryDailyOrdersList(ctx context.Context, date time.T
 	return results, err
 }
 
-// QueryMonthlyOrdersList Query monthly orders list for the past 6 months
+// QueryMonthlyOrdersList 查询过去 6 个月订单统计（包含当前月）
 func (m *customOrderModel) QueryMonthlyOrdersList(ctx context.Context, date time.Time) ([]OrdersTotalWithDate, error) {
 	var results []OrdersTotalWithDate
+
 	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
-		sixMonthsAgo := date.AddDate(0, -5, 0)
+		// 六个月前（取月初）
+		start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).AddDate(0, -5, 0)
+		// 下个月月初
+		end := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).AddDate(0, 1, 0)
+
 		return conn.Model(&Order{}).
-			Where("status IN ? AND created_at >= ? AND method != ?", []int64{2, 5}, sixMonthsAgo, "balance").
-			Select(
-				"DATE_FORMAT(created_at, '%Y-%m') as date, " +
-					"SUM(amount) as amount_total, " +
-					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
-					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
-			).
+			Select(`
+				DATE_FORMAT(created_at, '%Y-%m') AS date,
+				SUM(amount) AS amount_total,
+				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
+			`).
+			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
+				[]int64{2, 5}, start, end, "balance").
 			Group("DATE_FORMAT(created_at, '%Y-%m')").
 			Order("date ASC").
 			Scan(v).Error
