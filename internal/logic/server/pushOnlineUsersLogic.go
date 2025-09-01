@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/model/cache"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -46,20 +46,24 @@ func (l *PushOnlineUsersLogic) PushOnlineUsers(req *types.OnlineUsersRequest) er
 		return fmt.Errorf("server not found: %w", err)
 	}
 
-	userOnlineIp := make([]cache.NodeOnlineUser, 0)
+	var onlineUsers node.OnlineUserSubscribe
 	for _, user := range req.Users {
-		userOnlineIp = append(userOnlineIp, cache.NodeOnlineUser{
-			SID: user.SID,
-			IP:  user.IP,
-		})
+		if online, ok := onlineUsers[user.SID]; ok {
+			// If user already exists, update IP if different
+			online = append(online, user.IP)
+			onlineUsers[user.SID] = online
+		} else {
+			// New user, add to map
+			onlineUsers[user.SID] = []string{user.IP}
+		}
 	}
-	err = l.svcCtx.NodeCache.AddOnlineUserIP(l.ctx, userOnlineIp)
+	err = l.svcCtx.NodeModel.UpdateOnlineUserSubscribe(l.ctx, req.ServerId, req.Protocol, onlineUsers)
 	if err != nil {
 		l.Errorw("[PushOnlineUsers] cache operation error", logger.Field("error", err))
 		return err
 	}
 
-	err = l.svcCtx.NodeCache.UpdateNodeOnlineUser(l.ctx, req.ServerId, userOnlineIp)
+	err = l.svcCtx.NodeModel.UpdateOnlineUserSubscribeGlobal(l.ctx, onlineUsers)
 
 	if err != nil {
 		l.Errorw("[PushOnlineUsers] cache operation error", logger.Field("error", err))

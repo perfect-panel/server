@@ -119,13 +119,6 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 		}
 	}()
 
-	// Reset today's traffic data
-	err = l.svc.NodeCache.ResetTodayTrafficData(ctx)
-	if err != nil {
-		logger.Errorw("[ResetTodayTraffic] Failed to reset today traffic data",
-			logger.Field("error", err.Error()))
-	}
-
 	// Load last reset time from cache
 	var cache resetTrafficCache
 	cacheData, err := l.svc.Redis.Get(ctx, cacheKey).Result()

@@ -20,24 +20,25 @@ type (
 		ExpiredAt   int64    `json:"expired_at"`
 	}
 	ServerStatus {
-		Online []ServerOnlineUser `json:"online"`
-		Cpu    float64            `json:"cpu"`
-		Mem    float64            `json:"mem"`
-		Disk   float64            `json:"disk"`
+		Cpu      float64            `json:"cpu"`
+		Mem      float64            `json:"mem"`
+		Disk     float64            `json:"disk"`
+		Protocol string             `json:"protocol"`
+		Online   []ServerOnlineUser `json:"online"`
 	}
 	Server {
-		Id             int64        `json:"id"`
-		Name           string       `json:"name"`
-		Country        string       `json:"country"`
-		City           string       `json:"city"`
-		Ratio          float32      `json:"ratio"`
-		Address        string       `json:"address"`
-		Sort           int          `json:"sort"`
-		Protocols      []Protocol   `json:"protocols"`
-		LastReportedAt int64        `json:"last_reported_at"`
-		Status         ServerStatus `json:"status"`
-		CreatedAt      int64        `json:"created_at"`
-		UpdatedAt      int64        `json:"updated_at"`
+		Id             int64          `json:"id"`
+		Name           string         `json:"name"`
+		Country        string         `json:"country"`
+		City           string         `json:"city"`
+		Ratio          float32        `json:"ratio"`
+		Address        string         `json:"address"`
+		Sort           int            `json:"sort"`
+		Protocols      []Protocol     `json:"protocols"`
+		LastReportedAt int64          `json:"last_reported_at"`
+		Status         []ServerStatus `json:"status"`
+		CreatedAt      int64          `json:"created_at"`
+		UpdatedAt      int64          `json:"updated_at"`
 	}
 	Protocol {
 		Type                 string `json:"type"`

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/server/internal/model/cache"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -32,7 +32,7 @@ func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequ
 		l.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
 		return errors.New("server not found")
 	}
-	err = l.svcCtx.NodeCache.UpdateNodeStatus(l.ctx, req.ServerId, cache.NodeStatus{
+	err = l.svcCtx.NodeModel.UpdateStatusCache(l.ctx, req.ServerId, req.Protocol, &node.Status{
 		Cpu:       req.Cpu,
 		Mem:       req.Mem,
 		Disk:      req.Disk,

@@ -7,10 +7,8 @@ import (
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/device"
 
-	"github.com/perfect-panel/server/internal/model/ads"
-	"github.com/perfect-panel/server/internal/model/cache"
-
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/model/ads"
 	"github.com/perfect-panel/server/internal/model/announcement"
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/internal/model/coupon"
@@ -35,11 +33,11 @@ import (
 )
 
 type ServiceContext struct {
-	DB          *gorm.DB
-	Redis       *redis.Client
-	Config      config.Config
-	Queue       *asynq.Client
-	NodeCache   *cache.NodeCacheClient
+	DB     *gorm.DB
+	Redis  *redis.Client
+	Config config.Config
+	Queue  *asynq.Client
+	//NodeCache   *cache.NodeCacheClient
 	AuthModel   auth.Model
 	AdsModel    ads.Model
 	LogModel    log.Model
@@ -86,11 +84,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 	authLimiter := limit.NewPeriodLimit(86400, 15, rds, config.SendCountLimitKeyPrefix, limit.Align())
 	srv := &ServiceContext{
-		DB:          db,
-		Redis:       rds,
-		Config:      c,
-		Queue:       NewAsynqClient(c),
-		NodeCache:   cache.NewNodeCacheClient(rds),
+		DB:     db,
+		Redis:  rds,
+		Config: c,
+		Queue:  NewAsynqClient(c),
+		//NodeCache:   cache.NewNodeCacheClient(rds),
 		AuthLimiter: authLimiter,
 		AdsModel:    ads.NewModel(db, rds),
 		LogModel:    log.NewModel(db),

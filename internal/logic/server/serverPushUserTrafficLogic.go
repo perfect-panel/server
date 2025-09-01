@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/cache"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -40,23 +39,9 @@ func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPush
 
 	// Create traffic task
 	var request task.TrafficStatistics
-	var userTraffic []cache.UserTraffic
 	request.ServerId = serverInfo.Id
 	tool.DeepCopy(&request.Logs, req.Traffic)
-	tool.DeepCopy(&userTraffic, req.Traffic)
 
-	// update today traffic rank
-	err = l.svcCtx.NodeCache.AddNodeTodayTraffic(l.ctx, serverInfo.Id, userTraffic)
-	if err != nil {
-		l.Errorw("[ServerPushUserTraffic] AddNodeTodayTraffic error", logger.Field("error", err))
-		return errors.New("add node today traffic error")
-	}
-	for _, user := range req.Traffic {
-		if err = l.svcCtx.NodeCache.AddUserTodayTraffic(l.ctx, user.SID, user.Upload, user.Download); err != nil {
-			l.Errorw("[ServerPushUserTraffic] AddUserTodayTraffic error", logger.Field("error", err))
-			continue
-		}
-	}
 	// Push traffic task
 	val, _ := json.Marshal(request)
 	t := asynq.NewTask(task.ForthwithTrafficStatistics, val, asynq.MaxRetry(3))

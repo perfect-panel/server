@@ -14,6 +14,7 @@ type (
 	Model interface {
 		serverModel
 		NodeModel
+		customCacheLogicModel
 		customServerLogicModel
 	}
 	serverModel interface {
