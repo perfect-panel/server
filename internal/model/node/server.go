@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type Server struct {
@@ -23,6 +24,17 @@ type Server struct {
 
 func (*Server) TableName() string {
 	return "servers"
+}
+
+func (m *Server) BeforeCreate(tx *gorm.DB) error {
+	if m.Sort == 0 {
+		var maxSort int
+		if err := tx.Model(&Server{}).Select("COALESCE(MAX(sort), 0)").Scan(&maxSort).Error; err != nil {
+			return err
+		}
+		m.Sort = maxSort + 1
+	}
+	return nil
 }
 
 // MarshalProtocols Marshal server protocols to json

@@ -11,6 +11,7 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 type FilterServerListLogic struct {
@@ -54,8 +55,20 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 		}
 		tool.DeepCopy(&protocols, dst)
 		server.Protocols = protocols
-		// handler status
-		server.Status = l.handlerServerStatus(datum.Id, protocols)
+
+		nodeStatus, err := l.svcCtx.NodeModel.StatusCache(l.ctx, datum.Id)
+		if err != nil {
+			if !errors.Is(err, redis.Nil) {
+				l.Errorw("[handlerServerStatus] GetNodeStatus Error: ", logger.Field("error", err.Error()), logger.Field("node_id", datum.Id))
+			}
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetNodeStatus Error")
+		}
+		server.Status = types.ServerStatus{
+			Mem:    nodeStatus.Mem,
+			Cpu:    nodeStatus.Cpu,
+			Disk:   nodeStatus.Disk,
+			Online: l.handlerServerStatus(datum.Id, protocols),
+		}
 		list = append(list, server)
 	}
 
@@ -65,57 +78,71 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 	}, nil
 }
 
-func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.Protocol) []types.ServerStatus {
-	var result []types.ServerStatus
+func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.Protocol) []types.ServerOnlineUser {
+	result := make([]types.ServerOnlineUser, 0)
+
 	for _, protocol := range protocols {
-		nodeStatus, err := l.svcCtx.NodeModel.StatusCache(l.ctx, id, protocol.Type)
+		// query online user
+		data, err := l.svcCtx.NodeModel.OnlineUserSubscribe(l.ctx, id, protocol.Type)
 		if err != nil {
 			if !errors.Is(err, redis.Nil) {
-				l.Errorw("[handlerServerStatus] GetNodeStatus Error: ", logger.Field("error", err.Error()), logger.Field("node_id", id))
+				l.Errorw("[handlerServerStatus] OnlineUserSubscribe Error: ", logger.Field("error", err.Error()), logger.Field("node_id", id), logger.Field("protocol", protocol.Type))
 			}
-			return result
+			continue
 		}
-		status := types.ServerStatus{
-			Mem:      nodeStatus.Mem,
-			Cpu:      nodeStatus.Cpu,
-			Disk:     nodeStatus.Disk,
-			Protocol: protocol.Type,
-			Online:   make([]types.ServerOnlineUser, 0),
+		if len(data) > 0 {
+			for sub, online := range data {
+				var ips []types.ServerOnlineIP
+				for _, ip := range online {
+					ips = append(ips, types.ServerOnlineIP{
+						IP:       ip,
+						Protocol: protocol.Type,
+					})
+				}
+
+				result = append(result, types.ServerOnlineUser{
+					IP:          ips,
+					SubscribeId: sub,
+				})
+			}
 		}
-		// parse online users
-		onlineUser, err := l.svcCtx.NodeModel.OnlineUserSubscribe(l.ctx, id, protocol.Type)
-		if err != nil {
-			l.Errorw("[handlerServerStatus] GetNodeOnlineUser Error: ", logger.Field("error", err.Error()), logger.Field("node_id", id))
-			return result
-		}
-		var onlineList []types.ServerOnlineUser
-		var onlineMap = make(map[int64]types.ServerOnlineUser)
-		// group by user_id
-		for subId, info := range onlineUser {
-			data, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, subId)
+	}
+	// merge same subscribe
+	var mapResult = make(map[int64]types.ServerOnlineUser)
+	for _, item := range result {
+		if exist, ok := mapResult[item.SubscribeId]; ok {
+			// merge
+			exist.Traffic += item.Traffic
+			exist.IP = append(exist.IP, item.IP...)
+			mapResult[item.SubscribeId] = exist
+		} else {
+			// get subscribe info
+			info, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, item.SubscribeId)
 			if err != nil {
-				l.Errorw("[handlerServerStatus] FindOneSubscribe Error: ", logger.Field("error", err.Error()))
+				if !errors.Is(err, gorm.ErrRecordNotFound) {
+					l.Errorw("[handlerServerStatus] FindOneSubscribe Error: ", logger.Field("error", err.Error()), logger.Field("subscribe_id", item.SubscribeId))
+				}
 				continue
 			}
-			if online, exist := onlineMap[data.UserId]; !exist {
-				onlineMap[data.UserId] = types.ServerOnlineUser{
-					IP:          info,
-					UserId:      data.UserId,
-					Subscribe:   data.Subscribe.Name,
-					SubscribeId: data.SubscribeId,
-					Traffic:     data.Traffic,
-					ExpiredAt:   data.ExpireTime.UnixMilli(),
-				}
-			} else {
-				online.IP = append(online.IP, info...)
-				onlineMap[data.UserId] = online
+			data := types.ServerOnlineUser{
+				IP:          item.IP,
+				UserId:      info.UserId,
+				Subscribe:   "",
+				SubscribeId: item.SubscribeId,
+				Traffic:     info.Download + info.Upload,
+				ExpiredAt:   info.ExpireTime.UnixMilli(),
 			}
+			if info.Subscribe != nil {
+				data.Subscribe = info.Subscribe.Name
+			}
+			// add new
+			mapResult[item.SubscribeId] = data
 		}
-		for _, online := range onlineMap {
-			onlineList = append(onlineList, online)
-		}
-		status.Online = onlineList
-		result = append(result, status)
+	}
+	// convert map to slice
+	result = make([]types.ServerOnlineUser, 0, len(mapResult))
+	for _, item := range mapResult {
+		result = append(result, item)
 	}
 	return result
 }

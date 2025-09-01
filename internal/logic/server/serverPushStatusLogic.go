@@ -16,7 +16,7 @@ type ServerPushStatusLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Push server status
+// NewServerPushStatusLogic Push server status
 func NewServerPushStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ServerPushStatusLogic {
 	return &ServerPushStatusLogic{
 		Logger: logger.WithContext(ctx),
@@ -32,7 +32,7 @@ func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequ
 		l.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
 		return errors.New("server not found")
 	}
-	err = l.svcCtx.NodeModel.UpdateStatusCache(l.ctx, req.ServerId, req.Protocol, &node.Status{
+	err = l.svcCtx.NodeModel.UpdateStatusCache(l.ctx, req.ServerId, &node.Status{
 		Cpu:       req.Cpu,
 		Mem:       req.Mem,
 		Disk:      req.Disk,

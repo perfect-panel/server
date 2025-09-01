@@ -12,8 +12,8 @@ import (
 
 type (
 	customCacheLogicModel interface {
-		StatusCache(ctx context.Context, serverId int64, protocol string) (Status, error)
-		UpdateStatusCache(ctx context.Context, serverId int64, protocol string, status *Status) error
+		StatusCache(ctx context.Context, serverId int64) (Status, error)
+		UpdateStatusCache(ctx context.Context, serverId int64, status *Status) error
 		OnlineUserSubscribe(ctx context.Context, serverId int64, protocol string) (OnlineUserSubscribe, error)
 		UpdateOnlineUserSubscribe(ctx context.Context, serverId int64, protocol string, subscribe OnlineUserSubscribe) error
 		OnlineUserSubscribeGlobal(ctx context.Context) (int64, error)
@@ -54,22 +54,22 @@ func (s *Status) Unmarshal(data string) error {
 
 const (
 	Expiry                                = 300 * time.Second              // Cache expiry time in seconds
-	StatusCacheKey                        = "node:status:%d:%s"            // Node status cache key format (Server ID and protocol) Example: node:status:1:shadowsocks
+	StatusCacheKey                        = "node:status:%d"               // Node status cache key format (Server ID and protocol) Example: node:status:1:shadowsocks
 	OnlineUserCacheKeyWithSubscribe       = "node:online:subscribe:%d:%s"  // Online user subscribe cache key format (Server ID and protocol) Example: node:online:subscribe:1:shadowsocks
 	OnlineUserSubscribeCacheKeyWithGlobal = "node:online:subscribe:global" // Online user global subscribe cache key
 )
 
 // UpdateStatusCache Update server status to cache
-func (m *customServerModel) UpdateStatusCache(ctx context.Context, serverId int64, protocol string, status *Status) error {
-	key := fmt.Sprintf(StatusCacheKey, serverId, protocol)
+func (m *customServerModel) UpdateStatusCache(ctx context.Context, serverId int64, status *Status) error {
+	key := fmt.Sprintf(StatusCacheKey, serverId)
 	return m.Cache.Set(ctx, key, status.Marshal(), Expiry).Err()
 
 }
 
 // StatusCache Get server status from cache
-func (m *customServerModel) StatusCache(ctx context.Context, serverId int64, protocol string) (Status, error) {
+func (m *customServerModel) StatusCache(ctx context.Context, serverId int64) (Status, error) {
 	var status Status
-	key := fmt.Sprintf(StatusCacheKey, serverId, protocol)
+	key := fmt.Sprintf(StatusCacheKey, serverId)
 
 	result, err := m.Cache.Get(ctx, key).Result()
 	if err != nil {

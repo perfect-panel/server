@@ -1,6 +1,10 @@
 package node
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Node struct {
 	Id        int64     `gorm:"primary_key"`
@@ -12,10 +16,22 @@ type Node struct {
 	Server    *Server   `gorm:"foreignKey:ServerId;references:Id"`
 	Protocol  string    `gorm:"type:varchar(100);not null;default:'';comment:Protocol"`
 	Enabled   *bool     `gorm:"type:boolean;not null;default:true;comment:Enabled"`
+	Sort      int       `gorm:"uniqueIndex;not null;default:0;comment:Sort"`
 	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
 	UpdatedAt time.Time `gorm:"comment:Update Time"`
 }
 
-func (Node) TableName() string {
+func (n *Node) TableName() string {
 	return "nodes"
+}
+
+func (n *Node) BeforeCreate(tx *gorm.DB) error {
+	if n.Sort == 0 {
+		var maxSort int
+		if err := tx.Model(&Node{}).Select("COALESCE(MAX(sort), 0)").Scan(&maxSort).Error; err != nil {
+			return err
+		}
+		n.Sort = maxSort + 1
+	}
+	return nil
 }

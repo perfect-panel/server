@@ -317,6 +317,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Filter Node List
 		adminServerGroupRouter.GET("/node/list", adminServer.FilterNodeListHandler(serverCtx))
 
+		// Reset node sort
+		adminServerGroupRouter.POST("/node/sort", adminServer.ResetSortWithNodeHandler(serverCtx))
+
 		// Toggle Node Status
 		adminServerGroupRouter.POST("/node/status/toggle", adminServer.ToggleNodeStatusHandler(serverCtx))
 
@@ -325,6 +328,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get Server Protocols
 		adminServerGroupRouter.GET("/protocols", adminServer.GetServerProtocolsHandler(serverCtx))
+
+		// Reset server sort
+		adminServerGroupRouter.POST("/server/sort", adminServer.ResetSortWithServerHandler(serverCtx))
 
 		// Update Server
 		adminServerGroupRouter.POST("/update", adminServer.UpdateServerHandler(serverCtx))

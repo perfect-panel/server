@@ -1606,6 +1606,12 @@ type ResetPasswordRequest struct {
 	CfToken   string `json:"cf_token,optional"`
 }
 
+type ResetSortRequest struct {
+	Page int     `json:"page"`
+	Size int     `json:"size"`
+	Sort []int64 `json:"sort"`
+}
+
 type ResetSubscribeLog struct {
 	Type            uint16 `json:"type"`
 	UserId          int64  `json:"user_id"`
@@ -1669,18 +1675,18 @@ type SendSmsCodeRequest struct {
 }
 
 type Server struct {
-	Id             int64          `json:"id"`
-	Name           string         `json:"name"`
-	Country        string         `json:"country"`
-	City           string         `json:"city"`
-	Ratio          float32        `json:"ratio"`
-	Address        string         `json:"address"`
-	Sort           int            `json:"sort"`
-	Protocols      []Protocol     `json:"protocols"`
-	LastReportedAt int64          `json:"last_reported_at"`
-	Status         []ServerStatus `json:"status"`
-	CreatedAt      int64          `json:"created_at"`
-	UpdatedAt      int64          `json:"updated_at"`
+	Id             int64        `json:"id"`
+	Name           string       `json:"name"`
+	Country        string       `json:"country"`
+	City           string       `json:"city"`
+	Ratio          float32      `json:"ratio"`
+	Address        string       `json:"address"`
+	Sort           int          `json:"sort"`
+	Protocols      []Protocol   `json:"protocols"`
+	LastReportedAt int64        `json:"last_reported_at"`
+	Status         ServerStatus `json:"status"`
+	CreatedAt      int64        `json:"created_at"`
+	UpdatedAt      int64        `json:"updated_at"`
 }
 
 type ServerBasic struct {
@@ -1702,13 +1708,18 @@ type ServerGroup struct {
 	UpdatedAt   int64  `json:"updated_at"`
 }
 
+type ServerOnlineIP struct {
+	IP       string `json:"ip"`
+	Protocol string `json:"protocol"`
+}
+
 type ServerOnlineUser struct {
-	IP          []string `json:"ip"`
-	UserId      int64    `json:"user_id"`
-	Subscribe   string   `json:"subscribe"`
-	SubscribeId int64    `json:"subscribe_id"`
-	Traffic     int64    `json:"traffic"`
-	ExpiredAt   int64    `json:"expired_at"`
+	IP          []ServerOnlineIP `json:"ip"`
+	UserId      int64            `json:"user_id"`
+	Subscribe   string           `json:"subscribe"`
+	SubscribeId int64            `json:"subscribe_id"`
+	Traffic     int64            `json:"traffic"`
+	ExpiredAt   int64            `json:"expired_at"`
 }
 
 type ServerPushStatusRequest struct {
