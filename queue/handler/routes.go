@@ -39,4 +39,7 @@ func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
 
 	// ScheduledBatchSendEmail
 	mux.Handle(types.ScheduledBatchSendEmail, emailLogic.NewBatchEmailLogic(serverCtx))
+
+	// ScheduledTrafficStat
+	mux.Handle(types.SchedulerTrafficStat, traffic.NewStatLogic(serverCtx))
 }
