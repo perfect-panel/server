@@ -19,6 +19,7 @@ type customSystemLogicModel interface {
 	GetTosConfig(ctx context.Context) ([]*System, error)
 	GetCurrencyConfig(ctx context.Context) ([]*System, error)
 	GetVerifyCodeConfig(ctx context.Context) ([]*System, error)
+	GetLogConfig(ctx context.Context) ([]*System, error)
 	UpdateNodeMultiplierConfig(ctx context.Context, config string) error
 	FindNodeMultiplierConfig(ctx context.Context) (*System, error)
 }
@@ -149,6 +150,15 @@ func (m *customSystemModel) GetVerifyCodeConfig(ctx context.Context) ([]*System,
 	var configs []*System
 	err := m.QueryCtx(ctx, &configs, config.VerifyCodeConfigKey, func(conn *gorm.DB, v interface{}) error {
 		return conn.Where("`category` = ?", "verify_code").Find(v).Error
+	})
+	return configs, err
+}
+
+// GetLogConfig returns the log config.
+func (m *customSystemModel) GetLogConfig(ctx context.Context) ([]*System, error) {
+	var configs []*System
+	err := m.QueryNoCacheCtx(ctx, &configs, func(conn *gorm.DB, v interface{}) error {
+		return conn.Where("`category` = ?", "log").Find(v).Error
 	})
 	return configs, err
 }

@@ -216,6 +216,12 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Filter server traffic log
 		adminLogGroupRouter.GET("/server/traffic/list", adminLog.FilterServerTrafficLogHandler(serverCtx))
 
+		// Get log setting
+		adminLogGroupRouter.GET("/setting", adminLog.GetLogSettingHandler(serverCtx))
+
+		// Update log setting
+		adminLogGroupRouter.POST("/setting", adminLog.UpdateLogSettingHandler(serverCtx))
+
 		// Filter subscribe log
 		adminLogGroupRouter.GET("/subscribe/list", adminLog.FilterSubscribeLogHandler(serverCtx))
 

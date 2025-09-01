@@ -1143,6 +1143,11 @@ type LogResponse struct {
 	List interface{} `json:"list"`
 }
 
+type LogSetting struct {
+	AutoClear *bool `json:"auto_clear"`
+	ClearDays int64 `json:"clear_days"`
+}
+
 type LoginLog struct {
 	UserId    int64  `json:"user_id"`
 	Method    string `json:"method"`

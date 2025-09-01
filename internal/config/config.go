@@ -25,6 +25,7 @@ type Config struct {
 	Subscribe     SubscribeConfig `yaml:"Subscribe"`
 	Invite        InviteConfig    `yaml:"Invite"`
 	Telegram      Telegram        `yaml:"Telegram"`
+	Log           Log             `yaml:"Log"`
 	Administrator struct {
 		Email    string `yaml:"Email" default:"admin@ppanel.dev"`
 		Password string `yaml:"Password" default:"password"`
@@ -145,4 +146,9 @@ type VerifyCode struct {
 	ExpireTime int64 `yaml:"ExpireTime" default:"300"`
 	Limit      int64 `yaml:"Limit" default:"15"`
 	Interval   int64 `yaml:"Interval" default:"60"`
+}
+
+type Log struct {
+	AutoClear bool  `yaml:"AutoClear" default:"true"`
+	ClearDays int64 `yaml:"ClearDays" default:"7"`
 }

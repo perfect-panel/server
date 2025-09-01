@@ -199,7 +199,7 @@ func (l *CheckSubscriptionLogic) sendTrafficNotify(ctx context.Context, subs []i
 }
 
 func (l *CheckSubscriptionLogic) clearServerCache(ctx context.Context, userSubs ...*user.Subscribe) {
-	var subs map[int64]bool
+	subs := make(map[int64]bool)
 	for _, sub := range userSubs {
 		if _, ok := subs[sub.SubscribeId]; !ok {
 			subs[sub.SubscribeId] = true

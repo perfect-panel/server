@@ -185,6 +185,10 @@ type (
 		Total int64               `json:"total"`
 		List  []TrafficLogDetails `json:"list"`
 	}
+	LogSetting {
+		AutoClear *bool `json:"auto_clear"`
+		ClearDays int64 `json:"clear_days"`
+	}
 )
 
 @server (
@@ -244,5 +248,13 @@ service ppanel {
 	@doc "Filter traffic log details"
 	@handler FilterTrafficLogDetails
 	get /traffic/details (FilterTrafficLogDetailsRequest) returns (FilterTrafficLogDetailsResponse)
+
+	@doc "Get log setting"
+	@handler GetLogSetting
+	get /setting returns (LogSetting)
+
+	@doc "Update log setting"
+	@handler UpdateLogSetting
+	post /setting (LogSetting)
 }
 

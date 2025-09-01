@@ -95,13 +95,29 @@ func (l *FilterServerTrafficLogLogic) FilterServerTrafficLog(req *types.FilterSe
 				l.Errorw("[FilterServerTrafficLog] Unmarshal Error", logger.Field("error", err.Error()), logger.Field("content", item.Content))
 				continue
 			}
+
+			hasDetails := true
+			if l.svcCtx.Config.Log.AutoClear {
+				last := now.AddDate(0, 0, int(-l.svcCtx.Config.Log.ClearDays))
+				dataTime, err := time.Parse(time.DateOnly, item.Date)
+				if err != nil {
+					l.Errorw("[FilterServerTrafficLog] Parse Date Error", logger.Field("error", err.Error()), logger.Field("date", item.Date))
+				} else {
+					if dataTime.Before(last) {
+						hasDetails = false
+					} else {
+						hasDetails = true
+					}
+				}
+			}
+
 			list = append(list, types.ServerTrafficLog{
 				ServerId: item.ObjectID,
 				Upload:   content.Upload,
 				Download: content.Download,
 				Total:    content.Total,
 				Date:     item.Date,
-				Details:  false,
+				Details:  hasDetails,
 			})
 		}
 
