@@ -1608,9 +1608,7 @@ type ResetPasswordRequest struct {
 }
 
 type ResetSortRequest struct {
-	Page int     `json:"page"`
-	Size int     `json:"size"`
-	Sort []int64 `json:"sort"`
+	Sort []SortItem `json:"sort"`
 }
 
 type ResetSubscribeLog struct {

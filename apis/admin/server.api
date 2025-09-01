@@ -165,9 +165,7 @@ type (
 		Message string `json:"message,omitempty"`
 	}
 	ResetSortRequest {
-		Page int     `json:"page"`
-		Size int     `json:"size"`
-		Sort []int64 `json:"sort"`
+		Sort []SortItem `json:"sort"`
 	}
 )
 

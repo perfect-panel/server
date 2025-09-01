@@ -11,6 +11,7 @@ import (
 )
 
 type Proxy struct {
+	Sort   int
 	Name   string
 	Server string
 	Port   uint16

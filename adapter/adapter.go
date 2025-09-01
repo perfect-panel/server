@@ -102,6 +102,7 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 		for _, protocol := range protocols {
 			if protocol.Type == item.Protocol {
 				proxies = append(proxies, Proxy{
+					Sort:                 item.Sort,
 					Name:                 item.Name,
 					Server:               item.Address,
 					Port:                 item.Port,

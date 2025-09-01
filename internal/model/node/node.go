@@ -3,6 +3,7 @@ package node
 import (
 	"time"
 
+	"github.com/perfect-panel/server/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -32,6 +33,50 @@ func (n *Node) BeforeCreate(tx *gorm.DB) error {
 			return err
 		}
 		n.Sort = maxSort + 1
+	}
+	return nil
+}
+
+func (n *Node) BeforeDelete(tx *gorm.DB) error {
+	if err := tx.Exec("UPDATE `nodes` SET sort = sort - 1 WHERE sort > ?", n.Sort).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *Node) BeforeUpdate(tx *gorm.DB) error {
+	var count int64
+	if err := tx.Set("gorm:query_option", "FOR UPDATE").Model(&Server{}).
+		Where("sort = ? AND id != ?", n.Sort, n.Id).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 1 {
+		// reorder sort
+		if err := reorderSortWithNode(tx); err != nil {
+			logger.Errorf("[Server] BeforeUpdate reorderSort error: %v", err.Error())
+			return err
+		}
+		// get max sort
+		var maxSort int
+		if err := tx.Model(&Server{}).Select("MAX(sort)").Scan(&maxSort).Error; err != nil {
+			return err
+		}
+		n.Sort = maxSort + 1
+	}
+	return nil
+}
+
+func reorderSortWithNode(tx *gorm.DB) error {
+	var nodes []Node
+	if err := tx.Order("sort, id").Find(&nodes).Error; err != nil {
+		return err
+	}
+	for i, node := range nodes {
+		if node.Sort != i+1 {
+			if err := tx.Exec("UPDATE `nodes` SET sort = ? WHERE id = ?", i+1, node.Id).Error; err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
