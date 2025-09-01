@@ -41,7 +41,7 @@ func (l *StatLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 	// 获取全部有效订阅
 	var userTraffic []log.UserTraffic
 	// 获取统计时间范围
-	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	start := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, time.Local)
 	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
 
 	// 查询用户流量统计, 按用户和订阅分组
@@ -141,7 +141,7 @@ func (l *StatLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 		return err
 	}
 
-	// 删除过期的流量日志
+	// Delete old traffic logs
 	err = tx.WithContext(ctx).Model(&traffic.TrafficLog{}).Where("created_at <= ?", end).Delete(&traffic.TrafficLog{}).Error
 	if err != nil {
 		logger.Errorf("[Traffic Stat Queue] Delete server traffic log failed: %v", err.Error())
