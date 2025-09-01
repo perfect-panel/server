@@ -1,4 +1,4 @@
-ALTER TABLE `u`
+ALTER TABLE `user`
     ADD COLUMN `referral_percentage` TINYINT UNSIGNED NOT NULL DEFAULT 0
       COMMENT 'Referral Percentage'
       AFTER `commission`,
