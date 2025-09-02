@@ -29,6 +29,13 @@ func NewFilterUserSubscribeTrafficLogLogic(ctx context.Context, svcCtx *svc.Serv
 }
 
 func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *types.FilterSubscribeTrafficRequest) (resp *types.FilterSubscribeTrafficResponse, err error) {
+	if req.Size <= 0 {
+		req.Size = 10
+	}
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+
 	today := time.Now().Format("2006-01-02")
 	var list []types.UserSubscribeTrafficLog
 	var total int64
@@ -44,7 +51,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 			Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
 			Where("timestamp BETWEEN ? AND ?", start, end).
 			Group("user_id, subscribe_id").
-			Order("id DESC").
+			Order("SUM(download + upload) DESC").
 			Scan(&userTraffic).Error
 		if err != nil {
 			l.Errorw("[FilterUserSubscribeTrafficLog] Query Database Error", logger.Field("error", err.Error()))

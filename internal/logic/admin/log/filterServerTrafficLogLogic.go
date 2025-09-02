@@ -43,7 +43,7 @@ func (l *FilterServerTrafficLogLogic) FilterServerTrafficLog(req *types.FilterSe
 			Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
 			Where("timestamp BETWEEN ? AND ?", start, end).
 			Group("server_id").
-			Order("id DESC").
+			Order("SUM(download + upload) DESC").
 			Scan(&serverTraffic).Error
 		if err != nil {
 			l.Errorw("[FilterServerTrafficLog] Query Database Error", logger.Field("error", err.Error()))
