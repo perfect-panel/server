@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
@@ -68,6 +69,7 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 			Cpu:    nodeStatus.Cpu,
 			Disk:   nodeStatus.Disk,
 			Online: l.handlerServerStatus(datum.Id, protocols),
+			Status: l.handlerServerStaus(datum.LastReportedAt),
 		}
 		list = append(list, server)
 	}
@@ -145,4 +147,18 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.
 		result = append(result, item)
 	}
 	return result
+}
+
+func (l *FilterServerListLogic) handlerServerStaus(last *time.Time) string {
+	if last == nil {
+		return "offline"
+	}
+	if time.Since(*last) > time.Minute*5 {
+		return "offline"
+	}
+	if time.Since(*last) > time.Minute*3 {
+		return "warning"
+	}
+	return "online"
+
 }

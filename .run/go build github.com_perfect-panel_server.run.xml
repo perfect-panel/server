@@ -3,9 +3,6 @@
     <module name="server" />
     <working_directory value="$PROJECT_DIR$" />
     <parameters value="run --config etc/ppanel-dev.yaml" />
-    <envs>
-      <env name="PPANEL_MODE" value="demo" />
-    </envs>
     <kind value="PACKAGE" />
     <package value="github.com/perfect-panel/server" />
     <directory value="$PROJECT_DIR$" />

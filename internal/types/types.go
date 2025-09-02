@@ -1753,6 +1753,7 @@ type ServerStatus struct {
 	Disk     float64            `json:"disk"`
 	Protocol string             `json:"protocol"`
 	Online   []ServerOnlineUser `json:"online"`
+	Status   string             `json:"status"`
 }
 
 type ServerTotalDataResponse struct {
