@@ -108,6 +108,7 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   token != "",
+				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
 			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{

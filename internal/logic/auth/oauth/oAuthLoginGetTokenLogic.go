@@ -495,6 +495,7 @@ func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *
 			LoginIP:   ip,
 			UserAgent: userAgent,
 			Success:   loginStatus,
+			Timestamp: time.Now().UnixMilli(),
 		}
 		content, _ := loginLog.Marshal()
 		if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{

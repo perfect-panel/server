@@ -163,6 +163,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   token != "",
+				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
 			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{

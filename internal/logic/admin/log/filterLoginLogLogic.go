@@ -54,7 +54,7 @@ func (l *FilterLoginLogLogic) FilterLoginLog(req *types.FilterLoginLogRequest) (
 			LoginIP:   item.LoginIP,
 			UserAgent: item.UserAgent,
 			Success:   item.Success,
-			Timestamp: item.Timestamp,
+			Timestamp: datum.CreatedAt.UnixMilli(),
 		})
 	}
 
