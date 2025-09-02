@@ -174,12 +174,12 @@ func (m *customOrderModel) QueryTotalOrders(ctx context.Context) (OrdersTotal, e
 
 	err := m.QueryNoCacheCtx(ctx, &result, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
-			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
 			Select(`
 				SUM(amount) AS amount_total,
 				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
 				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
 			`).
+			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
 			Scan(&result).Error
 	})
 
@@ -267,14 +267,14 @@ func (m *customOrderModel) QueryDailyOrdersList(ctx context.Context, date time.T
 
 		return conn.Model(&Order{}).
 			Select(`
-				DATE(created_at) AS date,
+				DATE_FORMAT(created_at, '%Y-%m-%d') AS date,
 				SUM(amount) AS amount_total,
 				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
 				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
 			`).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, firstDay, nextDay, "balance").
-			Group("DATE(created_at)").
+			Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
 			Order("date ASC").
 			Scan(v).Error
 	})

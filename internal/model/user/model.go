@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 
 	"github.com/redis/go-redis/v9"
@@ -250,39 +251,74 @@ func (m *customUserModel) FindOneSubscribeDetailsById(ctx context.Context, id in
 // QueryDailyUserStatisticsList Query daily user statistics list for the current month (from 1st to current date)
 func (m *customUserModel) QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error) {
 	var results []UserStatisticsWithDate
+
 	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
 		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+
+		// 子查询：统计每天的新用户订单数量
+		newOrderSub := conn.Model(&order.Order{}).
+			Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(DISTINCT user_id) AS new_order_users").
+			Where("is_new = 1 AND created_at BETWEEN ? AND ? AND status IN ?", firstDay, date, []int64{2, 5}).
+			Group("DATE_FORMAT(created_at, '%Y-%m-%d')")
+
+		// 子查询：统计每天的续费订单数量
+		renewalOrderSub := conn.Model(&order.Order{}).
+			Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(DISTINCT user_id) AS renewal_order_users").
+			Where("is_new = 0 AND created_at BETWEEN ? AND ? AND status IN ?", firstDay, date, []int64{2, 5}).
+			Group("DATE_FORMAT(created_at, '%Y-%m-%d')")
+
 		return conn.Model(&User{}).
-			Select(
-				"DATE(created_at) as date, "+
-					"COUNT(*) as register, "+
-					"0 as new_order_users, "+
-					"0 as renewal_order_users",
-			).
-			Where("created_at BETWEEN ? AND ?", firstDay, date).
-			Group("DATE(created_at)").
+			Select(`
+                DATE_FORMAT(user.created_at, '%Y-%m-%d') AS date,
+                COUNT(*) AS register,
+                IFNULL(MAX(n.new_order_users), 0) AS new_order_users,
+                IFNULL(MAX(r.renewal_order_users), 0) AS renewal_order_users
+            `).
+			Joins("LEFT JOIN (?) AS n ON DATE_FORMAT(user.created_at, '%Y-%m-%d') = n.date", newOrderSub).
+			Joins("LEFT JOIN (?) AS r ON DATE_FORMAT(user.created_at, '%Y-%m-%d') = r.date", renewalOrderSub).
+			Where("user.created_at BETWEEN ? AND ?", firstDay, date).
+			Group("DATE_FORMAT(user.created_at, '%Y-%m-%d')").
 			Order("date ASC").
 			Scan(v).Error
 	})
+
 	return results, err
 }
 
 // QueryMonthlyUserStatisticsList Query monthly user statistics list for the past 6 months
 func (m *customUserModel) QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error) {
 	var results []UserStatisticsWithDate
+
 	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
+		// 获取 6 个月前的日期
 		sixMonthsAgo := date.AddDate(0, -5, 0)
+
+		// 子查询：每月新订单用户数量
+		newOrderSub := conn.Model(&order.Order{}).
+			Select("DATE_FORMAT(created_at, '%Y-%m') AS date, COUNT(DISTINCT user_id) AS new_order_users").
+			Where("is_new = 1 AND created_at >= ? AND status IN ?", sixMonthsAgo, []int64{2, 5}).
+			Group("DATE_FORMAT(created_at, '%Y-%m')")
+
+		// 子查询：每月续费订单用户数量
+		renewalOrderSub := conn.Model(&order.Order{}).
+			Select("DATE_FORMAT(created_at, '%Y-%m') AS date, COUNT(DISTINCT user_id) AS renewal_order_users").
+			Where("is_new = 0 AND created_at >= ? AND status IN ?", sixMonthsAgo, []int64{2, 5}).
+			Group("DATE_FORMAT(created_at, '%Y-%m')")
+
 		return conn.Model(&User{}).
-			Select(
-				"DATE_FORMAT(created_at, '%Y-%m') as date, "+
-					"COUNT(*) as register, "+
-					"0 as new_order_users, "+
-					"0 as renewal_order_users",
-			).
-			Where("created_at >= ?", sixMonthsAgo).
-			Group("DATE_FORMAT(created_at, '%Y-%m')").
+			Select(`
+				DATE_FORMAT(user.created_at, '%Y-%m') AS date,
+				COUNT(*) AS register,
+				IFNULL(MAX(n.new_order_users), 0) AS new_order_users,
+				IFNULL(MAX(r.renewal_order_users), 0) AS renewal_order_users
+			`).
+			Joins("LEFT JOIN (?) AS n ON DATE_FORMAT(user.created_at, '%Y-%m') = n.date", newOrderSub).
+			Joins("LEFT JOIN (?) AS r ON DATE_FORMAT(user.created_at, '%Y-%m') = r.date", renewalOrderSub).
+			Where("user.created_at >= ?", sixMonthsAgo).
+			Group("DATE_FORMAT(user.created_at, '%Y-%m')").
 			Order("date ASC").
 			Scan(v).Error
 	})
+
 	return results, err
 }
