@@ -34,9 +34,11 @@ func (l *UpdateNodeLogic) UpdateNode(req *types.UpdateNodeRequest) error {
 	}
 	data.Name = req.Name
 	data.Tags = tool.StringSliceToString(req.Tags)
+	data.ServerId = req.ServerId
 	data.Port = req.Port
 	data.Address = req.Address
 	data.Protocol = req.Protocol
+	data.Enabled = req.Enabled
 	err = l.svcCtx.NodeModel.UpdateNode(l.ctx, data)
 	if err != nil {
 		l.Errorw("[UpdateNode] Update Database Error: ", logger.Field("error", err.Error()))
