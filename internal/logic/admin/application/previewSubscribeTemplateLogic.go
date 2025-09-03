@@ -30,8 +30,9 @@ func NewPreviewSubscribeTemplateLogic(ctx context.Context, svcCtx *svc.ServiceCo
 
 func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.PreviewSubscribeTemplateRequest) (resp *types.PreviewSubscribeTemplateResponse, err error) {
 	_, servers, err := l.svcCtx.NodeModel.FilterNodeList(l.ctx, &node.FilterNodeParams{
-		Page: 1,
-		Size: 1000,
+		Page:    1,
+		Size:    1000,
+		Preload: true,
 	})
 	if err != nil {
 		l.Errorf("[PreviewSubscribeTemplateLogic] FindAllServer error: %v", err.Error())
