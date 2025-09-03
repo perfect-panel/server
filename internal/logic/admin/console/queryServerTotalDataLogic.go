@@ -82,13 +82,12 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday user traffic rank log error", logger.Field("error", err.Error()))
 		}
-		yesterdayUserRankData = make([]types.UserTrafficData, 0, len(rank.Rank))
-		for i, v := range rank.Rank {
-			yesterdayUserRankData[i] = types.UserTrafficData{
+		for _, v := range rank.Rank {
+			yesterdayUserRankData = append(yesterdayUserRankData, types.UserTrafficData{
 				SID:      v.SubscribeId,
 				Upload:   v.Upload,
 				Download: v.Download,
-			}
+			})
 		}
 	}
 
