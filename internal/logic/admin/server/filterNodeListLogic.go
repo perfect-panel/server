@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"strings"
 
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
@@ -40,7 +41,21 @@ func (l *FilterNodeListLogic) FilterNodeList(req *types.FilterNodeListRequest) (
 	}
 
 	list := make([]types.Node, 0)
-	tool.DeepCopy(&list, data)
+	for _, datum := range data {
+		list = append(list, types.Node{
+			Id:        datum.Id,
+			Name:      datum.Name,
+			Tags:      tool.RemoveDuplicateElements(strings.Split(datum.Tags, ",")...),
+			Port:      datum.Port,
+			Address:   datum.Address,
+			ServerId:  datum.ServerId,
+			Protocol:  datum.Protocol,
+			Enabled:   datum.Enabled,
+			Sort:      datum.Sort,
+			CreatedAt: datum.CreatedAt.UnixMilli(),
+			UpdatedAt: datum.UpdatedAt.UnixMilli(),
+		})
+	}
 
 	return &types.FilterNodeListResponse{
 		List:  list,
