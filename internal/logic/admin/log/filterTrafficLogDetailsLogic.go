@@ -37,6 +37,11 @@ func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.Filter
 		}
 		start = day
 		end = day.Add(24*time.Hour - time.Nanosecond)
+	} else {
+		// query today
+		now := time.Now()
+		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		end = start.Add(24*time.Hour - time.Nanosecond)
 	}
 	var data []*traffic.TrafficLog
 	tx := l.svcCtx.DB.WithContext(l.ctx).Model(&traffic.TrafficLog{})

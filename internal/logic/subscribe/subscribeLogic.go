@@ -216,7 +216,7 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, erro
 		Page:     1,
 		Size:     1000,
 		ServerId: nodeIds,
-		Tag:      tags,
+		Tag:      tool.RemoveDuplicateElements(tags...),
 		Preload:  true,
 	})
 
