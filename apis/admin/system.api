@@ -42,10 +42,6 @@ service ppanel {
 	@handler UpdateSubscribeConfig
 	put /subscribe_config (SubscribeConfig)
 
-	@doc "Get subscribe type"
-	@handler GetSubscribeType
-	get /subscribe_type returns (SubscribeType)
-
 	@doc "Get register config"
 	@handler GetRegisterConfig
 	get /register_config returns (RegisterConfig)

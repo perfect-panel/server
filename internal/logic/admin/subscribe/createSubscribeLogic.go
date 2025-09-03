@@ -37,6 +37,7 @@ func (l *CreateSubscribeLogic) CreateSubscribe(req *types.CreateSubscribeRequest
 	sub := &subscribe.Subscribe{
 		Id:             0,
 		Name:           req.Name,
+		Language:       req.Language,
 		Description:    req.Description,
 		UnitPrice:      req.UnitPrice,
 		UnitTime:       req.UnitTime,
@@ -47,7 +48,6 @@ func (l *CreateSubscribeLogic) CreateSubscribe(req *types.CreateSubscribeRequest
 		SpeedLimit:     req.SpeedLimit,
 		DeviceLimit:    req.DeviceLimit,
 		Quota:          req.Quota,
-		GroupId:        req.GroupId,
 		Nodes:          tool.Int64SliceToString(req.Nodes),
 		NodeTags:       tool.StringSliceToString(req.NodeTags),
 		Show:           req.Show,

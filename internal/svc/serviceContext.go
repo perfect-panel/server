@@ -17,7 +17,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
 	"github.com/perfect-panel/server/internal/model/subscribe"
-	"github.com/perfect-panel/server/internal/model/subscribeType"
 	"github.com/perfect-panel/server/internal/model/system"
 	"github.com/perfect-panel/server/internal/model/ticket"
 	"github.com/perfect-panel/server/internal/model/traffic"
@@ -47,14 +46,13 @@ type ServiceContext struct {
 	ClientModel client.Model
 	TicketModel ticket.Model
 	//ServerModel        server.Model
-	SystemModel        system.Model
-	CouponModel        coupon.Model
-	PaymentModel       payment.Model
-	DocumentModel      document.Model
-	SubscribeModel     subscribe.Model
-	TrafficLogModel    traffic.Model
-	AnnouncementModel  announcement.Model
-	SubscribeTypeModel subscribeType.Model
+	SystemModel       system.Model
+	CouponModel       coupon.Model
+	PaymentModel      payment.Model
+	DocumentModel     document.Model
+	SubscribeModel    subscribe.Model
+	TrafficLogModel   traffic.Model
+	AnnouncementModel announcement.Model
 
 	Restart               func() error
 	TelegramBot           *tgbotapi.BotAPI

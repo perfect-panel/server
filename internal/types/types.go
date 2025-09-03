@@ -373,6 +373,7 @@ type CreateSubscribeGroupRequest struct {
 
 type CreateSubscribeRequest struct {
 	Name           string              `json:"name" validate:"required"`
+	Language       string              `json:"language"`
 	Description    string              `json:"description"`
 	UnitPrice      int64               `json:"unit_price"`
 	UnitTime       string              `json:"unit_time"`
@@ -383,7 +384,6 @@ type CreateSubscribeRequest struct {
 	SpeedLimit     int64               `json:"speed_limit"`
 	DeviceLimit    int64               `json:"device_limit"`
 	Quota          int64               `json:"quota"`
-	GroupId        int64               `json:"group_id"`
 	Nodes          []int64             `json:"nodes"`
 	NodeTags       []string            `json:"node_tags"`
 	Show           *bool               `json:"show"`
@@ -944,10 +944,10 @@ type GetSubscribeGroupListResponse struct {
 }
 
 type GetSubscribeListRequest struct {
-	Page    int64  `form:"page" validate:"required"`
-	Size    int64  `form:"size" validate:"required"`
-	GroupId int64  `form:"group_id,omitempty"`
-	Search  string `form:"search,omitempty"`
+	Page     int64  `form:"page" validate:"required"`
+	Size     int64  `form:"size" validate:"required"`
+	Language string `form:"language,omitempty"`
+	Search   string `form:"search,omitempty"`
 }
 
 type GetSubscribeListResponse struct {
@@ -1522,6 +1522,10 @@ type QuerySubscribeGroupListResponse struct {
 	Total int64            `json:"total"`
 }
 
+type QuerySubscribeListRequest struct {
+	Language string `form:"language"`
+}
+
 type QuerySubscribeListResponse struct {
 	List  []Subscribe `json:"list"`
 	Total int64       `json:"total"`
@@ -1847,6 +1851,7 @@ type StripePayment struct {
 type Subscribe struct {
 	Id             int64               `json:"id"`
 	Name           string              `json:"name"`
+	Language       string              `json:"language"`
 	Description    string              `json:"description"`
 	UnitPrice      int64               `json:"unit_price"`
 	UnitTime       string              `json:"unit_time"`
@@ -1857,7 +1862,6 @@ type Subscribe struct {
 	SpeedLimit     int64               `json:"speed_limit"`
 	DeviceLimit    int64               `json:"device_limit"`
 	Quota          int64               `json:"quota"`
-	GroupId        int64               `json:"group_id"`
 	Nodes          []int64             `json:"nodes"`
 	NodeTags       []string            `json:"node_tags"`
 	Show           bool                `json:"show"`
@@ -2217,6 +2221,7 @@ type UpdateSubscribeGroupRequest struct {
 type UpdateSubscribeRequest struct {
 	Id             int64               `json:"id" validate:"required"`
 	Name           string              `json:"name" validate:"required"`
+	Language       string              `json:"language"`
 	Description    string              `json:"description"`
 	UnitPrice      int64               `json:"unit_price"`
 	UnitTime       string              `json:"unit_time"`
@@ -2227,7 +2232,6 @@ type UpdateSubscribeRequest struct {
 	SpeedLimit     int64               `json:"speed_limit"`
 	DeviceLimit    int64               `json:"device_limit"`
 	Quota          int64               `json:"quota"`
-	GroupId        int64               `json:"group_id"`
 	Nodes          []int64             `json:"nodes"`
 	NodeTags       []string            `json:"node_tags"`
 	Show           *bool               `json:"show"`

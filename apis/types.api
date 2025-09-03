@@ -185,6 +185,7 @@ type (
 	Subscribe {
 		Id             int64               `json:"id"`
 		Name           string              `json:"name"`
+		Language       string              `json:"language"`
 		Description    string              `json:"description"`
 		UnitPrice      int64               `json:"unit_price"`
 		UnitTime       string              `json:"unit_time"`
@@ -195,7 +196,6 @@ type (
 		SpeedLimit     int64               `json:"speed_limit"`
 		DeviceLimit    int64               `json:"device_limit"`
 		Quota          int64               `json:"quota"`
-		GroupId        int64               `json:"group_id"`
 		Nodes          []int64             `json:"nodes"`
 		NodeTags       []string            `json:"node_tags"`
 		Show           bool                `json:"show"`

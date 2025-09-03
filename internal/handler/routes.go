@@ -435,9 +435,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Update subscribe config
 		adminSystemGroupRouter.PUT("/subscribe_config", adminSystem.UpdateSubscribeConfigHandler(serverCtx))
 
-		// Get subscribe type
-		adminSystemGroupRouter.GET("/subscribe_type", adminSystem.GetSubscribeTypeHandler(serverCtx))
-
 		// Get Team of Service Config
 		adminSystemGroupRouter.GET("/tos_config", adminSystem.GetTosConfigHandler(serverCtx))
 
@@ -722,9 +719,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	publicSubscribeGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
 	{
-		// Get subscribe group list
-		publicSubscribeGroupRouter.GET("/group/list", publicSubscribe.QuerySubscribeGroupListHandler(serverCtx))
-
 		// Get subscribe list
 		publicSubscribeGroupRouter.GET("/list", publicSubscribe.QuerySubscribeListHandler(serverCtx))
 	}

@@ -45,6 +45,7 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *types.UpdateSubscribeRequest
 	sub := &subscribe.Subscribe{
 		Id:             req.Id,
 		Name:           req.Name,
+		Language:       req.Language,
 		Description:    req.Description,
 		UnitPrice:      req.UnitPrice,
 		UnitTime:       req.UnitTime,
@@ -55,7 +56,6 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *types.UpdateSubscribeRequest
 		SpeedLimit:     req.SpeedLimit,
 		DeviceLimit:    req.DeviceLimit,
 		Quota:          req.Quota,
-		GroupId:        req.GroupId,
 		Nodes:          tool.Int64SliceToString(req.Nodes),
 		NodeTags:       tool.StringSliceToString(req.NodeTags),
 		Show:           req.Show,

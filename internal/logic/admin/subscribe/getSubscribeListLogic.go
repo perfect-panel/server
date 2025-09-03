@@ -29,7 +29,7 @@ func NewGetSubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequest) (resp *types.GetSubscribeListResponse, err error) {
-	total, list, err := l.svcCtx.SubscribeModel.QuerySubscribeListByPage(l.ctx, int(req.Page), int(req.Size), req.GroupId, req.Search)
+	total, list, err := l.svcCtx.SubscribeModel.QuerySubscribeListByPage(l.ctx, int(req.Page), int(req.Size), req.Language, req.Search)
 	if err != nil {
 		l.Logger.Error("[GetSubscribeListLogic] get subscribe list failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe list failed: %v", err.Error())

@@ -8,7 +8,7 @@ import (
 )
 
 type customSubscribeLogicModel interface {
-	QuerySubscribeListByPage(ctx context.Context, page, size int, group int64, search string) (total int64, list []*Subscribe, err error)
+	QuerySubscribeListByPage(ctx context.Context, page, size int, lang string, search string) (total int64, list []*Subscribe, err error)
 	QuerySubscribeList(ctx context.Context) ([]*Subscribe, error)
 	QuerySubscribeListByShow(ctx context.Context) ([]*Subscribe, error)
 	QuerySubscribeIdsByNodeIdAndNodeTag(ctx context.Context, node []int64, tags []string) ([]*Subscribe, error)
@@ -25,7 +25,7 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 }
 
 // QuerySubscribeListByPage  Get Subscribe List
-func (m *customSubscribeModel) QuerySubscribeListByPage(ctx context.Context, page, size int, group int64, search string) (total int64, list []*Subscribe, err error) {
+func (m *customSubscribeModel) QuerySubscribeListByPage(ctx context.Context, page, size int, lang string, search string) (total int64, list []*Subscribe, err error) {
 	err = m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		// About to be abandoned
 		_ = conn.Model(&Subscribe{}).
@@ -33,13 +33,14 @@ func (m *customSubscribeModel) QuerySubscribeListByPage(ctx context.Context, pag
 			Update("sort", gorm.Expr("id"))
 
 		conn = conn.Model(&Subscribe{})
-		if group > 0 {
-			conn = conn.Where("group_id = ?", group)
+		if lang != "" {
+			conn = conn.Where("`language` = ?", lang)
 		}
 		if search != "" {
 			conn = conn.Where("`name` like ? or `description` like ?", "%"+search+"%", "%"+search+"%")
 		}
-		return conn.Count(&total).Order("sort ASC").Limit(size).Offset((page - 1) * size).Find(v).Error
+		err = conn.Count(&total).Order("sort ASC").Limit(size).Offset((page - 1) * size).Find(v).Error
+		return nil
 	})
 	return total, list, err
 }

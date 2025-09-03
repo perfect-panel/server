@@ -27,13 +27,22 @@ func NewQuerySubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *QuerySubscribeListLogic) QuerySubscribeList() (resp *types.QuerySubscribeListResponse, err error) {
+func (l *QuerySubscribeListLogic) QuerySubscribeList(req *types.QuerySubscribeListRequest) (resp *types.QuerySubscribeListResponse, err error) {
 
-	data, err := l.svcCtx.SubscribeModel.QuerySubscribeList(l.ctx)
+	total, data, err := l.svcCtx.SubscribeModel.QuerySubscribeListByPage(l.ctx, 1, 1000, req.Language, "")
 	if err != nil {
 		l.Errorw("[QuerySubscribeListLogic] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QuerySubscribeList error: %v", err.Error())
 	}
+	// If no data is found for the specified language, query default language data
+	if total == 0 && req.Language != "" {
+		total, data, err = l.svcCtx.SubscribeModel.QuerySubscribeListByPage(l.ctx, 1, 1000, "", "")
+		if err != nil {
+			l.Errorw("[QuerySubscribeListLogic] Database Error", logger.Field("error", err.Error()))
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QuerySubscribeList error: %v", err.Error())
+		}
+	}
+
 	resp = &types.QuerySubscribeListResponse{
 		Total: int64(len(data)),
 	}
