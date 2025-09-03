@@ -119,6 +119,7 @@ func (l *MigrateServerNodeLogic) MigrateServerNode() (resp *types.MigrateServerN
 
 func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Server, error) {
 	result := &node.Server{
+		Id:        info.Id,
 		Name:      info.Name,
 		Country:   info.Country,
 		City:      info.City,
