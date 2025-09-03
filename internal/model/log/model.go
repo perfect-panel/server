@@ -46,7 +46,7 @@ func (m *customSystemLogModel) FilterSystemLog(ctx context.Context, filter *Filt
 	}
 
 	if filter.Data != "" {
-		tx = tx.Where("`data` = ?", filter.Data)
+		tx = tx.Where("`date` = ?", filter.Data)
 	}
 
 	if filter.ObjectID != 0 {
