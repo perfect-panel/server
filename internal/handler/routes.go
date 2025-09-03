@@ -323,6 +323,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Toggle Node Status
 		adminServerGroupRouter.POST("/node/status/toggle", adminServer.ToggleNodeStatusHandler(serverCtx))
 
+		// Query all node tags
+		adminServerGroupRouter.GET("/node/tags", adminServer.QueryNodeTagHandler(serverCtx))
+
 		// Update Node
 		adminServerGroupRouter.POST("/node/update", adminServer.UpdateNodeHandler(serverCtx))
 

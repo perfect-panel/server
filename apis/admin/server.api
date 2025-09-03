@@ -168,6 +168,9 @@ type (
 	ResetSortRequest {
 		Sort []SortItem `json:"sort"`
 	}
+	QueryNodeTagResponse {
+		Tags []string `json:"tags"`
+	}
 )
 
 @server (
@@ -231,5 +234,9 @@ service ppanel {
 	@doc "Reset node sort"
 	@handler ResetSortWithNode
 	post /node/sort (ResetSortRequest)
+
+	@doc "Query all node tags"
+	@handler QueryNodeTag
+	get /node/tags returns (QueryNodeTagResponse)
 }
 

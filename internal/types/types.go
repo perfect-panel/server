@@ -1477,6 +1477,10 @@ type QueryDocumentListResponse struct {
 	List  []Document `json:"list"`
 }
 
+type QueryNodeTagResponse struct {
+	Tags []string `json:"tags"`
+}
+
 type QueryOrderDetailRequest struct {
 	OrderNo string `form:"order_no" validate:"required"`
 }
