@@ -147,13 +147,9 @@ func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
 			return db
 		}
 
-		query := db
-		for i, v := range values {
-			if i == 0 {
-				query = query.Where("FIND_IN_SET(?, "+field+")", v)
-			} else {
-				query = query.Or("FIND_IN_SET(?, "+field+")", v)
-			}
+		query := db.Where("1=0")
+		for _, v := range values {
+			query = query.Or("FIND_IN_SET(?, "+field+")", v)
 		}
 		return query
 	}
