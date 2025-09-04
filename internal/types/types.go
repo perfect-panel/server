@@ -965,6 +965,10 @@ type GetSubscribeLogResponse struct {
 	Total int64              `json:"total"`
 }
 
+type GetSubscriptionRequest struct {
+	Language string `form:"language"`
+}
+
 type GetSubscriptionResponse struct {
 	List []Subscribe `json:"list"`
 }

@@ -10,7 +10,7 @@ import (
 type customSubscribeLogicModel interface {
 	QuerySubscribeListByPage(ctx context.Context, page, size int, lang string, search string) (total int64, list []*Subscribe, err error)
 	QuerySubscribeList(ctx context.Context) ([]*Subscribe, error)
-	QuerySubscribeListByShow(ctx context.Context) ([]*Subscribe, error)
+	QuerySubscribeListByShow(ctx context.Context, lang string) ([]*Subscribe, error)
 	QuerySubscribeIdsByNodeIdAndNodeTag(ctx context.Context, node []int64, tags []string) ([]*Subscribe, error)
 	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
 	QuerySubscribeListByIds(ctx context.Context, ids []int64) ([]*Subscribe, error)
@@ -78,11 +78,11 @@ func (m *customSubscribeModel) QuerySubscribeIdsByNodeIdAndNodeTag(ctx context.C
 }
 
 // QuerySubscribeListByShow Get Subscribe List By Show
-func (m *customSubscribeModel) QuerySubscribeListByShow(ctx context.Context) ([]*Subscribe, error) {
+func (m *customSubscribeModel) QuerySubscribeListByShow(ctx context.Context, lang string) ([]*Subscribe, error) {
 	var list []*Subscribe
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		conn = conn.Model(&Subscribe{})
-		return conn.Where("`show` = true").Find(v).Error
+		return conn.Where("`show` = true AND `language` = ?", lang).Find(v).Error
 	})
 	return list, err
 }
