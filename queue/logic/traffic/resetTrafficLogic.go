@@ -579,7 +579,7 @@ func (l *ResetTrafficLogic) isRetryableError(err error) bool {
 // clearCache clears the reset traffic cache
 func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscribe) {
 	if len(list) != 0 {
-		var subs map[int64]bool
+		subs := make(map[int64]bool)
 
 		for _, sub := range list {
 			if sub.SubscribeId > 0 {
