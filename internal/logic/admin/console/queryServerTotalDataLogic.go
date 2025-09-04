@@ -133,18 +133,19 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday server traffic rank log error", logger.Field("error", err.Error()))
 		}
-		for _, v := range rank.Rank {
+		yesterdayTop10Server = make([]types.ServerTrafficData, 0, len(rank.Rank))
+		for i, v := range rank.Rank {
 			info, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, v.ServerId)
 			if err != nil {
 				l.Errorw("[QueryServerTotalDataLogic] FindOneServer error", logger.Field("error", err.Error()), logger.Field("server_id", v.ServerId))
 				continue
 			}
-			yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
+			yesterdayTop10Server[i-1] = types.ServerTrafficData{
 				ServerId: v.ServerId,
 				Name:     info.Name,
 				Upload:   v.Upload,
 				Download: v.Download,
-			})
+			}
 		}
 	}
 
