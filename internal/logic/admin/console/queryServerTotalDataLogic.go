@@ -104,19 +104,19 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " Query server traffic failed: %v", err.Error())
 	}
 
-	var todayServerRanking []types.ServerTrafficData
-	for _, item := range todayTop10Server {
+	todayServerRanking := make([]types.ServerTrafficData, len(todayTop10Server))
+	for i, item := range todayTop10Server {
 		info, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, item.ServerId)
 		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] FindOneServer error", logger.Field("error", err.Error()), logger.Field("server_id", item.ServerId))
 			continue
 		}
-		todayServerRanking = append(todayServerRanking, types.ServerTrafficData{
+		todayServerRanking[i] = types.ServerTrafficData{
 			ServerId: item.ServerId,
 			Name:     info.Name,
 			Upload:   item.Upload,
 			Download: item.Download,
-		})
+		}
 	}
 
 	// query server traffic rank yesterday
@@ -133,7 +133,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday server traffic rank log error", logger.Field("error", err.Error()))
 		}
-		yesterdayTop10Server = make([]types.ServerTrafficData, 0, len(rank.Rank))
+		yesterdayTop10Server = make([]types.ServerTrafficData, len(rank.Rank))
 		for i, v := range rank.Rank {
 			info, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, v.ServerId)
 			if err != nil {
