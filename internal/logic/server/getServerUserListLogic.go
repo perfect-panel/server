@@ -23,7 +23,7 @@ type GetServerUserListLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Get user list
+// NewGetServerUserListLogic Get user list
 func NewGetServerUserListLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *GetServerUserListLogic {
 	return &GetServerUserListLogic{
 		Logger: logger.WithContext(ctx.Request.Context()),

@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -57,7 +60,34 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 	if data == nil {
 		return []string{}
 	}
-	return []string{fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id)}
+	var keys []string
+	if data.Nodes != "" {
+		var nodes []*node.Node
+		ids := strings.Split(data.Nodes, ",")
+
+		err := m.QueryNoCacheCtx(context.Background(), &nodes, func(conn *gorm.DB, v interface{}) error {
+			return conn.Model(&node.Node{}).Where("id IN (?)", tool.StringSliceToInt64Slice(ids)).Find(&nodes).Error
+		})
+		if err == nil {
+			for _, n := range nodes {
+				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+			}
+		}
+	}
+	if data.NodeTags != "" {
+		var nodes []*node.Node
+		tags := tool.RemoveDuplicateElements(strings.Split(data.NodeTags, ",")...)
+		err := m.QueryNoCacheCtx(context.Background(), &nodes, func(conn *gorm.DB, v interface{}) error {
+			return conn.Model(&node.Node{}).Scopes(InSet("tags", tags)).Find(&nodes).Error
+		})
+		if err == nil {
+			for _, n := range nodes {
+				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+			}
+		}
+	}
+
+	return append(keys, fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id))
 }
 
 func (m *defaultSubscribeModel) Insert(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error {
