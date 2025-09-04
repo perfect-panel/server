@@ -8,6 +8,7 @@ import (
 	"github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/tool"
 )
 
 func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
@@ -28,9 +29,13 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 				c.Abort()
 				return
 			}
-			clientUserAgents := strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")
+			clientUserAgents := tool.RemoveDuplicateElements(strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")...)
 			var allow = false
 			for _, keyword := range clientUserAgents {
+				keyword = strings.Trim(keyword, " ")
+				if keyword == "" {
+					continue
+				}
 				if strings.Contains(strings.ToLower(ua), strings.ToLower(keyword)) {
 					allow = true
 				}
