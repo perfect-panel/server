@@ -7,14 +7,32 @@ import (
 	"gorm.io/gorm"
 )
 
+type FilterParams struct {
+	Page            int      // Page Number
+	Size            int      // Page Size
+	Ids             []int64  // Subscribe IDs
+	Node            []int64  // Node IDs
+	Tags            []string // Node Tags
+	Show            bool     // Show Portal Page
+	Sell            bool     // Sell
+	Language        string   // Language
+	DefaultLanguage bool     // Default Subscribe Language Data
+	Search          string   // Search Keywords
+}
+
+func (p *FilterParams) Normalize() {
+	if p.Page <= 0 {
+		p.Page = 1
+	}
+	if p.Size <= 0 {
+		p.Size = 10
+	}
+}
+
 type customSubscribeLogicModel interface {
-	QuerySubscribeListByPage(ctx context.Context, page, size int, lang string, search string) (total int64, list []*Subscribe, err error)
-	QuerySubscribeList(ctx context.Context) ([]*Subscribe, error)
-	QuerySubscribeListByShow(ctx context.Context, lang string) ([]*Subscribe, error)
-	QuerySubscribeIdsByNodeIdAndNodeTag(ctx context.Context, node []int64, tags []string) ([]*Subscribe, error)
-	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
-	QuerySubscribeListByIds(ctx context.Context, ids []int64) ([]*Subscribe, error)
+	FilterList(ctx context.Context, params *FilterParams) (int64, []*Subscribe, error)
 	ClearCache(ctx context.Context, id ...int64) error
+	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
 }
 
 // NewModel returns a model for the database table.
@@ -24,83 +42,12 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 	}
 }
 
-// QuerySubscribeListByPage  Get Subscribe List
-func (m *customSubscribeModel) QuerySubscribeListByPage(ctx context.Context, page, size int, lang string, search string) (total int64, list []*Subscribe, err error) {
-	err = m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		// About to be abandoned
-		_ = conn.Model(&Subscribe{}).
-			Where("sort = ?", 0).
-			Update("sort", gorm.Expr("id"))
-
-		conn = conn.Model(&Subscribe{})
-		if lang != "" {
-			conn = conn.Where("`language` = ?", lang)
-		}
-		if search != "" {
-			conn = conn.Where("`name` like ? or `description` like ?", "%"+search+"%", "%"+search+"%")
-		}
-		err = conn.Count(&total).Order("sort ASC").Limit(size).Offset((page - 1) * size).Find(v).Error
-		return nil
-	})
-	return total, list, err
-}
-
-// QuerySubscribeList Get Subscribe List
-func (m *customSubscribeModel) QuerySubscribeList(ctx context.Context) ([]*Subscribe, error) {
-	var list []*Subscribe
-	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		conn = conn.Model(&Subscribe{})
-		return conn.Where("`sell` = true").Order("sort ").Find(v).Error
-	})
-	return list, err
-}
-
-func (m *customSubscribeModel) QuerySubscribeIdsByNodeIdAndNodeTag(ctx context.Context, node []int64, tags []string) ([]*Subscribe, error) {
-	var data []*Subscribe
-	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		db := conn.Model(&Subscribe{})
-		if len(node) > 0 {
-			for _, id := range node {
-				db = db.Or("FIND_IN_SET(?, nodes)", id)
-			}
-		}
-
-		if len(tags) > 0 {
-			// 拼接多个 tag 条件
-			for _, t := range tags {
-				db = db.Or("FIND_IN_SET(?, node_tags)", t)
-			}
-		}
-
-		return db.Find(v).Error
-	})
-	return data, err
-}
-
-// QuerySubscribeListByShow Get Subscribe List By Show
-func (m *customSubscribeModel) QuerySubscribeListByShow(ctx context.Context, lang string) ([]*Subscribe, error) {
-	var list []*Subscribe
-	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		conn = conn.Model(&Subscribe{})
-		return conn.Where("`show` = true AND `language` = ?", lang).Find(v).Error
-	})
-	return list, err
-}
-
 func (m *customSubscribeModel) QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error) {
 	var minSort int64
 	err := m.QueryNoCacheCtx(ctx, &minSort, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Subscribe{}).Where("id IN ?", ids).Select("COALESCE(MIN(sort), 0)").Scan(v).Error
 	})
 	return minSort, err
-}
-
-func (m *customSubscribeModel) QuerySubscribeListByIds(ctx context.Context, ids []int64) ([]*Subscribe, error) {
-	var list []*Subscribe
-	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Where("id IN ?", ids).Find(v).Error
-	})
-	return list, err
 }
 
 func (m *customSubscribeModel) ClearCache(ctx context.Context, ids ...int64) error {
@@ -117,4 +64,96 @@ func (m *customSubscribeModel) ClearCache(ctx context.Context, ids ...int64) err
 		cacheKeys = append(cacheKeys, m.getCacheKeys(data)...)
 	}
 	return m.CachedConn.DelCacheCtx(ctx, cacheKeys...)
+}
+
+// FilterList Filter Subscribe List
+func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterParams) (int64, []*Subscribe, error) {
+	if params == nil {
+		params = &FilterParams{}
+	}
+	params.Normalize()
+
+	var list []*Subscribe
+	var total int64
+
+	// 构建查询函数
+	buildQuery := func(conn *gorm.DB, lang string) *gorm.DB {
+		query := conn.Model(&Subscribe{})
+
+		if params.Search != "" {
+			s := "%" + params.Search + "%"
+			query = query.Where("`name` LIKE ? OR `description` LIKE ?", s, s)
+		}
+		if params.Show {
+			query = query.Where("`show` = true")
+		}
+		if params.Sell {
+			query = query.Where("`sell` = true")
+		}
+
+		if len(params.Ids) > 0 {
+			query = query.Where("id IN ?", params.Ids)
+		}
+		if len(params.Node) > 0 {
+			query = query.Where(func(db *gorm.DB) *gorm.DB {
+				for i, id := range params.Node {
+					if i == 0 {
+						db = db.Where("FIND_IN_SET(?, nodes)", id)
+					} else {
+						db = db.Or("FIND_IN_SET(?, nodes)", id)
+					}
+				}
+				return db
+			})
+		}
+
+		if len(params.Tags) > 0 {
+			query = query.Where(func(db *gorm.DB) *gorm.DB {
+				for i, tag := range params.Tags {
+					if i == 0 {
+						db = db.Where("FIND_IN_SET(?, node_tags)", tag)
+					} else {
+						db = db.Or("FIND_IN_SET(?, node_tags)", tag)
+					}
+				}
+				return db
+			})
+		}
+		if lang != "" {
+			query = query.Where("language = ?", lang)
+		} else if params.DefaultLanguage {
+			query = query.Where("language = ''")
+		}
+
+		return query
+	}
+
+	// 查询数据
+	queryFunc := func(lang string) error {
+		return m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
+			query := buildQuery(conn, lang)
+			if err := query.Count(&total).Error; err != nil {
+				return err
+			}
+			return query.Order("sort ASC").
+				Limit(params.Size).
+				Offset((params.Page - 1) * params.Size).
+				Find(v).Error
+		})
+	}
+
+	err := queryFunc(params.Language)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// fallback 默认语言
+	if params.DefaultLanguage && total == 0 {
+		err = queryFunc("")
+		if err != nil {
+			return 0, nil, err
+		}
+	}
+
+	return total, list, nil
 }

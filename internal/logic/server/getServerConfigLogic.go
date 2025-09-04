@@ -21,7 +21,7 @@ type GetServerConfigLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Get server config
+// NewGetServerConfigLogic Get server config
 func NewGetServerConfigLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *GetServerConfigLogic {
 	return &GetServerConfigLogic{
 		Logger: logger.WithContext(ctx.Request.Context()),

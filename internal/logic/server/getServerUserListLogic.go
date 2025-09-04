@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/subscribe"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -73,7 +74,12 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		}
 	}
 
-	subs, err := l.svcCtx.SubscribeModel.QuerySubscribeIdsByNodeIdAndNodeTag(l.ctx, nodeIds, nodeTag)
+	_, subs, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+		Page: 1,
+		Size: 9999,
+		Node: nodeIds,
+		Tags: nodeTag,
+	})
 	if err != nil {
 		l.Errorw("QuerySubscribeIdsByServerIdAndServerGroupId error", logger.Field("error", err.Error()))
 		return nil, err
