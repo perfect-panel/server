@@ -3,6 +3,7 @@ package subscribe
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -95,29 +96,11 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 			query = query.Where("id IN ?", params.Ids)
 		}
 		if len(params.Node) > 0 {
-			query = query.Where(func(db *gorm.DB) *gorm.DB {
-				for i, id := range params.Node {
-					if i == 0 {
-						db = db.Where("FIND_IN_SET(?, nodes)", id)
-					} else {
-						db = db.Or("FIND_IN_SET(?, nodes)", id)
-					}
-				}
-				return db
-			})
+			query = query.Scopes(InSet("nodes", tool.Int64SliceToStringSlice(params.Node)))
 		}
 
 		if len(params.Tags) > 0 {
-			query = query.Where(func(db *gorm.DB) *gorm.DB {
-				for i, tag := range params.Tags {
-					if i == 0 {
-						db = db.Where("FIND_IN_SET(?, node_tags)", tag)
-					} else {
-						db = db.Or("FIND_IN_SET(?, node_tags)", tag)
-					}
-				}
-				return db
-			})
+			query = query.Scopes(InSet("node_tags", params.Tags))
 		}
 		if lang != "" {
 			query = query.Where("language = ?", lang)
@@ -156,4 +139,22 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 	}
 
 	return total, list, nil
+}
+
+func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(values) == 0 {
+			return db
+		}
+
+		conds := db
+		for i, v := range values {
+			if i == 0 {
+				conds = conds.Where("FIND_IN_SET(?, "+field+")", v)
+			} else {
+				conds = conds.Or("FIND_IN_SET(?, "+field+")", v)
+			}
+		}
+		return conds
+	}
 }
