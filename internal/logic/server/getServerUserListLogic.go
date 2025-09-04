@@ -68,7 +68,7 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	var nodeTag []string
 	var nodeIds []int64
 	for _, n := range nodes {
-		nodeIds = append(nodeIds, n.Id)
+		nodeIds = append(nodeIds, n.ServerId)
 		if n.Tags != "" {
 			nodeTag = append(nodeTag, strings.Split(n.Tags, ",")...)
 		}
