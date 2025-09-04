@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -102,7 +103,7 @@ func (l *GetServerConfigLogic) compatible(config node.Protocol) map[string]inter
 		result = ShadowsocksNode{
 			Port:      config.Port,
 			Cipher:    config.Cipher,
-			ServerKey: config.ServerKey,
+			ServerKey: base64.StdEncoding.EncodeToString([]byte(config.ServerKey)),
 		}
 	case Vless:
 		result = VlessNode{

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/svc"
@@ -50,6 +51,16 @@ func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPush
 		l.Errorw("[ServerPushUserTraffic] Push traffic task error", logger.Field("error", err.Error()), logger.Field("task", t))
 	} else {
 		l.Infow("[ServerPushUserTraffic] Push traffic task success", logger.Field("task", t), logger.Field("info", info))
+	}
+
+	// Update server last reported time
+	now := time.Now()
+	serverInfo.LastReportedAt = &now
+
+	err = l.svcCtx.NodeModel.UpdateServer(l.ctx, serverInfo)
+	if err != nil {
+		l.Errorw("[ServerPushUserTraffic] UpdateServer error", logger.Field("error", err))
+		return nil
 	}
 	return nil
 }

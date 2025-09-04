@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
@@ -42,5 +43,14 @@ func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequ
 		l.Errorw("[ServerPushStatus] UpdateNodeStatus error", logger.Field("error", err))
 		return errors.New("update node status failed")
 	}
+	now := time.Now()
+	serverInfo.LastReportedAt = &now
+
+	err = l.svcCtx.NodeModel.UpdateServer(l.ctx, serverInfo)
+	if err != nil {
+		l.Errorw("[ServerPushStatus] UpdateServer error", logger.Field("error", err))
+		return nil
+	}
+
 	return nil
 }
