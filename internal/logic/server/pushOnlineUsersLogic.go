@@ -46,7 +46,7 @@ func (l *PushOnlineUsersLogic) PushOnlineUsers(req *types.OnlineUsersRequest) er
 		return fmt.Errorf("server not found: %w", err)
 	}
 
-	var onlineUsers node.OnlineUserSubscribe
+	onlineUsers := make(node.OnlineUserSubscribe)
 	for _, user := range req.Users {
 		if online, ok := onlineUsers[user.SID]; ok {
 			// If user already exists, update IP if different
