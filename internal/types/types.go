@@ -132,7 +132,7 @@ type BalanceLog struct {
 	Type      uint16 `json:"type"`
 	UserId    int64  `json:"user_id"`
 	Amount    int64  `json:"amount"`
-	OrderId   int64  `json:"order_id,omitempty"`
+	OrderNo   string `json:"order_no,omitempty"`
 	Balance   int64  `json:"balance"`
 	Timestamp int64  `json:"timestamp"`
 }

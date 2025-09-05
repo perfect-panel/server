@@ -62,7 +62,7 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserB
 			UserId:    datum.ObjectID,
 			Amount:    content.Amount,
 			Type:      content.Type,
-			OrderId:   content.OrderId,
+			OrderNo:   content.OrderNo,
 			Balance:   content.Balance,
 			Timestamp: content.Timestamp,
 		})

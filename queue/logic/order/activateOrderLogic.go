@@ -624,7 +624,7 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 		balanceLog := &log.Balance{
 			Amount:    orderInfo.Price,
 			Type:      CommissionTypeRecharge,
-			OrderId:   orderInfo.Id,
+			OrderNo:   orderInfo.OrderNo,
 			Balance:   userInfo.Balance,
 			Timestamp: time.Now().UnixMilli(),
 		}

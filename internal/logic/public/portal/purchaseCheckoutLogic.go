@@ -413,7 +413,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			balanceLog := &log.Balance{
 				Amount:    balanceUsed,
 				Type:      log.BalanceTypePayment, // Type 3 represents payment deduction
-				OrderId:   o.Id,
+				OrderNo:   o.OrderNo,
 				Balance:   userInfo.Balance,
 				Timestamp: time.Now().UnixMilli(),
 			}

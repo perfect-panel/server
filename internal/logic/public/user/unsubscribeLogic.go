@@ -6,6 +6,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
@@ -48,6 +49,14 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())
 	}
 
+	activate := []uint8{0, 1, 2}
+
+	if !tool.Contains(activate, userSub.Status) {
+		// Only active (2) or paused (5) subscriptions can be cancelled
+		l.Errorw("Subscription status invalid for cancellation", logger.Field("userSubscribeId", userSub.Id), logger.Field("status", userSub.Status))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Subscription status invalid for cancellation")
+	}
+
 	// Calculate the remaining amount to refund based on unused subscription time/traffic
 	remainingAmount, err := CalculateRemainingAmount(l.ctx, l.svcCtx, req.Id)
 	if err != nil {
@@ -57,12 +66,8 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 	// Process unsubscription in a database transaction to ensure data consistency
 	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Find and update subscription status to cancelled (status = 4)
-		var userSub user.Subscribe
-		if err = db.Model(&user.Subscribe{}).Where("id = ?", req.Id).First(&userSub).Error; err != nil {
-			return err
-		}
 		userSub.Status = 4 // Set status to cancelled
-		if err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, &userSub); err != nil {
+		if err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, userSub); err != nil {
 			return err
 		}
 
@@ -94,7 +99,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		balanceRefundAmount := balance - u.Balance
 		if balanceRefundAmount > 0 {
 			balanceLog := log.Balance{
-				OrderId:   userSub.OrderId,
+				OrderNo:   orderInfo.OrderNo,
 				Amount:    balanceRefundAmount,
 				Type:      log.BalanceTypeRefund, // Type 4 represents refund transaction
 				Balance:   balance,
