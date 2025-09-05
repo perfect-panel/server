@@ -390,7 +390,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		if giftUsed > 0 {
 			giftLog := &log.Gift{
 				OrderNo: o.OrderNo,
-				Type:    2, // Type 2 represents gift amount decrease/usage
+				Type:    log.GiftTypeReduce, // Type 2 represents gift amount decrease/usage
 				Amount:  giftUsed,
 				Balance: userInfo.GiftAmount,
 				Remark:  "Purchase payment",
