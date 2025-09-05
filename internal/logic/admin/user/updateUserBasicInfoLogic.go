@@ -39,7 +39,6 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 
 	isDemo := strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo"
 
-	tool.DeepCopy(userInfo, req)
 	if req.Avatar != "" && !tool.IsValidImageSize(req.Avatar, 1024) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Invalid Image Size")
 	}
@@ -121,7 +120,7 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 		}
 		userInfo.Commission = req.Commission
 	}
-
+	tool.DeepCopy(userInfo, req)
 	userInfo.OnlyFirstPurchase = &req.OnlyFirstPurchase
 	userInfo.ReferralPercentage = req.ReferralPercentage
 
