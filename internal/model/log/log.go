@@ -43,7 +43,7 @@ const (
 	BalanceTypeReward         uint16 = 325 // Reward
 	CommissionTypePurchase    uint16 = 331 // Purchase
 	CommissionTypeRenewal     uint16 = 332 // Renewal
-	CommissionTypeRefund      uint16 = 333 // Gift
+	CommissionTypeRefund      uint16 = 333 // Refund
 	GiftTypeIncrease          uint16 = 341 // Increase
 	GiftTypeReduce            uint16 = 342 // Reduce
 )
