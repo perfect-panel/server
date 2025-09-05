@@ -40,10 +40,13 @@ const (
 	BalanceTypeWithdraw       uint16 = 322 // Withdraw
 	BalanceTypePayment        uint16 = 323 // Payment
 	BalanceTypeRefund         uint16 = 324 // Refund
+	BalanceTypeAdjust         uint16 = 326 // Admin Adjust
 	BalanceTypeReward         uint16 = 325 // Reward
 	CommissionTypePurchase    uint16 = 331 // Purchase
 	CommissionTypeRenewal     uint16 = 332 // Renewal
 	CommissionTypeRefund      uint16 = 333 // Refund
+	commissionTypeWithdraw    uint16 = 334 // withdraw
+	CommissionTypeAdjust      uint16 = 335 // Admin Adjust
 	GiftTypeIncrease          uint16 = 341 // Increase
 	GiftTypeReduce            uint16 = 342 // Reduce
 )
