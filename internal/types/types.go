@@ -657,7 +657,8 @@ type FilterServerTrafficLogResponse struct {
 
 type FilterSubscribeLogRequest struct {
 	FilterLogParams
-	UserId int64 `form:"user_id,optional"`
+	UserId          int64 `form:"user_id,optional"`
+	UserSubscribeId int64 `form:"user_subscribe_id,optional"`
 }
 
 type FilterSubscribeLogResponse struct {

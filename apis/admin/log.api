@@ -45,7 +45,8 @@ type (
 	}
 	FilterSubscribeLogRequest {
 		FilterLogParams
-		UserId int64 `form:"user_id,optional"`
+		UserId          int64 `form:"user_id,optional"`
+		UserSubscribeId int64 `form:"user_subscribe_id,optional"`
 	}
 	FilterSubscribeLogResponse {
 		Total int64          `json:"total"`
