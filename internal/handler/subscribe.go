@@ -8,6 +8,7 @@ import (
 	"github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 )
 
@@ -30,6 +31,18 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 				return
 			}
 			clientUserAgents := tool.RemoveDuplicateElements(strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")...)
+
+			// query client list
+			clients, err := svcCtx.ClientModel.List(c.Request.Context())
+			if err != nil {
+				logger.Errorw("[PanDomainMiddleware] Query client list failed", logger.Field("error", err.Error()))
+			}
+			for _, item := range clients {
+				u := strings.ToLower(item.UserAgent)
+				u = strings.Trim(u, " ")
+				clientUserAgents = append(clientUserAgents, u)
+			}
+
 			var allow = false
 			for _, keyword := range clientUserAgents {
 				keyword = strings.Trim(keyword, " ")

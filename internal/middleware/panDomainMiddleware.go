@@ -8,6 +8,7 @@ import (
 	"github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 )
 
@@ -26,6 +27,18 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 				}
 				browserKeywords := tool.RemoveDuplicateElements(strings.Split(svc.Config.Subscribe.UserAgentList, "\n")...)
 				var allow = false
+
+				// query client list
+				clients, err := svc.ClientModel.List(c.Request.Context())
+				if err != nil {
+					logger.Errorw("[PanDomainMiddleware] Query client list failed", logger.Field("error", err.Error()))
+				}
+				for _, item := range clients {
+					u := strings.ToLower(item.UserAgent)
+					u = strings.Trim(u, " ")
+					browserKeywords = append(browserKeywords, u)
+				}
+
 				for _, keyword := range browserKeywords {
 					keyword = strings.ToLower(strings.Trim(keyword, " "))
 					if keyword == "" {
