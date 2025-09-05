@@ -25,6 +25,7 @@ func TelephoneUserRegisterHandler(svcCtx *svc.ServiceContext) func(c *gin.Contex
 		}
 		// get client ip
 		req.IP = c.ClientIP()
+		req.UserAgent = c.Request.UserAgent()
 		if svcCtx.Config.Verify.RegisterVerify {
 			verifyTurns := turnstile.New(turnstile.Config{
 				Secret:  svcCtx.Config.Verify.TurnstileSecret,
