@@ -94,10 +94,11 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		balanceRefundAmount := balance - u.Balance
 		if balanceRefundAmount > 0 {
 			balanceLog := log.Balance{
-				OrderId: userSub.OrderId,
-				Amount:  balanceRefundAmount,
-				Type:    log.BalanceTypeRefund, // Type 4 represents refund transaction
-				Balance: balance,
+				OrderId:   userSub.OrderId,
+				Amount:    balanceRefundAmount,
+				Type:      log.BalanceTypeRefund, // Type 4 represents refund transaction
+				Balance:   balance,
+				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := balanceLog.Marshal()
 

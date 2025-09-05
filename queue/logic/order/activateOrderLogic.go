@@ -622,10 +622,11 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 		}
 
 		balanceLog := &log.Balance{
-			Amount:  orderInfo.Price,
-			Type:    CommissionTypeRecharge,
-			OrderId: orderInfo.Id,
-			Balance: userInfo.Balance,
+			Amount:    orderInfo.Price,
+			Type:      CommissionTypeRecharge,
+			OrderId:   orderInfo.Id,
+			Balance:   userInfo.Balance,
+			Timestamp: time.Now().UnixMilli(),
 		}
 		content, _ := balanceLog.Marshal()
 

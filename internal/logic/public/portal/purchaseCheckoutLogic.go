@@ -411,10 +411,11 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		// Create balance log if regular balance was used
 		if balanceUsed > 0 {
 			balanceLog := &log.Balance{
-				Amount:  balanceUsed,
-				Type:    log.BalanceTypePayment, // Type 3 represents payment deduction
-				OrderId: o.Id,
-				Balance: userInfo.Balance,
+				Amount:    balanceUsed,
+				Type:      log.BalanceTypePayment, // Type 3 represents payment deduction
+				OrderId:   o.Id,
+				Balance:   userInfo.Balance,
+				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := balanceLog.Marshal()
 			err = db.Create(&log.SystemLog{
