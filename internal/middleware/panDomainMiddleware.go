@@ -8,6 +8,7 @@ import (
 	"github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/tool"
 )
 
 func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
@@ -23,9 +24,13 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 					c.Abort()
 					return
 				}
-				browserKeywords := strings.Split(svc.Config.Subscribe.UserAgentList, "\n")
+				browserKeywords := tool.RemoveDuplicateElements(strings.Split(svc.Config.Subscribe.UserAgentList, "\n")...)
 				var allow = false
 				for _, keyword := range browserKeywords {
+					keyword = strings.ToLower(strings.Trim(keyword, " "))
+					if keyword == "" {
+						continue
+					}
 					if strings.Contains(strings.ToLower(ua), keyword) {
 						allow = true
 					}
