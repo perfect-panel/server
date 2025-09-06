@@ -8,7 +8,7 @@ import (
 	"github.com/perfect-panel/server/pkg/result"
 )
 
-// Purchase Checkout
+// PurchaseCheckoutHandler Purchase Checkout
 func PurchaseCheckoutHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var req types.CheckoutOrderRequest

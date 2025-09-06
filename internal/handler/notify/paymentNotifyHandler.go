@@ -26,7 +26,7 @@ func PaymentNotifyHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 		}
 
 		switch payment.ParsePlatform(platform) {
-		case payment.EPay:
+		case payment.EPay, payment.CryptoSaaS:
 			req := &types.EPayNotifyRequest{}
 			if err := c.ShouldBind(req); err != nil {
 				result.HttpResult(c, nil, err)

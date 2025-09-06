@@ -106,6 +106,17 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 			CheckoutUrl: url,
 		}
 
+	case paymentPlatform.CryptoSaaS:
+		// Process EPay payment - generates payment URL for redirect
+		url, err := l.epayPayment(paymentConfig, orderInfo, req.ReturnUrl)
+		if err != nil {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "epayPayment error: %v", err.Error())
+		}
+		resp = &types.CheckoutOrderResponse{
+			CheckoutUrl: url,
+			Type:        "url", // Client should redirect to URL
+		}
+
 	case paymentPlatform.Balance:
 		// Process balance payment - validate user and process payment immediately
 		if orderInfo.UserId == 0 {
@@ -140,8 +151,8 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 // It handles currency conversion and creates a pre-payment trade for QR code scanning
 func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *order.Order) (string, error) {
 	// Parse Alipay F2F configuration from payment settings
-	f2FConfig := payment.AlipayF2FConfig{}
-	if err := json.Unmarshal([]byte(pay.Config), &f2FConfig); err != nil {
+	f2FConfig := &payment.AlipayF2FConfig{}
+	if err := f2FConfig.Unmarshal([]byte(pay.Config)); err != nil {
 		l.Errorw("[PurchaseCheckout] Unmarshal Alipay config error", logger.Field("error", err.Error()))
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unmarshal error: %s", err.Error())
 	}
@@ -191,8 +202,9 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 // It supports various payment methods including WeChat Pay and Alipay through Stripe
 func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, identifier string) (*types.StripePayment, error) {
 	// Parse Stripe configuration from payment settings
-	stripeConfig := payment.StripeConfig{}
-	if err := json.Unmarshal([]byte(config), &stripeConfig); err != nil {
+	stripeConfig := &payment.StripeConfig{}
+
+	if err := stripeConfig.Unmarshal([]byte(config)); err != nil {
 		l.Errorw("[PurchaseCheckout] Unmarshal Stripe config error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unmarshal error: %s", err.Error())
 	}
@@ -249,14 +261,55 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 // It handles currency conversion and creates a payment URL for external payment processing
 func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order.Order, returnUrl string) (string, error) {
 	// Parse EPay configuration from payment settings
-	epayConfig := payment.EPayConfig{}
-	if err := json.Unmarshal([]byte(config.Config), &epayConfig); err != nil {
+	epayConfig := &payment.EPayConfig{}
+	if err := epayConfig.Unmarshal([]byte(config.Config)); err != nil {
 		l.Errorw("[PurchaseCheckout] Unmarshal EPay config error", logger.Field("error", err.Error()))
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unmarshal error: %s", err.Error())
 	}
-
 	// Initialize EPay client with merchant credentials
 	client := epay.NewClient(epayConfig.Pid, epayConfig.Url, epayConfig.Key)
+
+	// Convert order amount to CNY using current exchange rate
+	amount, err := l.queryExchangeRate("CNY", info.Amount)
+	if err != nil {
+		return "", err
+	}
+
+	// Build notification URL for payment status callbacks
+	notifyUrl := ""
+	if config.Domain != "" {
+		notifyUrl = config.Domain + "/v1/notify/" + config.Platform + "/" + config.Token
+	} else {
+		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
+		if !ok {
+			host = l.svcCtx.Config.Host
+		}
+		notifyUrl = "https://" + host + "/v1/notify/" + config.Platform + "/" + config.Token
+	}
+
+	// Create payment URL for user redirection
+	url := client.CreatePayUrl(epay.Order{
+		Name:      l.svcCtx.Config.Site.SiteName,
+		Amount:    amount,
+		OrderNo:   info.OrderNo,
+		SignType:  "MD5",
+		NotifyUrl: notifyUrl,
+		ReturnUrl: returnUrl,
+	})
+	return url, nil
+}
+
+// CryptoSaaSPayment processes CryptoSaaSPayment payment by generating a payment URL for redirect
+// It handles currency conversion and creates a payment URL for external payment processing
+func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info *order.Order, returnUrl string) (string, error) {
+	// Parse EPay configuration from payment settings
+	epayConfig := &payment.CryptoSaaSConfig{}
+	if err := epayConfig.Unmarshal([]byte(config.Config)); err != nil {
+		l.Errorw("[PurchaseCheckout] Unmarshal EPay config error", logger.Field("error", err.Error()))
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unmarshal error: %s", err.Error())
+	}
+	// Initialize EPay client with merchant credentials
+	client := epay.NewClient(epayConfig.AccountID, epayConfig.Endpoint, epayConfig.SecretKey)
 
 	// Convert order amount to CNY using current exchange rate
 	amount, err := l.queryExchangeRate("CNY", info.Amount)

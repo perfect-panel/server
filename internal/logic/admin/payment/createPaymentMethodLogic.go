@@ -55,10 +55,9 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 		Token:       random.KeyNew(8, 1),
 	}
 	err = l.svcCtx.PaymentModel.Transaction(l.ctx, func(tx *gorm.DB) error {
-
 		if req.Platform == "Stripe" {
 			var cfg paymentModel.StripeConfig
-			if err := cfg.Unmarshal(paymentMethod.Config); err != nil {
+			if err = cfg.Unmarshal([]byte(paymentMethod.Config)); err != nil {
 				l.Errorf("[CreatePaymentMethod] unmarshal stripe config error: %s", err.Error())
 				return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal stripe config error: %s", err.Error())
 			}
@@ -79,7 +78,8 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 				return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "create stripe webhook endpoint error: %s", err.Error())
 			}
 			cfg.WebhookSecret = endpoint.Secret
-			paymentMethod.Config = cfg.Marshal()
+			content, _ := cfg.Marshal()
+			paymentMethod.Config = string(content)
 		}
 		if err = tx.Model(&paymentModel.Payment{}).Create(paymentMethod).Error; err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert payment method error: %s", err.Error())
@@ -101,27 +101,36 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 func parsePaymentPlatformConfig(ctx context.Context, platform payment.Platform, config interface{}) string {
 	data, err := json.Marshal(config)
 	if err != nil {
-		logger.WithContext(ctx).Errorw("parse payment platform config error", logger.Field("platform", platform), logger.Field("config", config), logger.Field("error", err.Error()))
+		logger.WithContext(ctx).Errorw("marshal config error", logger.Field("platform", platform), logger.Field("config", config), logger.Field("error", err.Error()))
+		return ""
 	}
+
+	// 通用处理函数
+	handleConfig := func(name string, target interface {
+		Unmarshal([]byte) error
+		Marshal() ([]byte, error)
+	}) string {
+		if err = target.Unmarshal(data); err != nil {
+			logger.WithContext(ctx).Errorw("parse "+name+" config error", logger.Field("config", string(data)), logger.Field("error", err.Error()))
+			return ""
+		}
+		content, err := target.Marshal()
+		if err != nil {
+			logger.WithContext(ctx).Errorw("marshal "+name+" config error", logger.Field("error", err.Error()))
+			return ""
+		}
+		return string(content)
+	}
+
 	switch platform {
 	case payment.Stripe:
-		stripe := &paymentModel.StripeConfig{}
-		if err := stripe.Unmarshal(string(data)); err != nil {
-			logger.WithContext(ctx).Errorw("parse stripe config error", logger.Field("config", string(data)), logger.Field("error", err.Error()))
-		}
-		return stripe.Marshal()
+		return handleConfig("Stripe", &paymentModel.StripeConfig{})
 	case payment.AlipayF2F:
-		alipay := &paymentModel.AlipayF2FConfig{}
-		if err := alipay.Unmarshal(string(data)); err != nil {
-			logger.WithContext(ctx).Errorw("parse alipay config error", logger.Field("config", string(data)), logger.Field("error", err.Error()))
-		}
-		return alipay.Marshal()
+		return handleConfig("Alipay", &paymentModel.AlipayF2FConfig{})
 	case payment.EPay:
-		epay := &paymentModel.EPayConfig{}
-		if err := epay.Unmarshal(string(data)); err != nil {
-			logger.WithContext(ctx).Errorw("parse epay config error", logger.Field("config", string(data)), logger.Field("error", err.Error()))
-		}
-		return epay.Marshal()
+		return handleConfig("Epay", &paymentModel.EPayConfig{})
+	case payment.CryptoSaaS:
+		return handleConfig("CryptoSaaS", &paymentModel.CryptoSaaSConfig{})
 	default:
 		return ""
 	}
