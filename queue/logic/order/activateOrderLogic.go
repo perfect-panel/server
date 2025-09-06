@@ -87,7 +87,7 @@ func (l *ActivateOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task) 
 	return nil
 }
 
-// parsePayload unmarshals the task payload into a structured format
+// parsePayload unMarshals the task payload into a structured format
 func (l *ActivateOrderLogic) parsePayload(ctx context.Context, payload []byte) (*types.ForthwithActivateOrderPayload, error) {
 	var p types.ForthwithActivateOrderPayload
 	if err := json.Unmarshal(payload, &p); err != nil {
@@ -182,7 +182,7 @@ func (l *ActivateOrderLogic) NewPurchase(ctx context.Context, orderInfo *order.O
 	}
 
 	// Handle commission in separate goroutine to avoid blocking
-	go l.handleCommission(context.Background(), userInfo, orderInfo, true)
+	go l.handleCommission(context.Background(), userInfo, orderInfo)
 
 	// Clear cache
 	l.clearServerCache(ctx, sub)
@@ -353,8 +353,8 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 
 // handleCommission processes referral commission for the referrer if applicable.
 // This runs asynchronously to avoid blocking the main order processing flow.
-func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *user.User, orderInfo *order.Order, isNewPurchase bool) {
-	if !l.shouldProcessCommission(userInfo, orderInfo, isNewPurchase) {
+func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *user.User, orderInfo *order.Order) {
+	if !l.shouldProcessCommission(userInfo, orderInfo.IsNew) {
 		return
 	}
 
@@ -368,8 +368,8 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 	}
 
 	var referralPercentage uint8
-	if userInfo.ReferralPercentage != 0 {
-		referralPercentage = userInfo.ReferralPercentage
+	if referer.ReferralPercentage != 0 {
+		referralPercentage = referer.ReferralPercentage
 	} else {
 		referralPercentage = uint8(l.svc.Config.Invite.ReferralPercentage)
 	}
@@ -379,7 +379,7 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 	// Use transaction for commission updates
 	err = l.svc.DB.Transaction(func(tx *gorm.DB) error {
 		referer.Commission += amount
-		if err := l.svc.UserModel.Update(ctx, referer, tx); err != nil {
+		if err = l.svc.UserModel.Update(ctx, referer, tx); err != nil {
 			return err
 		}
 
@@ -413,7 +413,7 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 	}
 
 	// Update cache
-	if err := l.svc.UserModel.UpdateUserCache(ctx, referer); err != nil {
+	if err = l.svc.UserModel.UpdateUserCache(ctx, referer); err != nil {
 		logger.WithContext(ctx).Error("Update referer cache failed",
 			logger.Field("error", err.Error()),
 			logger.Field("user_id", referer.Id),
@@ -423,10 +423,39 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 
 // shouldProcessCommission determines if commission should be processed based on
 // referrer existence, commission settings, and order type
-func (l *ActivateOrderLogic) shouldProcessCommission(userInfo *user.User, orderInfo *order.Order, isNewPurchase bool) bool {
-	return userInfo.RefererId != 0 &&
-		l.svc.Config.Invite.ReferralPercentage != 0 &&
-		(!l.svc.Config.Invite.OnlyFirstPurchase || (isNewPurchase && orderInfo.IsNew) || !*userInfo.OnlyFirstPurchase)
+func (l *ActivateOrderLogic) shouldProcessCommission(userInfo *user.User, isFirstPurchase bool) bool {
+	if userInfo == nil || userInfo.RefererId == 0 {
+		return false
+	}
+
+	referer, err := l.svc.UserModel.FindOne(context.Background(), userInfo.RefererId)
+	if err != nil {
+		logger.Errorw("Find referer failed",
+			logger.Field("error", err.Error()),
+			logger.Field("referer_id", userInfo.RefererId))
+		return false
+	}
+	if referer == nil {
+		return false
+	}
+
+	// use referer's custom settings if set
+	if referer.ReferralPercentage > 0 {
+		if referer.OnlyFirstPurchase != nil && *referer.OnlyFirstPurchase && !isFirstPurchase {
+			return false
+		}
+		return true
+	}
+
+	// use global settings
+	if l.svc.Config.Invite.ReferralPercentage == 0 {
+		return false
+	}
+	if l.svc.Config.Invite.OnlyFirstPurchase && !isFirstPurchase {
+		return false
+	}
+
+	return true
 }
 
 // calculateCommission computes the commission amount based on order price and referral percentage
@@ -486,7 +515,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 	l.clearServerCache(ctx, sub)
 
 	// Handle commission
-	go l.handleCommission(context.Background(), userInfo, orderInfo, false)
+	go l.handleCommission(context.Background(), userInfo, orderInfo)
 
 	// Send notifications
 	l.sendNotifications(ctx, orderInfo, userInfo, sub, userSub, telegram.RenewalNotify)
