@@ -374,7 +374,8 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 		referralPercentage = uint8(l.svc.Config.Invite.ReferralPercentage)
 	}
 
-	amount := l.calculateCommission(orderInfo.Price, referralPercentage)
+	// Order commission calculation： (Order Amount - Order Fee) * Referral Percentage
+	amount := l.calculateCommission(orderInfo.Amount-orderInfo.FeeAmount, referralPercentage)
 
 	// Use transaction for commission updates
 	err = l.svc.DB.Transaction(func(tx *gorm.DB) error {
