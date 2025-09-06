@@ -337,7 +337,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			logger.Field("orderNo", o.OrderNo),
 			logger.Field("userId", u.Id),
 		)
-		err := l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2)
+		err = l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2)
 		if err != nil {
 			l.Errorw("[PurchaseCheckout] Update order status error",
 				logger.Field("error", err.Error()),

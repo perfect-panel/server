@@ -95,7 +95,7 @@ func (l *QueryPurchaseOrderLogic) handleTemporaryOrder(orderInfo *order.Order, r
 	}
 
 	// Validate user and email
-	if err := l.validateUserAndEmail(orderInfo, req.Identifier, req.Identifier); err != nil {
+	if err = l.validateUserAndEmail(orderInfo, req.AuthType, req.Identifier); err != nil {
 		return "", err
 	}
 

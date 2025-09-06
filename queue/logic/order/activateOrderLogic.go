@@ -46,11 +46,6 @@ const (
 	OrderStatusFinished = 5 // Order successfully completed
 )
 
-// Commission type constants define the types of commission transactions
-const (
-	CommissionTypeRecharge = 1 // Commission from balance recharge
-)
-
 // Predefined error variables for common error conditions
 var (
 	ErrInvalidOrderStatus = fmt.Errorf("invalid order status")
@@ -83,7 +78,7 @@ func (l *ActivateOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task) 
 		return nil // Log and continue
 	}
 
-	if err := l.processOrderByType(ctx, orderInfo); err != nil {
+	if err = l.processOrderByType(ctx, orderInfo); err != nil {
 		logger.WithContext(ctx).Error("[ActivateOrderLogic] Process task failed", logger.Field("error", err.Error()))
 		return nil
 	}
@@ -282,8 +277,12 @@ func (l *ActivateOrderLogic) getTempOrderInfo(ctx context.Context, orderNo strin
 	}
 
 	var tempOrder constant.TemporaryOrderInfo
-	if err = json.Unmarshal([]byte(data), &tempOrder); err != nil {
-		logger.WithContext(ctx).Error("Unmarshal temp order failed", logger.Field("error", err.Error()))
+	if err = tempOrder.Unmarshal([]byte(data)); err != nil {
+		logger.WithContext(ctx).Error("Unmarshal temp order cache failed",
+			logger.Field("error", err.Error()),
+			logger.Field("cache_key", cacheKey),
+			logger.Field("data", data),
+		)
 		return nil, err
 	}
 
@@ -469,7 +468,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 		return err
 	}
 
-	if err := l.updateSubscriptionForRenewal(ctx, userSub, sub, orderInfo); err != nil {
+	if err = l.updateSubscriptionForRenewal(ctx, userSub, sub, orderInfo); err != nil {
 		return err
 	}
 
@@ -623,7 +622,7 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 
 		balanceLog := &log.Balance{
 			Amount:    orderInfo.Price,
-			Type:      CommissionTypeRecharge,
+			Type:      log.BalanceTypeRecharge,
 			OrderNo:   orderInfo.OrderNo,
 			Balance:   userInfo.Balance,
 			Timestamp: time.Now().UnixMilli(),
