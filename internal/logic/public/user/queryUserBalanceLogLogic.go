@@ -47,10 +47,6 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserB
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Balance Log Error")
 	}
 
-	resp = &types.QueryUserBalanceLogListResponse{
-		Total: total,
-	}
-
 	list := make([]types.BalanceLog, 0)
 	for _, datum := range data {
 		var content log.Balance
@@ -68,5 +64,8 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserB
 		})
 	}
 
-	return
+	return &types.QueryUserBalanceLogListResponse{
+		Total: total,
+		List:  list,
+	}, nil
 }
