@@ -136,7 +136,8 @@ func (w *Worker) Start() {
 			taskInfo.Errors = string(text)
 		}
 		count++
-		if err := tx.Model(&task.EmailTask{}).Save(&taskInfo).Error; err != nil {
+		taskInfo.Current = count
+		if err := tx.Model(&task.EmailTask{}).Where("`id` = ?", taskInfo.Id).Save(&taskInfo).Error; err != nil {
 			logger.Error("Batch Send Email",
 				logger.Field("message", "Failed to update task progress"),
 				logger.Field("error", err.Error()),
@@ -148,7 +149,7 @@ func (w *Worker) Start() {
 		time.Sleep(intervalTime)
 	}
 	taskInfo.Status = 2 // 设置状态为已完成
-	if err := tx.Model(&task.EmailTask{}).Save(&taskInfo).Error; err != nil {
+	if err := tx.Model(&task.EmailTask{}).Where("`id` = ?", taskInfo.Id).Save(&taskInfo).Error; err != nil {
 		logger.Error("Batch Send Email",
 			logger.Field("message", "Failed to finalize task"),
 			logger.Field("error", err.Error()),
