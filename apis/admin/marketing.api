@@ -12,7 +12,7 @@ type (
 	CreateBatchSendEmailTaskRequest {
 		Subject           string `json:"subject"`
 		Content           string `json:"content"`
-		Scope             string `json:"scope"`
+		Scope             int8   `json:"scope"`
 		RegisterStartTime int64  `json:"register_start_time,omitempty"`
 		RegisterEndTime   int64  `json:"register_end_time,omitempty"`
 		Additional        string `json:"additional,omitempty"`
@@ -25,7 +25,7 @@ type (
 		Subject           string `json:"subject"`
 		Content           string `json:"content"`
 		Recipients        string `json:"recipients"`
-		Scope             string `json:"scope"`
+		Scope             int8   `json:"scope"`
 		RegisterStartTime int64  `json:"register_start_time"`
 		RegisterEndTime   int64  `json:"register_end_time"`
 		Additional        string `json:"additional"`
@@ -42,7 +42,7 @@ type (
 	GetBatchSendEmailTaskListRequest {
 		Page   int    `form:"page"`
 		Size   int    `form:"size"`
-		Scope  string `form:"scope,omitempty"`
+		Scope  *int8  `form:"scope,omitempty"`
 		Status *uint8 `form:"status,omitempty"`
 	}
 	GetBatchSendEmailTaskListResponse {
@@ -64,6 +64,57 @@ type (
 		Id int64 `json:"id"`
 	}
 	GetBatchSendEmailTaskStatusResponse {
+		Status  uint8  `json:"status"`
+		Current int64  `json:"current"`
+		Total   int64  `json:"total"`
+		Errors  string `json:"errors"`
+	}
+	CreateQuotaTaskRequest {
+		Scope             int8   `json:"scope"`
+		RegisterStartTime int64  `json:"register_start_time"`
+		RegisterEndTime   int64  `json:"register_end_time"`
+		QuotaType         uint8  `json:"quota_type"`
+		Days              uint64 `json:"days"` // Number of days for the quota
+		Gift              uint8  `json:"gift"` // Invoice amount ratio(%) to gift amount for quota
+	}
+	QuotaTask {
+		Id                int64   `json:"id"`
+		Scope             int8    `json:"scope"`
+		RegisterStartTime int64   `json:"register_start_time"`
+		RegisterEndTime   int64   `json:"register_end_time"`
+		QuotaType         uint8   `json:"quota_type"`
+		Days              uint64  `json:"days"` // Number of days for the quota
+		Gift              uint8   `json:"gift"` // Invoice amount ratio(%) to gift
+		Recipients        []int64 `json:"recipients"` // UserSubscribe IDs of recipients
+		Status            uint8   `json:"status"`
+		Total             int64   `json:"total"`
+		Current           int64   `json:"current"`
+		Errors            string  `json:"errors"`
+		CreatedAt         int64   `json:"created_at"`
+		UpdatedAt         int64   `json:"updated_at"`
+	}
+	QueryQuotaTaskPreCountRequest {
+		Scope             uint8 `json:"scope"`
+		RegisterStartTime int64 `json:"register_start_time"`
+		RegisterEndTime   int64 `json:"register_end_time"`
+	}
+	QueryQuotaTaskPreCountResponse {
+		Count int64 `json:"count"`
+	}
+	QueryQuotaTaskListRequest {
+		Page   int    `form:"page"`
+		Size   int    `form:"size"`
+		Scope  *uint8 `form:"scope,omitempty"`
+		Status *uint8 `form:"status,omitempty"`
+	}
+	QueryQuotaTaskListResponse {
+		Total int64       `json:"total"`
+		List  []QuotaTask `json:"list"`
+	}
+	QueryQuotaTaskStatusRequest {
+		Id int64 `json:"id"`
+	}
+	QueryQuotaTaskStatusResponse {
 		Status  uint8  `json:"status"`
 		Current int64  `json:"current"`
 		Total   int64  `json:"total"`
@@ -96,5 +147,21 @@ service ppanel {
 	@doc "Get batch send email task status"
 	@handler GetBatchSendEmailTaskStatus
 	post /email/batch/status (GetBatchSendEmailTaskStatusRequest) returns (GetBatchSendEmailTaskStatusResponse)
+
+	@doc "Create a quota task"
+	@handler CreateQuotaTask
+	post /quota/create (CreateQuotaTaskRequest)
+
+	@doc "Query quota task pre-count"
+	@handler QueryQuotaTaskPreCount
+	post /quota/pre-count (QueryQuotaTaskPreCountRequest) returns (QueryQuotaTaskPreCountResponse)
+
+	@doc "Query quota task list"
+	@handler QueryQuotaTaskList
+	get /quota/list (QueryQuotaTaskListRequest) returns (QueryQuotaTaskListResponse)
+
+	@doc "Query quota task status"
+	@handler QueryQuotaTaskStatus
+	post /quota/status (QueryQuotaTaskStatusRequest) returns (QueryQuotaTaskStatusResponse)
 }
 

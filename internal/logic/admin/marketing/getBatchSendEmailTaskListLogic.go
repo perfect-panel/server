@@ -2,12 +2,12 @@ package marketing
 
 import (
 	"context"
+	"strings"
 
 	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 )
 
@@ -28,12 +28,12 @@ func NewGetBatchSendEmailTaskListLogic(ctx context.Context, svcCtx *svc.ServiceC
 
 func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.GetBatchSendEmailTaskListRequest) (resp *types.GetBatchSendEmailTaskListResponse, err error) {
 
-	var tasks []*task.EmailTask
-	tx := l.svcCtx.DB.Model(&task.EmailTask{})
+	var tasks []*task.Task
+	tx := l.svcCtx.DB.Model(&task.Task{}).Where("`type` = ?", task.TypeEmail)
 	if req.Status != nil {
 		tx = tx.Where("status = ?", *req.Status)
 	}
-	if req.Scope != "" {
+	if req.Scope != nil {
 		tx = tx.Where("scope = ?", req.Scope)
 	}
 	if req.Page == 0 {
@@ -49,7 +49,40 @@ func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.Ge
 	}
 
 	list := make([]types.BatchSendEmailTask, 0)
-	tool.DeepCopy(&list, tasks)
+
+	for _, t := range tasks {
+		var scopeInfo task.EmailScope
+		if err = scopeInfo.Unmarshal([]byte(t.Scope)); err != nil {
+			l.Errorf("[GetBatchSendEmailTaskList] failed to unmarshal email task scope: %v", err.Error())
+			continue
+		}
+		var contentInfo task.EmailContent
+		if err = contentInfo.Unmarshal([]byte(t.Content)); err != nil {
+			l.Errorf("[GetBatchSendEmailTaskList] failed to unmarshal email task content: %v", err.Error())
+			continue
+		}
+
+		list = append(list, types.BatchSendEmailTask{
+			Id:                t.Id,
+			Subject:           contentInfo.Subject,
+			Content:           contentInfo.Content,
+			Recipients:        strings.Join(scopeInfo.Recipients, "\n"),
+			Scope:             scopeInfo.Type,
+			RegisterStartTime: scopeInfo.RegisterStartTime,
+			RegisterEndTime:   scopeInfo.RegisterEndTime,
+			Additional:        strings.Join(scopeInfo.Additional, "\n"),
+			Scheduled:         scopeInfo.Scheduled,
+			Interval:          scopeInfo.Interval,
+			Limit:             scopeInfo.Limit,
+			Status:            uint8(t.Status),
+			Errors:            t.Errors,
+			Total:             t.Total,
+			Current:           t.Current,
+			CreatedAt:         t.CreatedAt.UnixMilli(),
+			UpdatedAt:         t.UpdatedAt.UnixMilli(),
+		})
+	}
+
 	return &types.GetBatchSendEmailTaskListResponse{
 		List: list,
 	}, nil

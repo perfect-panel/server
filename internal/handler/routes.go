@@ -253,6 +253,18 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Stop a batch send email task
 		adminMarketingGroupRouter.POST("/email/batch/stop", adminMarketing.StopBatchSendEmailTaskHandler(serverCtx))
+
+		// Create a quota task
+		adminMarketingGroupRouter.POST("/quota/create", adminMarketing.CreateQuotaTaskHandler(serverCtx))
+
+		// Query quota task list
+		adminMarketingGroupRouter.GET("/quota/list", adminMarketing.QueryQuotaTaskListHandler(serverCtx))
+
+		// Query quota task pre-count
+		adminMarketingGroupRouter.POST("/quota/pre-count", adminMarketing.QueryQuotaTaskPreCountHandler(serverCtx))
+
+		// Query quota task status
+		adminMarketingGroupRouter.POST("/quota/status", adminMarketing.QueryQuotaTaskStatusHandler(serverCtx))
 	}
 
 	adminOrderGroupRouter := router.Group("/v1/admin/order")
