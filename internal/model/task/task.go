@@ -91,10 +91,11 @@ func (c *EmailContent) Unmarshal(data []byte) error {
 }
 
 type QuotaScope struct {
-	Type              int8    `gorm:"not null;comment:Scope Type"`
-	RegisterStartTime int64   `json:"register_start_time"`
-	RegisterEndTime   int64   `json:"register_end_time"`
-	Recipients        []int64 `json:"recipients"` // list of user subs IDs
+	Subscribers []int64 `json:"subscribers"` // Subscribe IDs
+	IsActive    *bool   `json:"is_active"`   // filter by active status
+	StartTime   int64   `json:"start_time"`  // filter by subscription start time
+	EndTime     int64   `json:"end_time"`    // filter by subscription end time
+	Objects     []int64 `json:"recipients"`  // list of user subs IDs
 }
 
 func (s *QuotaScope) Marshal() ([]byte, error) {
@@ -112,18 +113,26 @@ func (s *QuotaScope) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, &aux)
 }
 
-type QuotaType int8
-
-const (
-	QuotaTypeReset QuotaType = iota + 1 // Reset Subscribe  Quota
-	QuotaTypeDays                       // Add Subscribe Days
-	QuotaTypeGift                       // Add Gift Amount
-)
-
 type QuotaContent struct {
-	Type int8   `json:"type"`
-	Days uint64 `json:"days,omitempty"` // days to add
-	Gift uint8  `json:"gift,omitempty"` // Invoice amount ratio(%) to gift amount
+	ResetTraffic bool   `json:"reset_traffic"`        // whether to reset traffic
+	Days         uint64 `json:"days,omitempty"`       // days to add
+	GiftType     uint8  `json:"gift_type,omitempty"`  // 1: Fixed, 2: Ratio
+	GiftValue    uint64 `json:"gift_value,omitempty"` // value of the gift type
+}
+
+func (c *QuotaContent) Marshal() ([]byte, error) {
+	type Alias QuotaContent
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(c),
+	})
+}
+
+func (c *QuotaContent) Unmarshal(data []byte) error {
+	type Alias QuotaContent
+	aux := (*Alias)(c)
+	return json.Unmarshal(data, &aux)
 }
 
 func ParseScopeType(t int8) ScopeType {

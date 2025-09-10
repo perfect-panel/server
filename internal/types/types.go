@@ -345,12 +345,14 @@ type CreatePaymentMethodRequest struct {
 }
 
 type CreateQuotaTaskRequest struct {
-	Scope             int8   `json:"scope"`
-	RegisterStartTime int64  `json:"register_start_time"`
-	RegisterEndTime   int64  `json:"register_end_time"`
-	QuotaType         uint8  `json:"quota_type"`
-	Days              uint64 `json:"days"` // Number of days for the quota
-	Gift              uint8  `json:"gift"` // Invoice amount ratio(%) to gift amount for quota
+	Subscribers  []int64 `json:"subscribers"`
+	IsActive     *bool   `json:"is_active"`
+	StartTime    int64   `json:"start_time"`
+	EndTime      int64   `json:"end_time"`
+	ResetTraffic bool    `json:"reset_traffic"`
+	Days         uint64  `json:"days"`
+	GiftType     uint8   `json:"gift_type"`
+	GiftValue    uint64  `json:"gift_value"`
 }
 
 type CreateServerRequest struct {
@@ -887,9 +889,9 @@ type GetPaymentMethodListResponse struct {
 }
 
 type GetPreSendEmailCountRequest struct {
-	Scope             string `json:"scope"`
-	RegisterStartTime int64  `json:"register_start_time,omitempty"`
-	RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+	Scope             int8  `json:"scope"`
+	RegisterStartTime int64 `json:"register_start_time,omitempty"`
+	RegisterEndTime   int64 `json:"register_end_time,omitempty"`
 }
 
 type GetPreSendEmailCountResponse struct {
@@ -1534,7 +1536,6 @@ type QueryPurchaseOrderResponse struct {
 type QueryQuotaTaskListRequest struct {
 	Page   int    `form:"page"`
 	Size   int    `form:"size"`
-	Scope  *uint8 `form:"scope,omitempty"`
 	Status *uint8 `form:"status,omitempty"`
 }
 
@@ -1544,9 +1545,10 @@ type QueryQuotaTaskListResponse struct {
 }
 
 type QueryQuotaTaskPreCountRequest struct {
-	Scope             uint8 `json:"scope"`
-	RegisterStartTime int64 `json:"register_start_time"`
-	RegisterEndTime   int64 `json:"register_end_time"`
+	Subscribers []int64 `json:"subscribers"`
+	IsActive    *bool   `json:"is_active"`
+	StartTime   int64   `json:"start_time"`
+	EndTime     int64   `json:"end_time"`
 }
 
 type QueryQuotaTaskPreCountResponse struct {
@@ -1614,20 +1616,22 @@ type QueryUserSubscribeListResponse struct {
 }
 
 type QuotaTask struct {
-	Id                int64   `json:"id"`
-	Scope             int8    `json:"scope"`
-	RegisterStartTime int64   `json:"register_start_time"`
-	RegisterEndTime   int64   `json:"register_end_time"`
-	QuotaType         uint8   `json:"quota_type"`
-	Days              uint64  `json:"days"`       // Number of days for the quota
-	Gift              uint8   `json:"gift"`       // Invoice amount ratio(%) to gift
-	Recipients        []int64 `json:"recipients"` // UserSubscribe IDs of recipients
-	Status            uint8   `json:"status"`
-	Total             int64   `json:"total"`
-	Current           int64   `json:"current"`
-	Errors            string  `json:"errors"`
-	CreatedAt         int64   `json:"created_at"`
-	UpdatedAt         int64   `json:"updated_at"`
+	Id           int64   `json:"id"`
+	Subscribers  []int64 `json:"subscribers"`
+	IsActive     *bool   `json:"is_active"`
+	StartTime    int64   `json:"start_time"`
+	EndTime      int64   `json:"end_time"`
+	ResetTraffic bool    `json:"reset_traffic"`
+	Days         uint64  `json:"days"`
+	GiftType     uint8   `json:"gift_type"`
+	GiftValue    uint64  `json:"gift_value"`
+	Objects      []int64 `json:"objects"` // UserSubscribe IDs
+	Status       uint8   `json:"status"`
+	Total        int64   `json:"total"`
+	Current      int64   `json:"current"`
+	Errors       string  `json:"errors"`
+	CreatedAt    int64   `json:"created_at"`
+	UpdatedAt    int64   `json:"updated_at"`
 }
 
 type RechargeOrderRequest struct {

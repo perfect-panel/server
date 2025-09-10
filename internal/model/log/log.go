@@ -36,6 +36,7 @@ const (
 	ResetSubscribeTypeAuto    uint16 = 231 // Auto reset
 	ResetSubscribeTypeAdvance uint16 = 232 // Advance reset
 	ResetSubscribeTypePaid    uint16 = 233 // Paid reset
+	ResetSubscribeTypeQuota   uint16 = 234 // Quota reset
 	BalanceTypeRecharge       uint16 = 321 // Recharge
 	BalanceTypeWithdraw       uint16 = 322 // Withdraw
 	BalanceTypePayment        uint16 = 323 // Payment

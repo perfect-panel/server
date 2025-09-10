@@ -101,7 +101,7 @@ type customUserLogicModel interface {
 	DeleteDevice(ctx context.Context, id int64, tx ...*gorm.DB) error
 
 	ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error
-	clearUserCache(ctx context.Context, data ...*User) error
+	ClearUserCache(ctx context.Context, data ...*User) error
 
 	QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
 	QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
