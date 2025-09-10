@@ -262,9 +262,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Query quota task pre-count
 		adminMarketingGroupRouter.POST("/quota/pre-count", adminMarketing.QueryQuotaTaskPreCountHandler(serverCtx))
-
-		// Query quota task status
-		adminMarketingGroupRouter.POST("/quota/status", adminMarketing.QueryQuotaTaskStatusHandler(serverCtx))
 	}
 
 	adminOrderGroupRouter := router.Group("/v1/admin/order")
