@@ -646,7 +646,7 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 	// Update balance in transaction
 	err = l.svc.DB.Transaction(func(tx *gorm.DB) error {
 		userInfo.Balance += orderInfo.Price
-		if err := l.svc.UserModel.Update(ctx, userInfo, tx); err != nil {
+		if err = l.svc.UserModel.Update(ctx, userInfo, tx); err != nil {
 			return err
 		}
 
@@ -668,7 +668,13 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 	})
 
 	if err != nil {
-		logger.WithContext(ctx).Error("Database transaction failed", logger.Field("error", err.Error()))
+		logger.WithContext(ctx).Error("[Recharge] Database transaction failed", logger.Field("error", err.Error()))
+		return err
+	}
+
+	// clear user cache
+	if err = l.svc.UserModel.UpdateUserCache(ctx, userInfo); err != nil {
+		logger.WithContext(ctx).Error("[Recharge] Update user cache failed", logger.Field("error", err.Error()))
 		return err
 	}
 
