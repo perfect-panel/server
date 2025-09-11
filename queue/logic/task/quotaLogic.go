@@ -208,6 +208,7 @@ func (l *QuotaTaskLogic) processSubscribes(ctx context.Context, subscribes []*us
 		taskInfo.Errors = string(errs)
 	}
 
+	taskInfo.Current = uint64(len(subscribes))
 	taskInfo.Status = status
 	err := tx.Where("id = ?", taskInfo.Id).Save(taskInfo).Error
 	if err != nil {
