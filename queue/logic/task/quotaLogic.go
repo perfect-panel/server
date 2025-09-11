@@ -75,6 +75,7 @@ func (l *QuotaTaskLogic) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	if err = l.processSubscribes(ctx, subscribes, content, taskInfo); err != nil {
 		return err
 	}
+	// 清理用户缓存（仅在有赠送金时清理）
 	if content.GiftValue != 0 {
 		var userIds []int64
 		for _, sub := range subscribes {

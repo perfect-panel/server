@@ -18,7 +18,7 @@ type FilterTrafficLogDetailsLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Filter traffic log details
+// NewFilterTrafficLogDetailsLogic Filter traffic log details
 func NewFilterTrafficLogDetailsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FilterTrafficLogDetailsLogic {
 	return &FilterTrafficLogDetailsLogic{
 		Logger: logger.WithContext(ctx),
