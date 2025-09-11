@@ -173,7 +173,8 @@ func (w *Worker) Start() {
 		}
 		time.Sleep(intervalTime)
 	}
-	w.status = 2 // 设置状态为已完成
+	taskInfo.Status = 2 // 2 表示任务已完成
+	w.status = 2        // 设置状态为已完成
 
 	if err := tx.Model(&task.Task{}).Where("`id` = ?", taskInfo.Id).Save(&taskInfo).Error; err != nil {
 		logger.Error("Batch Send Email",
