@@ -68,7 +68,7 @@ func (l *QuotaTaskLogic) ProcessTask(ctx context.Context, t *asynq.Task) error {
 		return err
 	}
 
-	subscribes, err := l.getSubscribes(ctx, scope.Subscribers)
+	subscribes, err := l.getSubscribes(ctx, scope.Objects)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (l *QuotaTaskLogic) parseTaskData(ctx context.Context, taskInfo *task.Task)
 
 func (l *QuotaTaskLogic) getSubscribes(ctx context.Context, subscriberIDs []int64) ([]*user.Subscribe, error) {
 	var subscribes []*user.Subscribe
-	if err := l.svcCtx.DB.WithContext(ctx).Model(&user.Subscribe{}).Where("subscribe_id IN ?", subscriberIDs).Find(&subscribes).Error; err != nil {
+	if err := l.svcCtx.DB.WithContext(ctx).Model(&user.Subscribe{}).Where("id IN ?", subscriberIDs).Find(&subscribes).Error; err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.getSubscribes] find subscribes error",
 			logger.Field("error", err.Error()),
 			logger.Field("subscribers", subscriberIDs),

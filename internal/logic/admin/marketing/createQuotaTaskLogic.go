@@ -42,12 +42,12 @@ func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest
 		query = query.Where("`status` IN ?", []int64{0, 1, 2}) // 0: Pending 1: Active 2: Finished
 	}
 	if req.StartTime != 0 {
-		start := time.UnixMilli(req.StartTime)
+		start := time.Unix(req.StartTime, 0)
 		query = query.Where("`start_time` >= ?", start)
 	}
 	if req.EndTime != 0 {
 		end := time.UnixMilli(req.EndTime)
-		query = query.Where("`start_time` <= ?", end)
+		query = query.Where("`expire_time` <= ?", end)
 	}
 
 	if err := query.Find(&subs).Error; err != nil {
@@ -67,6 +67,7 @@ func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest
 		IsActive:    req.IsActive,
 		StartTime:   req.StartTime,
 		EndTime:     req.EndTime,
+		Objects:     subIds,
 	}
 	scopeBytes, _ := scopeInfo.Marshal()
 	contentInfo := task.QuotaContent{
