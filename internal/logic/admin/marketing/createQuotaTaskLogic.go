@@ -42,7 +42,7 @@ func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest
 		query = query.Where("`status` IN ?", []int64{0, 1, 2}) // 0: Pending 1: Active 2: Finished
 	}
 	if req.StartTime != 0 {
-		start := time.Unix(req.StartTime, 0)
+		start := time.UnixMilli(req.StartTime)
 		query = query.Where("`start_time` >= ?", start)
 	}
 	if req.EndTime != 0 {
