@@ -45,33 +45,6 @@ type (
 		CreatedAt      int64        `json:"created_at"`
 		UpdatedAt      int64        `json:"updated_at"`
 	}
-	Protocol {
-		Type                 string `json:"type"`
-		Port                 uint16 `json:"port"`
-		Security             string `json:"security,omitempty"`
-		SNI                  string `json:"sni,omitempty"`
-		AllowInsecure        bool   `json:"allow_insecure,omitempty"`
-		Fingerprint          string `json:"fingerprint,omitempty"`
-		RealityServerAddr    string `json:"reality_server_addr,omitempty"`
-		RealityServerPort    int    `json:"reality_server_port,omitempty"`
-		RealityPrivateKey    string `json:"reality_private_key,omitempty"`
-		RealityPublicKey     string `json:"reality_public_key,omitempty"`
-		RealityShortId       string `json:"reality_short_id,omitempty"`
-		Transport            string `json:"transport,omitempty"`
-		Host                 string `json:"host,omitempty"`
-		Path                 string `json:"path,omitempty"`
-		ServiceName          string `json:"service_name,omitempty"`
-		Cipher               string `json:"cipher,omitempty"`
-		ServerKey            string `json:"server_key,omitempty"`
-		Flow                 string `json:"flow,omitempty"`
-		HopPorts             string `json:"hop_ports,omitempty"`
-		HopInterval          int    `json:"hop_interval,omitempty"`
-		ObfsPassword         string `json:"obfs_password,omitempty"`
-		DisableSNI           bool   `json:"disable_sni,omitempty"`
-		ReduceRtt            bool   `json:"reduce_rtt,omitempty"`
-		UDPRelayMode         string `json:"udp_relay_mode,omitempty"`
-		CongestionController string `json:"congestion_controller,omitempty"`
-	}
 	CreateServerRequest {
 		Name      string     `json:"name"`
 		Country   string     `json:"country,omitempty"`

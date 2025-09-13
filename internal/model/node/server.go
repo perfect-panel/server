@@ -126,6 +126,12 @@ type Protocol struct {
 	ReduceRtt            bool   `json:"reduce_rtt,omitempty"`
 	UDPRelayMode         string `json:"udp_relay_mode,omitempty"`
 	CongestionController string `json:"congestion_controller,omitempty"`
+	Plugin               string `json:"plugin,omitempty"`         // obfs, v2ray-plugin, simple-obfs
+	PluginOptions        string `json:"plugin_options,omitempty"` // plugin options, eg: obfs=http;obfs-host=www.bing.com
+	Multiplex            string `json:"multiplex,omitempty"`      // mux, eg: off/low/medium/high
+	PaddingScheme        string `json:"padding_scheme,omitempty"` // padding scheme
+	UpMbps               int    `json:"up_mbps,omitempty"`        // upload speed limit
+	DownMbps             int    `json:"down_mbps,omitempty"`      // download speed limit
 }
 
 // Marshal protocol to json

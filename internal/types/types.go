@@ -1448,6 +1448,12 @@ type Protocol struct {
 	ReduceRtt            bool   `json:"reduce_rtt,omitempty"`
 	UDPRelayMode         string `json:"udp_relay_mode,omitempty"`
 	CongestionController string `json:"congestion_controller,omitempty"`
+	Plugin               string `json:"plugin,omitempty"`         // obfs, v2ray-plugin, simple-obfs
+	PluginOptions        string `json:"plugin_options,omitempty"` // plugin options, eg: obfs=http;obfs-host=www.bing.com
+	Multiplex            string `json:"multiplex,omitempty"`      // mux, eg: off/low/medium/high
+	PaddingScheme        string `json:"padding_scheme,omitempty"` // padding scheme
+	UpMbps               int    `json:"up_mbps,omitempty"`        // upload speed limit
+	DownMbps             int    `json:"down_mbps,omitempty"`      // download speed limit
 }
 
 type PubilcRegisterConfig struct {
@@ -1564,6 +1570,15 @@ type QueryQuotaTaskStatusResponse struct {
 	Current int64  `json:"current"`
 	Total   int64  `json:"total"`
 	Errors  string `json:"errors"`
+}
+
+type QueryServerConfigRequest struct {
+	ServerID  int64  `path:"server_id"`
+	SecretKey string `header:"secret_key"`
+}
+
+type QueryServerConfigResponse struct {
+	Protocols []Protocol `json:"protocols"`
 }
 
 type QuerySubscribeGroupListResponse struct {
