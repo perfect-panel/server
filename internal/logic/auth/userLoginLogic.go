@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/internal/config"
@@ -41,25 +42,39 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	// Record login status
 	defer func(svcCtx *svc.ServiceContext) {
 		if userInfo.Id != 0 {
-			if err := svcCtx.UserModel.InsertLoginLog(l.ctx, &user.LoginLog{
-				UserId:    userInfo.Id,
+			loginLog := log.Login{
+				Method:    "email",
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
-				Success:   &loginStatus,
+				Success:   loginStatus,
+				Timestamp: time.Now().UnixMilli(),
+			}
+			content, _ := loginLog.Marshal()
+			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+				Type:     log.TypeLogin.Uint8(),
+				Date:     time.Now().Format("2006-01-02"),
+				ObjectID: userInfo.Id,
+				Content:  string(content),
 			}); err != nil {
-				l.Logger.Error("[UserLogin] insert login log error", logger.Field("error", err.Error()))
+				l.Errorw("failed to insert login log",
+					logger.Field("user_id", userInfo.Id),
+					logger.Field("ip", req.IP),
+					logger.Field("error", err.Error()),
+				)
 			}
 		}
 	}(l.svcCtx)
 
 	userInfo, err = l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
+
 	if err != nil {
 		if errors.As(err, &gorm.ErrRecordNotFound) {
-			logger.WithContext(l.ctx).Error(err)
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)
 		}
+		logger.WithContext(l.ctx).Error(err)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
 	}
+
 	// Verify password
 	if !tool.VerifyPassWord(req.Password, userInfo.Password) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")

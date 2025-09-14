@@ -38,7 +38,7 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 		return nil
 	}
 	// query server info
-	serverInfo, err := l.svc.ServerModel.FindOne(ctx, payload.ServerId)
+	serverInfo, err := l.svc.NodeModel.FindOneServer(ctx, payload.ServerId)
 	if err != nil {
 		logger.WithContext(ctx).Error("[TrafficStatistics] Find server info failed",
 			logger.Field("serverId", payload.ServerId),
@@ -46,23 +46,22 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 		)
 		return nil
 	}
-	if serverInfo.TrafficRatio == 0 {
-		logger.WithContext(ctx).Error("[TrafficStatistics] Server log ratio is 0",
-			logger.Field("serverId", payload.ServerId),
-		)
-		return nil
+	var serverRatio float32 = 1.0
+	if serverInfo.Ratio > 0 {
+		serverRatio = serverInfo.Ratio
 	}
+
 	now := time.Now()
 	realTimeMultiplier := l.svc.NodeMultiplierManager.GetMultiplier(now)
 	for _, log := range payload.Logs {
 		// update user subscribe with log
-		d := int64(float32(log.Download) * serverInfo.TrafficRatio * realTimeMultiplier)
-		u := int64(float32(log.Upload) * serverInfo.TrafficRatio * realTimeMultiplier)
+		d := int64(float32(log.Download) * serverRatio * realTimeMultiplier)
+		u := int64(float32(log.Upload) * serverRatio * realTimeMultiplier)
 		if err := l.svc.UserModel.UpdateUserSubscribeWithTraffic(ctx, log.SID, d, u); err != nil {
 			logger.WithContext(ctx).Error("[TrafficStatistics] Update user subscribe with log failed",
 				logger.Field("sid", log.SID),
-				logger.Field("download", float32(log.Download)*serverInfo.TrafficRatio),
-				logger.Field("upload", float32(log.Upload)*serverInfo.TrafficRatio),
+				logger.Field("download", float32(log.Download)*serverRatio),
+				logger.Field("upload", float32(log.Upload)*serverRatio),
 				logger.Field("error", err.Error()),
 			)
 			continue
@@ -88,8 +87,8 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 		}); err != nil {
 			logger.WithContext(ctx).Error("[TrafficStatistics] Create log log failed",
 				logger.Field("uid", log.SID),
-				logger.Field("download", float32(log.Download)*serverInfo.TrafficRatio),
-				logger.Field("upload", float32(log.Upload)*serverInfo.TrafficRatio),
+				logger.Field("download", float32(log.Download)*serverRatio),
+				logger.Field("upload", float32(log.Upload)*serverRatio),
 				logger.Field("error", err.Error()),
 			)
 		}

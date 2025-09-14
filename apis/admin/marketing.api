@@ -12,7 +12,7 @@ type (
 	CreateBatchSendEmailTaskRequest {
 		Subject           string `json:"subject"`
 		Content           string `json:"content"`
-		Scope             string `json:"scope"`
+		Scope             int8   `json:"scope"`
 		RegisterStartTime int64  `json:"register_start_time,omitempty"`
 		RegisterEndTime   int64  `json:"register_end_time,omitempty"`
 		Additional        string `json:"additional,omitempty"`
@@ -25,7 +25,7 @@ type (
 		Subject           string `json:"subject"`
 		Content           string `json:"content"`
 		Recipients        string `json:"recipients"`
-		Scope             string `json:"scope"`
+		Scope             int8   `json:"scope"`
 		RegisterStartTime int64  `json:"register_start_time"`
 		RegisterEndTime   int64  `json:"register_end_time"`
 		Additional        string `json:"additional"`
@@ -42,7 +42,7 @@ type (
 	GetBatchSendEmailTaskListRequest {
 		Page   int    `form:"page"`
 		Size   int    `form:"size"`
-		Scope  string `form:"scope,omitempty"`
+		Scope  *int8  `form:"scope,omitempty"`
 		Status *uint8 `form:"status,omitempty"`
 	}
 	GetBatchSendEmailTaskListResponse {
@@ -53,9 +53,9 @@ type (
 		Id int64 `json:"id"`
 	}
 	GetPreSendEmailCountRequest {
-		Scope             string `json:"scope"`
-		RegisterStartTime int64  `json:"register_start_time,omitempty"`
-		RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+		Scope             int8  `json:"scope"`
+		RegisterStartTime int64 `json:"register_start_time,omitempty"`
+		RegisterEndTime   int64 `json:"register_end_time,omitempty"`
 	}
 	GetPreSendEmailCountResponse {
 		Count int64 `json:"count"`
@@ -64,6 +64,61 @@ type (
 		Id int64 `json:"id"`
 	}
 	GetBatchSendEmailTaskStatusResponse {
+		Status  uint8  `json:"status"`
+		Current int64  `json:"current"`
+		Total   int64  `json:"total"`
+		Errors  string `json:"errors"`
+	}
+	CreateQuotaTaskRequest {
+		Subscribers  []int64 `json:"subscribers"`
+		IsActive     *bool   `json:"is_active"`
+		StartTime    int64   `json:"start_time"`
+		EndTime      int64   `json:"end_time"`
+		ResetTraffic bool    `json:"reset_traffic"`
+		Days         uint64  `json:"days"`
+		GiftType     uint8   `json:"gift_type"`
+		GiftValue    uint64  `json:"gift_value"`
+	}
+	QuotaTask {
+		Id           int64   `json:"id"`
+		Subscribers  []int64 `json:"subscribers"`
+		IsActive     *bool   `json:"is_active"`
+		StartTime    int64   `json:"start_time"`
+		EndTime      int64   `json:"end_time"`
+		ResetTraffic bool    `json:"reset_traffic"`
+		Days         uint64  `json:"days"`
+		GiftType     uint8   `json:"gift_type"`
+		GiftValue    uint64  `json:"gift_value"`
+		Objects      []int64 `json:"objects"` // UserSubscribe IDs
+		Status       uint8   `json:"status"`
+		Total        int64   `json:"total"`
+		Current      int64   `json:"current"`
+		Errors       string  `json:"errors"`
+		CreatedAt    int64   `json:"created_at"`
+		UpdatedAt    int64   `json:"updated_at"`
+	}
+	QueryQuotaTaskPreCountRequest {
+		Subscribers []int64 `json:"subscribers"`
+		IsActive    *bool   `json:"is_active"`
+		StartTime   int64   `json:"start_time"`
+		EndTime     int64   `json:"end_time"`
+	}
+	QueryQuotaTaskPreCountResponse {
+		Count int64 `json:"count"`
+	}
+	QueryQuotaTaskListRequest {
+		Page   int    `form:"page"`
+		Size   int    `form:"size"`
+		Status *uint8 `form:"status,omitempty"`
+	}
+	QueryQuotaTaskListResponse {
+		Total int64       `json:"total"`
+		List  []QuotaTask `json:"list"`
+	}
+	QueryQuotaTaskStatusRequest {
+		Id int64 `json:"id"`
+	}
+	QueryQuotaTaskStatusResponse {
 		Status  uint8  `json:"status"`
 		Current int64  `json:"current"`
 		Total   int64  `json:"total"`
@@ -96,5 +151,17 @@ service ppanel {
 	@doc "Get batch send email task status"
 	@handler GetBatchSendEmailTaskStatus
 	post /email/batch/status (GetBatchSendEmailTaskStatusRequest) returns (GetBatchSendEmailTaskStatusResponse)
+
+	@doc "Create a quota task"
+	@handler CreateQuotaTask
+	post /quota/create (CreateQuotaTaskRequest)
+
+	@doc "Query quota task pre-count"
+	@handler QueryQuotaTaskPreCount
+	post /quota/pre-count (QueryQuotaTaskPreCountRequest) returns (QueryQuotaTaskPreCountResponse)
+
+	@doc "Query quota task list"
+	@handler QueryQuotaTaskList
+	get /quota/list (QueryQuotaTaskListRequest) returns (QueryQuotaTaskListResponse)
 }
 

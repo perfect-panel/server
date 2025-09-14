@@ -14,7 +14,6 @@ func StartInitSystemConfig(svc *svc.ServiceContext) {
 	Subscribe(svc)
 	Register(svc)
 	Mobile(svc)
-	TrafficDataToRedis(svc)
 	if !svc.Config.Debug {
 		Telegram(svc)
 	}

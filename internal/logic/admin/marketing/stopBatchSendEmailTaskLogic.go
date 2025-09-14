@@ -32,7 +32,7 @@ func (l *StopBatchSendEmailTaskLogic) StopBatchSendEmailTask(req *types.StopBatc
 	} else {
 		logger.Error("[StopBatchSendEmailTaskLogic] email.Manager is nil, cannot stop task")
 	}
-	err = l.svcCtx.DB.Model(&task.EmailTask{}).Where("id = ?", req.Id).Update("status", 2).Error
+	err = l.svcCtx.DB.Model(&task.Task{}).Where("id = ?", req.Id).Update("status", 2).Error
 
 	if err != nil {
 		l.Errorf("failed to stop email task, error: %v", err)

@@ -3,6 +3,7 @@ package subscribe
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -41,7 +42,7 @@ func (l *GetSubscribeDetailsLogic) GetSubscribeDetails(req *types.GetSubscribeDe
 			l.Logger.Error("[GetSubscribeDetailsLogic] JSON unmarshal failed: ", logger.Field("error", err.Error()), logger.Field("discount", sub.Discount))
 		}
 	}
-	resp.Server = tool.StringToInt64Slice(sub.Server)
-	resp.ServerGroup = tool.StringToInt64Slice(sub.ServerGroup)
+	resp.Nodes = tool.StringToInt64Slice(sub.Nodes)
+	resp.NodeTags = strings.Split(sub.NodeTags, ",")
 	return resp, nil
 }

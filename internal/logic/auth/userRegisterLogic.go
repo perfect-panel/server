@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/logic/common"
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -145,13 +146,47 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	loginStatus := true
 	defer func() {
 		if token != "" && userInfo.Id != 0 {
-			if err := l.svcCtx.UserModel.InsertLoginLog(l.ctx, &user.LoginLog{
-				UserId:    userInfo.Id,
+			loginLog := log.Login{
+				Method:    "email",
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
-				Success:   &loginStatus,
+				Success:   loginStatus,
+				Timestamp: time.Now().UnixMilli(),
+			}
+			content, _ := loginLog.Marshal()
+			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+				Id:       0,
+				Type:     log.TypeLogin.Uint8(),
+				Date:     time.Now().Format("2006-01-02"),
+				ObjectID: userInfo.Id,
+				Content:  string(content),
 			}); err != nil {
-				l.Logger.Error("[UserRegister] insert login log error", logger.Field("error", err.Error()))
+				l.Errorw("failed to insert login log",
+					logger.Field("user_id", userInfo.Id),
+					logger.Field("ip", req.IP),
+					logger.Field("error", err.Error()),
+				)
+			}
+
+			// Register log
+			registerLog := log.Register{
+				AuthMethod: "email",
+				Identifier: req.Email,
+				RegisterIP: req.IP,
+				UserAgent:  req.UserAgent,
+				Timestamp:  time.Now().UnixMilli(),
+			}
+			content, _ = registerLog.Marshal()
+			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+				Type:     log.TypeRegister.Uint8(),
+				ObjectID: userInfo.Id,
+				Date:     time.Now().Format("2006-01-02"),
+				Content:  string(content),
+			}); err != nil {
+				l.Errorw("failed to insert login log",
+					logger.Field("user_id", userInfo.Id),
+					logger.Field("ip", req.IP),
+					logger.Field("error", err.Error()))
 			}
 		}
 	}()

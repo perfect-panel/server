@@ -3,7 +3,9 @@ package order
 import (
 	"context"
 	"encoding/json"
+	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/pkg/payment/stripe"
 	"gorm.io/gorm"
@@ -92,15 +94,25 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 				return err
 			}
 			// Record the deduction refund log
-			giftAmountLog := &user.GiftAmountLog{
-				UserId:  orderInfo.UserId,
-				OrderNo: orderInfo.OrderNo,
-				Amount:  orderInfo.GiftAmount,
-				Type:    1,
-				Balance: deduction,
-				Remark:  "Order cancellation refund",
+
+			giftLog := log.Gift{
+				Type:        log.GiftTypeIncrease,
+				OrderNo:     orderInfo.OrderNo,
+				SubscribeId: 0,
+				Amount:      orderInfo.GiftAmount,
+				Balance:     deduction,
+				Remark:      "Order cancellation refund",
+				Timestamp:   time.Now().UnixMilli(),
 			}
-			err = tx.Model(&user.GiftAmountLog{}).Create(giftAmountLog).Error
+			content, _ := giftLog.Marshal()
+
+			err = tx.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Id:       0,
+				Type:     log.TypeGift.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: userInfo.Id,
+				Content:  string(content),
+			}).Error
 			if err != nil {
 				l.Errorw("[CloseOrder] Record cancellation refund log failed",
 					logger.Field("error", err.Error()),

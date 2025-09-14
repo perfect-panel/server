@@ -144,27 +144,7 @@ func (m *defaultUserModel) Delete(ctx context.Context, id int64, tx ...*gorm.DB)
 			return err
 		}
 
-		if err := db.Model(&BalanceLog{}).Where("`user_id` = ?", id).Delete(&BalanceLog{}).Error; err != nil {
-			return err
-		}
-
-		if err := db.Model(&GiftAmountLog{}).Where("`user_id` = ?", id).Delete(&GiftAmountLog{}).Error; err != nil {
-			return err
-		}
-
-		if err := db.Model(&LoginLog{}).Where("`user_id` = ?", id).Delete(&LoginLog{}).Error; err != nil {
-			return err
-		}
-
-		if err := db.Model(&SubscribeLog{}).Where("`user_id` = ?", id).Delete(&SubscribeLog{}).Error; err != nil {
-			return err
-		}
-
 		if err := db.Model(&Device{}).Where("`user_id` = ?", id).Delete(&Device{}).Error; err != nil {
-			return err
-		}
-
-		if err := db.Model(&CommissionLog{}).Where("`user_id` = ?", id).Delete(&CommissionLog{}).Error; err != nil {
 			return err
 		}
 

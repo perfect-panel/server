@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/perfect-panel/server/pkg/logger"
 
@@ -43,16 +44,15 @@ func (l *SendSmsLogic) ProcessTask(ctx context.Context, task *asynq.Task) error 
 		logger.WithContext(ctx).Error("[SendSmsLogic] New send sms client failed", logger.Field("error", err.Error()), logger.Field("payload", payload))
 		return err
 	}
-	createSms := &log.MessageLog{
-		Type:     log.Mobile.String(),
+	createSms := &log.Message{
 		Platform: l.svcCtx.Config.Mobile.Platform,
 		To:       fmt.Sprintf("+%s%s", payload.TelephoneArea, payload.Telephone),
 		Subject:  constant.ParseVerifyType(payload.Type).String(),
-		Content:  "",
+		Content: map[string]interface{}{
+			"content": client.GetSendCodeContent(payload.Content),
+		},
 	}
 	err = client.SendCode(payload.TelephoneArea, payload.Telephone, payload.Content)
-
-	createSms.Content = client.GetSendCodeContent(payload.Content)
 
 	if err != nil {
 		logger.WithContext(ctx).Error("[SendSmsLogic] Send sms failed", logger.Field("error", err.Error()), logger.Field("payload", payload))
@@ -64,7 +64,14 @@ func (l *SendSmsLogic) ProcessTask(ctx context.Context, task *asynq.Task) error 
 	}
 	createSms.Status = 1
 	logger.WithContext(ctx).Info("[SendSmsLogic] Send sms", logger.Field("telephone", payload.Telephone), logger.Field("content", createSms.Content))
-	err = l.svcCtx.LogModel.InsertMessageLog(ctx, createSms)
+
+	content, _ := createSms.Marshal()
+	err = l.svcCtx.LogModel.Insert(ctx, &log.SystemLog{
+		Type:     log.TypeMobileMessage.Uint8(),
+		Date:     time.Now().Format("2006-01-02"),
+		ObjectID: 0,
+		Content:  string(content),
+	})
 	if err != nil {
 		logger.WithContext(ctx).Error("[SendSmsLogic] Send sms failed", logger.Field("error", err.Error()), logger.Field("payload", payload))
 		return nil

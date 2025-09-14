@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/auth"
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -52,7 +53,6 @@ func NewOAuthLoginGetTokenLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTokenRequest, ip, userAgent string) (resp *types.LoginResponse, err error) {
-	startTime := time.Now()
 	requestID := uuidx.NewUUID().String()
 	loginStatus := false
 	var userInfo *user.User
@@ -65,27 +65,10 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTok
 	)
 
 	defer func() {
-		duration := time.Since(startTime)
-		l.recordLoginStatus(&loginStatus, &userInfo, ip, userAgent, requestID)
-
-		if loginStatus {
-			l.Infow("oauth login completed successfully",
-				logger.Field("request_id", requestID),
-				logger.Field("method", req.Method),
-				logger.Field("user_id", userInfo.Id),
-				logger.Field("duration_ms", duration.Milliseconds()),
-			)
-		} else {
-			l.Errorw("oauth login failed",
-				logger.Field("request_id", requestID),
-				logger.Field("method", req.Method),
-				logger.Field("error", err),
-				logger.Field("duration_ms", duration.Milliseconds()),
-			)
-		}
+		l.recordLoginStatus(loginStatus, userInfo, ip, userAgent, requestID, req.Method)
 	}()
 
-	userInfo, err = l.handleOAuthProvider(req, requestID)
+	userInfo, err = l.handleOAuthProvider(req, requestID, ip, userAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +82,7 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTok
 	return &types.LoginResponse{Token: token}, nil
 }
 
-func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := time.Now()
 	l.Infow("google oauth processing started",
 		logger.Field("request_id", requestID),
@@ -174,10 +157,10 @@ func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, r
 		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
 	)
 
-	return l.findOrRegisterUser(OAuthGoogle, googleUserInfo.OpenID, googleUserInfo.Email, googleUserInfo.Picture, requestID)
+	return l.findOrRegisterUser(OAuthGoogle, googleUserInfo.OpenID, googleUserInfo.Email, googleUserInfo.Picture, requestID, ip, userAgent)
 }
 
-func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := time.Now()
 	l.Infow("apple oauth processing started",
 		logger.Field("request_id", requestID),
@@ -274,10 +257,10 @@ func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, re
 		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
 	)
 
-	return l.findOrRegisterUser(OAuthApple, appleUnique, email, "", requestID)
+	return l.findOrRegisterUser(OAuthApple, appleUnique, email, "", requestID, ip, userAgent)
 }
 
-func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := time.Now()
 	l.Infow("telegram oauth processing started",
 		logger.Field("request_id", requestID),
@@ -337,10 +320,10 @@ func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest,
 		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
 	)
 
-	return l.findOrRegisterUser(OAuthTelegram, userID, email, avatar, requestID)
+	return l.findOrRegisterUser(OAuthTelegram, userID, email, avatar, requestID, ip, userAgent)
 }
 
-func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, requestID string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := time.Now()
 	l.Infow("user registration started",
 		logger.Field("request_id", requestID),
@@ -441,6 +424,31 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 		logger.Field("duration_ms", time.Since(startTime).Milliseconds()),
 	)
 
+	// Register log
+	registerLog := log.Register{
+		AuthMethod: method,
+		Identifier: openid,
+		RegisterIP: ip,
+		UserAgent:  userAgent,
+		Timestamp:  time.Now().UnixMilli(),
+	}
+	content, _ := registerLog.Marshal()
+
+	err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+		Type:     log.TypeRegister.Uint8(),
+		Date:     time.Now().Format("2006-01-02"),
+		ObjectID: userInfo.Id,
+		Content:  string(content),
+	})
+	if err != nil {
+		l.Errorw("failed to insert register log",
+			logger.Field("request_id", requestID),
+			logger.Field("user_id", userInfo.Id),
+			logger.Field("ip", ip),
+			logger.Field("error", err.Error()),
+		)
+	}
+
 	return userInfo, err
 }
 
@@ -504,32 +512,34 @@ func (l *OAuthLoginGetTokenLogic) createAuthMethod(db *gorm.DB, userID int64, au
 	return nil
 }
 
-func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus *bool, userInfo **user.User, ip, userAgent, requestID string) {
-	if *userInfo != nil && (*userInfo).Id != 0 {
-		if err := l.svcCtx.UserModel.InsertLoginLog(l.ctx, &user.LoginLog{
-			UserId:    (*userInfo).Id,
+func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *user.User, ip, userAgent, requestID, authType string) {
+
+	if userInfo != nil && userInfo.Id != 0 {
+		loginLog := log.Login{
+			Method:    authType,
 			LoginIP:   ip,
 			UserAgent: userAgent,
 			Success:   loginStatus,
+			Timestamp: time.Now().UnixMilli(),
+		}
+		content, _ := loginLog.Marshal()
+		if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			Type:     log.TypeLogin.Uint8(),
+			Date:     time.Now().Format("2006-01-02"),
+			ObjectID: userInfo.Id,
+			Content:  string(content),
 		}); err != nil {
 			l.Errorw("failed to insert login log",
 				logger.Field("request_id", requestID),
-				logger.Field("user_id", (*userInfo).Id),
+				logger.Field("user_id", userInfo.Id),
 				logger.Field("ip", ip),
 				logger.Field("error", err.Error()),
-			)
-		} else {
-			l.Debugw("login log recorded successfully",
-				logger.Field("request_id", requestID),
-				logger.Field("user_id", (*userInfo).Id),
-				logger.Field("ip", ip),
-				logger.Field("success", *loginStatus),
 			)
 		}
 	}
 }
 
-func (l *OAuthLoginGetTokenLogic) handleOAuthProvider(req *types.OAuthLoginGetTokenRequest, requestID string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) handleOAuthProvider(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	l.Debugw("handling oauth provider",
 		logger.Field("request_id", requestID),
 		logger.Field("provider", req.Method),
@@ -537,11 +547,11 @@ func (l *OAuthLoginGetTokenLogic) handleOAuthProvider(req *types.OAuthLoginGetTo
 
 	switch req.Method {
 	case OAuthGoogle:
-		return l.google(req, requestID)
+		return l.google(req, requestID, ip, userAgent)
 	case OAuthApple:
-		return l.apple(req, requestID)
+		return l.apple(req, requestID, ip, userAgent)
 	case OAuthTelegram:
-		return l.telegram(req, requestID)
+		return l.telegram(req, requestID, ip, userAgent)
 	default:
 		l.Errorw("unsupported oauth login method",
 			logger.Field("request_id", requestID),
@@ -730,7 +740,7 @@ func (l *OAuthLoginGetTokenLogic) getTelegramConfig(requestID string) (*auth.Tel
 	return &cfg, nil
 }
 
-func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, avatar, requestID string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, avatar, requestID, ip, userAgent string) (*user.User, error) {
 	l.Debugw("finding or registering user",
 		logger.Field("request_id", requestID),
 		logger.Field("auth_type", authType),
@@ -747,7 +757,7 @@ func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, av
 				logger.Field("openid", openID),
 				logger.Field("email", email),
 			)
-			return l.register(email, avatar, authType, openID, requestID)
+			return l.register(email, avatar, authType, openID, requestID, ip, userAgent)
 		}
 		l.Errorw("failed to find user auth method by openid",
 			logger.Field("request_id", requestID),

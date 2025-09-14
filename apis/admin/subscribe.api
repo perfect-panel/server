@@ -35,6 +35,7 @@ type (
 	}
 	CreateSubscribeRequest {
 		Name           string              `json:"name" validate:"required"`
+		Language       string              `json:"language"`
 		Description    string              `json:"description"`
 		UnitPrice      int64               `json:"unit_price"`
 		UnitTime       string              `json:"unit_time"`
@@ -45,9 +46,8 @@ type (
 		SpeedLimit     int64               `json:"speed_limit"`
 		DeviceLimit    int64               `json:"device_limit"`
 		Quota          int64               `json:"quota"`
-		GroupId        int64               `json:"group_id"`
-		ServerGroup    []int64             `json:"server_group"`
-		Server         []int64             `json:"server"`
+		Nodes          []int64             `json:"nodes"`
+		NodeTags       []string            `json:"node_tags"`
 		Show           *bool               `json:"show"`
 		Sell           *bool               `json:"sell"`
 		DeductionRatio int64               `json:"deduction_ratio"`
@@ -58,6 +58,7 @@ type (
 	UpdateSubscribeRequest {
 		Id             int64               `json:"id" validate:"required"`
 		Name           string              `json:"name" validate:"required"`
+		Language       string              `json:"language"`
 		Description    string              `json:"description"`
 		UnitPrice      int64               `json:"unit_price"`
 		UnitTime       string              `json:"unit_time"`
@@ -68,9 +69,8 @@ type (
 		SpeedLimit     int64               `json:"speed_limit"`
 		DeviceLimit    int64               `json:"device_limit"`
 		Quota          int64               `json:"quota"`
-		GroupId        int64               `json:"group_id"`
-		ServerGroup    []int64             `json:"server_group"`
-		Server         []int64             `json:"server"`
+		Nodes          []int64             `json:"nodes"`
+		NodeTags       []string            `json:"node_tags"`
 		Show           *bool               `json:"show"`
 		Sell           *bool               `json:"sell"`
 		Sort           int64               `json:"sort"`
@@ -83,10 +83,10 @@ type (
 		Sort []SortItem `json:"sort"`
 	}
 	GetSubscribeListRequest {
-		Page    int64  `form:"page" validate:"required"`
-		Size    int64  `form:"size" validate:"required"`
-		GroupId int64  `form:"group_id,omitempty"`
-		Search  string `form:"search,omitempty"`
+		Page     int64  `form:"page" validate:"required"`
+		Size     int64  `form:"size" validate:"required"`
+		Language string `form:"language,omitempty"`
+		Search   string `form:"search,omitempty"`
 	}
 	SubscribeItem {
 		Subscribe

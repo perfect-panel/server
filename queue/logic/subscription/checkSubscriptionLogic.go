@@ -1,12 +1,13 @@
 package subscription
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"text/template"
+	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/pkg/tool"
 	queue "github.com/perfect-panel/server/queue/types"
 
 	"github.com/perfect-panel/server/pkg/logger"
@@ -62,7 +63,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 					return err
 				}
 			}
-
+			l.clearServerCache(ctx, list...)
 			logger.Infow("[Check Subscription Traffic] Update subscribe status", logger.Field("user_ids", ids), logger.Field("count", int64(len(ids))))
 
 		} else {
@@ -104,6 +105,8 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 				logger.Errorw("[Check Subscription Traffic] Clear subscribe cache failed", logger.Field("error", err.Error()))
 				return err
 			}
+			l.clearServerCache(ctx, list...)
+
 			logger.Info("[Check Subscription Expire] Update subscribe status", logger.Field("user_ids", ids), logger.Field("count", int64(len(ids))))
 		} else {
 			logger.Info("[Check Subscription Expire] No subscribe need to update")
@@ -129,24 +132,14 @@ func (l *CheckSubscriptionLogic) sendExpiredNotify(ctx context.Context, subs []i
 			continue
 		}
 		var taskPayload queue.SendEmailPayload
+		taskPayload.Type = queue.EmailTypeExpiration
 		taskPayload.Email = method.AuthIdentifier
 		taskPayload.Subject = "Subscription Expired"
-		tpl, err := template.New("Expired").Parse(l.svc.Config.Email.ExpirationEmailTemplate)
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Parse template failed", logger.Field("error", err.Error()))
-			continue
-		}
-		var result bytes.Buffer
-		err = tpl.Execute(&result, map[string]interface{}{
+		taskPayload.Content = map[string]interface{}{
 			"SiteLogo":   l.svc.Config.Site.SiteLogo,
 			"SiteName":   l.svc.Config.Site.SiteName,
 			"ExpireDate": sub.ExpireTime.Format("2006-01-02 15:04:05"),
-		})
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Execute template failed", logger.Field("error", err.Error()))
-			continue
 		}
-		taskPayload.Content = result.String()
 		payloadBuy, err := json.Marshal(taskPayload)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] Marshal payload failed", logger.Field("error", err.Error()))
@@ -179,23 +172,13 @@ func (l *CheckSubscriptionLogic) sendTrafficNotify(ctx context.Context, subs []i
 			continue
 		}
 		var taskPayload queue.SendEmailPayload
+		taskPayload.Type = queue.EmailTypeTrafficExceed
 		taskPayload.Email = method.AuthIdentifier
 		taskPayload.Subject = "Subscription Traffic Exceed"
-		tpl, err := template.New("Traffic").Parse(l.svc.Config.Email.TrafficExceedEmailTemplate)
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Parse template failed", logger.Field("error", err.Error()))
-			continue
-		}
-		var result bytes.Buffer
-		err = tpl.Execute(&result, map[string]interface{}{
+		taskPayload.Content = map[string]interface{}{
 			"SiteLogo": l.svc.Config.Site.SiteLogo,
 			"SiteName": l.svc.Config.Site.SiteName,
-		})
-		if err != nil {
-			logger.Errorw("[CheckSubscription] Execute template failed", logger.Field("error", err.Error()))
-			continue
 		}
-		taskPayload.Content = result.String()
 		payloadBuy, err := json.Marshal(taskPayload)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] Marshal payload failed", logger.Field("error", err.Error()))
@@ -213,4 +196,42 @@ func (l *CheckSubscriptionLogic) sendTrafficNotify(ctx context.Context, subs []i
 		)
 	}
 	return nil
+}
+
+func (l *CheckSubscriptionLogic) clearServerCache(ctx context.Context, userSubs ...*user.Subscribe) {
+	subs := make(map[int64]bool)
+	for _, sub := range userSubs {
+		if _, ok := subs[sub.SubscribeId]; !ok {
+			subs[sub.SubscribeId] = true
+		}
+	}
+
+	for sub, _ := range subs {
+		info, err := l.svc.SubscribeModel.FindOne(ctx, sub)
+		if err != nil {
+			logger.Errorw("[CheckSubscription] FindOne subscribe failed", logger.Field("error", err.Error()), logger.Field("subscribe_id", sub))
+			continue
+		}
+		if info != nil && info.Id == sub {
+			var nodes []int64
+			if info.Nodes != "" {
+				nodes = tool.StringToInt64Slice(info.Nodes)
+			}
+			var tag []string
+			if info.NodeTags != "" {
+				tag = strings.Split(info.NodeTags, ",")
+			}
+
+			err = l.svc.NodeModel.ClearNodeCache(ctx, &node.FilterNodeParams{
+				Page:     1,
+				Size:     1000,
+				Tag:      tag,
+				ServerId: nodes,
+			})
+			if err != nil {
+				logger.Errorw("[CheckSubscription] ClearNodeCache failed", logger.Field("error", err.Error()), logger.Field("subscribe_id", sub))
+				continue
+			}
+		}
+	}
 }

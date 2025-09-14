@@ -35,7 +35,6 @@ jobs:
           mkdir -p swagger
           goctl api plugin -plugin goctl-swagger='swagger -filename common.json -pack Response -response "[{\"name\":\"code\",\"type\":\"integer\",\"description\":\"状态码\"},{\"name\":\"msg\",\"type\":\"string\",\"description\":\"消息\"},{\"name\":\"data\",\"type\":\"object\",\"description\":\"数据\",\"is_data\":true}]";' -api ./apis/swagger_common.api -dir ./swagger
           goctl api plugin -plugin goctl-swagger='swagger -filename user.json -pack Response -response "[{\"name\":\"code\",\"type\":\"integer\",\"description\":\"状态码\"},{\"name\":\"msg\",\"type\":\"string\",\"description\":\"消息\"},{\"name\":\"data\",\"type\":\"object\",\"description\":\"数据\",\"is_data\":true}]";' -api ./apis/swagger_user.api -dir ./swagger
-          goctl api plugin -plugin goctl-swagger='swagger -filename app.json -pack Response -response "[{\"name\":\"code\",\"type\":\"integer\",\"description\":\"状态码\"},{\"name\":\"msg\",\"type\":\"string\",\"description\":\"消息\"},{\"name\":\"data\",\"type\":\"object\",\"description\":\"数据\",\"is_data\":true}]";' -api ./apis/swagger_app.api -dir ./swagger
           goctl api plugin -plugin goctl-swagger='swagger -filename admin.json -pack Response -response "[{\"name\":\"code\",\"type\":\"integer\",\"description\":\"状态码\"},{\"name\":\"msg\",\"type\":\"string\",\"description\":\"消息\"},{\"name\":\"data\",\"type\":\"object\",\"description\":\"数据\",\"is_data\":true}]";' -api ./apis/swagger_admin.api -dir ./swagger
           goctl api plugin -plugin goctl-swagger='swagger -filename ppanel.json -pack Response -response "[{\"name\":\"code\",\"type\":\"integer\",\"description\":\"状态码\"},{\"name\":\"msg\",\"type\":\"string\",\"description\":\"消息\"},{\"name\":\"data\",\"type\":\"object\",\"description\":\"数据\",\"is_data\":true}]";' -api ppanel.api -dir ./swagger
           goctl api plugin -plugin goctl-swagger='swagger -filename node.json -pack Response -response "[{\"name\":\"code\",\"type\":\"integer\",\"description\":\"状态码\"},{\"name\":\"msg\",\"type\":\"string\",\"description\":\"消息\"},{\"name\":\"data\",\"type\":\"object\",\"description\":\"数据\",\"is_data\":true}]";' -api ./apis/swagger_node.api -dir ./swagger
@@ -45,7 +44,6 @@ jobs:
         run: |
           test -f ./swagger/common.json
           test -f ./swagger/user.json
-          test -f ./swagger/app.json
           test -f ./swagger/admin.json
 
       - name: Checkout target repository

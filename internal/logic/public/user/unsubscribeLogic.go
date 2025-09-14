@@ -2,8 +2,11 @@ package user
 
 import (
 	"context"
+	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
@@ -46,6 +49,14 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())
 	}
 
+	activate := []uint8{0, 1, 2}
+
+	if !tool.Contains(activate, userSub.Status) {
+		// Only active (2) or paused (5) subscriptions can be cancelled
+		l.Errorw("Subscription status invalid for cancellation", logger.Field("userSubscribeId", userSub.Id), logger.Field("status", userSub.Status))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Subscription status invalid for cancellation")
+	}
+
 	// Calculate the remaining amount to refund based on unused subscription time/traffic
 	remainingAmount, err := CalculateRemainingAmount(l.ctx, l.svcCtx, req.Id)
 	if err != nil {
@@ -55,12 +66,8 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 	// Process unsubscription in a database transaction to ensure data consistency
 	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Find and update subscription status to cancelled (status = 4)
-		var userSub user.Subscribe
-		if err = db.Model(&user.Subscribe{}).Where("id = ?", req.Id).First(&userSub).Error; err != nil {
-			return err
-		}
 		userSub.Status = 4 // Set status to cancelled
-		if err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, &userSub); err != nil {
+		if err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, userSub); err != nil {
 			return err
 		}
 
@@ -91,30 +98,44 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 		// Create balance log entry only if there's an actual regular balance refund
 		balanceRefundAmount := balance - u.Balance
 		if balanceRefundAmount > 0 {
-			balanceLog := user.BalanceLog{
-				UserId:  userSub.UserId,
-				OrderId: userSub.OrderId,
-				Amount:  balanceRefundAmount,
-				Type:    4, // Type 4 represents refund transaction
-				Balance: balance,
+			balanceLog := log.Balance{
+				OrderNo:   orderInfo.OrderNo,
+				Amount:    balanceRefundAmount,
+				Type:      log.BalanceTypeRefund, // Type 4 represents refund transaction
+				Balance:   balance,
+				Timestamp: time.Now().UnixMilli(),
 			}
-			if err := db.Model(&user.BalanceLog{}).Create(&balanceLog).Error; err != nil {
+			content, _ := balanceLog.Marshal()
+
+			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Type:     log.TypeBalance.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: u.Id,
+				Content:  string(content),
+			}).Error; err != nil {
 				return err
 			}
 		}
 
 		// Create gift amount log entry if there's a gift balance refund
 		if gift > 0 {
-			giftLog := user.GiftAmountLog{
-				UserId:          userSub.UserId,
-				UserSubscribeId: userSub.Id,
-				OrderNo:         orderInfo.OrderNo,
-				Type:            1, // Type 1 represents gift amount increase
-				Amount:          gift,
-				Balance:         u.GiftAmount + gift,
-				Remark:          "Unsubscribe refund",
+
+			giftLog := log.Gift{
+				SubscribeId: userSub.Id,
+				OrderNo:     orderInfo.OrderNo,
+				Type:        log.GiftTypeIncrease, // Type 1 represents gift amount increase
+				Amount:      gift,
+				Balance:     u.GiftAmount + gift,
+				Remark:      "Unsubscribe refund",
 			}
-			if err := db.Model(&user.GiftAmountLog{}).Create(&giftLog).Error; err != nil {
+			content, _ := giftLog.Marshal()
+
+			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Type:     log.TypeGift.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: u.Id,
+				Content:  string(content),
+			}).Error; err != nil {
 				return err
 			}
 			// Update user's gift amount

@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -61,42 +60,34 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 	if data == nil {
 		return []string{}
 	}
-	SubscribeIdKey := fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id)
-	serverKey := make([]string, 0)
-	if data.Server != "" {
-		cacheKey := strings.Split(data.Server, ",")
-		for _, v := range cacheKey {
-			if v != "" {
-				serverKey = append(serverKey, fmt.Sprintf("%s%v", config.ServerUserListCacheKey, v))
+	var keys []string
+	if data.Nodes != "" {
+		var nodes []*node.Node
+		ids := strings.Split(data.Nodes, ",")
+
+		err := m.QueryNoCacheCtx(context.Background(), &nodes, func(conn *gorm.DB, v interface{}) error {
+			return conn.Model(&node.Node{}).Where("id IN (?)", tool.StringSliceToInt64Slice(ids)).Find(&nodes).Error
+		})
+		if err == nil {
+			for _, n := range nodes {
+				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
 			}
 		}
 	}
-	// Temporary solution waiting for refactoring
-	if data.ServerGroup != "" {
-		cacheKey := strings.Split(data.ServerGroup, ",")
-		groupIds := make([]int64, 0)
-		for _, v := range cacheKey {
-			if v != "" {
-				id, _ := strconv.ParseInt(v, 10, 64)
-				if id > 0 {
-					groupIds = append(groupIds, id)
-				}
-			}
-		}
-		var ids []int64
-		_ = m.Transaction(context.Background(), func(tx *gorm.DB) error {
-			return tx.Model(&server.Server{}).Where("group_id IN ?", groupIds).Pluck("id", &ids).Error
+	if data.NodeTags != "" {
+		var nodes []*node.Node
+		tags := tool.RemoveDuplicateElements(strings.Split(data.NodeTags, ",")...)
+		err := m.QueryNoCacheCtx(context.Background(), &nodes, func(conn *gorm.DB, v interface{}) error {
+			return conn.Model(&node.Node{}).Scopes(InSet("tags", tags)).Find(&nodes).Error
 		})
-		for _, id := range ids {
-			serverKey = append(serverKey, fmt.Sprintf("%s%v", config.ServerUserListCacheKey, id))
+		if err == nil {
+			for _, n := range nodes {
+				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+			}
 		}
 	}
 
-	cacheKeys := []string{SubscribeIdKey}
-	if len(serverKey) > 0 {
-		cacheKeys = append(cacheKeys, serverKey...)
-	}
-	return cacheKeys
+	return append(keys, fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id))
 }
 
 func (m *defaultSubscribeModel) Insert(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error {

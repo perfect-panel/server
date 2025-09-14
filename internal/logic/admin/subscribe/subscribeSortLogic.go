@@ -3,6 +3,7 @@ package subscribe
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -40,7 +41,11 @@ func (l *SubscribeSortLogic) SubscribeSort(req *types.SubscribeSortRequest) erro
 		l.Logger.Error("[SubscribeSortLogic] query subscribe list by ids error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query subscribe list by ids error: %v", err.Error())
 	}
-	subs, err := l.svcCtx.SubscribeModel.QuerySubscribeListByIds(l.ctx, ids)
+	_, subs, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+		Page: 1,
+		Size: 9999,
+		Ids:  ids,
+	})
 	if err != nil {
 		l.Logger.Error("[SubscribeSortLogic] query subscribe list by ids error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query subscribe list by ids error: %v", err.Error())

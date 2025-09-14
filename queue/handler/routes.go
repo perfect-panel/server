@@ -7,6 +7,7 @@ import (
 	orderLogic "github.com/perfect-panel/server/queue/logic/order"
 	smslogic "github.com/perfect-panel/server/queue/logic/sms"
 	"github.com/perfect-panel/server/queue/logic/subscription"
+	"github.com/perfect-panel/server/queue/logic/task"
 	"github.com/perfect-panel/server/queue/logic/traffic"
 	"github.com/perfect-panel/server/queue/types"
 
@@ -39,4 +40,10 @@ func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
 
 	// ScheduledBatchSendEmail
 	mux.Handle(types.ScheduledBatchSendEmail, emailLogic.NewBatchEmailLogic(serverCtx))
+
+	// ScheduledTrafficStat
+	mux.Handle(types.SchedulerTrafficStat, traffic.NewStatLogic(serverCtx))
+
+	// ForthwithQuotaTask
+	mux.Handle(types.ForthwithQuotaTask, task.NewQuotaTaskLogic(serverCtx))
 }

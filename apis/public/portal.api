@@ -25,6 +25,9 @@ type (
 	PortalPurchaseResponse {
 		OrderNo string `json:"order_no"`
 	}
+	GetSubscriptionRequest {
+		Language string `form:"language"`
+	}
 	GetSubscriptionResponse {
 		List []Subscribe `json:"list"`
 	}
@@ -75,7 +78,7 @@ service ppanel {
 
 	@doc "Get Subscription"
 	@handler GetSubscription
-	get /subscribe returns (GetSubscriptionResponse)
+	get /subscribe (GetSubscriptionRequest) returns (GetSubscriptionResponse)
 
 	@doc "Pre Purchase Order"
 	@handler PrePurchaseOrder

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/config"
 	"gorm.io/gorm"
 )
 
@@ -45,10 +44,10 @@ var (
 // ClearCache Clear Cache
 func (m *customServerModel) ClearCache(ctx context.Context, id int64) error {
 	serverIdKey := fmt.Sprintf("%s%v", cacheServerIdPrefix, id)
-	configKey := fmt.Sprintf("%s%d", config.ServerConfigCacheKey, id)
-	userListKey := fmt.Sprintf("%s%v", config.ServerUserListCacheKey, id)
+	//configKey := fmt.Sprintf("%s%d", config.ServerConfigCacheKey, id)
+	//userListKey := fmt.Sprintf("%s%v", config.ServerUserListCacheKey, id)
 
-	return m.DelCacheCtx(ctx, serverIdKey, configKey, userListKey)
+	return m.DelCacheCtx(ctx, serverIdKey)
 }
 
 // QueryServerCountByServerGroups Query  Server Count By Server Groups

@@ -73,7 +73,7 @@ func (l *ServerDataLogic) getRanking(ctx context.Context) (top10ServerToday, top
 			if s.ServerId == 0 {
 				continue
 			}
-			serverInfo, err := l.svc.ServerModel.FindOne(ctx, s.ServerId)
+			serverInfo, err := l.svc.NodeModel.FindOneServer(ctx, s.ServerId)
 			if err != nil {
 				logger.Error("[ServerDataLogic] Find server failed", logger.Field("error", err.Error()))
 				continue
@@ -92,7 +92,7 @@ func (l *ServerDataLogic) getRanking(ctx context.Context) (top10ServerToday, top
 		logger.Error("[ServerDataLogic] Get top servers traffic by day failed", logger.Field("error", err.Error()))
 	} else {
 		for _, s := range serverYesterday {
-			serverInfo, err := l.svc.ServerModel.FindOne(ctx, s.ServerId)
+			serverInfo, err := l.svc.NodeModel.FindOneServer(ctx, s.ServerId)
 			if err != nil {
 				logger.Error("[ServerDataLogic] Find server failed", logger.Field("error", err.Error()))
 				continue

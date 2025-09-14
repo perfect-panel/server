@@ -9,6 +9,7 @@ import (
 type Subscribe struct {
 	Id             int64     `gorm:"primaryKey"`
 	Name           string    `gorm:"type:varchar(255);not null;default:'';comment:Subscribe Name"`
+	Language       string    `gorm:"type:varchar(255);not null;default:'';comment:Language"`
 	Description    string    `gorm:"type:text;comment:Subscribe Description"`
 	UnitPrice      int64     `gorm:"type:int;not null;default:0;comment:Unit Price"`
 	UnitTime       string    `gorm:"type:varchar(255);not null;default:'';comment:Unit Time"`
@@ -19,9 +20,8 @@ type Subscribe struct {
 	SpeedLimit     int64     `gorm:"type:int;not null;default:0;comment:Speed Limit"`
 	DeviceLimit    int64     `gorm:"type:int;not null;default:0;comment:Device Limit"`
 	Quota          int64     `gorm:"type:int;not null;default:0;comment:Quota"`
-	GroupId        int64     `gorm:"type:bigint;comment:Group Id"`
-	ServerGroup    string    `gorm:"type:varchar(255);comment:Server Group"`
-	Server         string    `gorm:"type:varchar(255);comment:Server"`
+	Nodes          string    `gorm:"type:varchar(255);comment:Node Ids"`
+	NodeTags       string    `gorm:"type:varchar(255);comment:Node Tags"`
 	Show           *bool     `gorm:"type:tinyint(1);not null;default:0;comment:Show portal page"`
 	Sell           *bool     `gorm:"type:tinyint(1);not null;default:0;comment:Sell"`
 	Sort           int64     `gorm:"type:int;not null;default:0;comment:Sort"`

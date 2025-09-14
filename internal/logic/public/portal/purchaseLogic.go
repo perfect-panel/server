@@ -6,18 +6,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/payment"
-
-	"github.com/perfect-panel/server/pkg/constant"
-
-	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/payment"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
+
+	"github.com/hibiken/asynq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -137,13 +136,15 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 			Password:   req.Password,
 			InviteCode: req.InviteCode,
 		}
-		if _, err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf(constant.TempOrderCacheKey, orderInfo.OrderNo), tempOrder.Marshal(), CloseOrderTimeMinutes*time.Minute).Result(); err != nil {
+		content, _ := tempOrder.Marshal()
+
+		if _, err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf(constant.TempOrderCacheKey, orderInfo.OrderNo), string(content), CloseOrderTimeMinutes*time.Minute).Result(); err != nil {
 			l.Errorw("[Purchase] Redis set error", logger.Field("error", err.Error()), logger.Field("order_no", orderInfo.OrderNo))
 			return err
 		}
 		l.Infow("[Purchase] Guest order", logger.Field("order_no", orderInfo.OrderNo), logger.Field("identifier", req.Identifier))
 		// save guest order
-		if err := l.svcCtx.OrderModel.Insert(l.ctx, orderInfo, tx); err != nil {
+		if err = l.svcCtx.OrderModel.Insert(l.ctx, orderInfo, tx); err != nil {
 			return err
 		}
 		return nil

@@ -29,15 +29,21 @@ func (m *Service) Start() {
 	if _, err := m.server.Register("@every 60s", checkTask); err != nil {
 		logger.Errorf("register check subscription task failed: %s", err.Error())
 	}
-	// schedule total server data task: every 5 minutes
-	totalServerDataTask := asynq.NewTask(types.SchedulerTotalServerData, nil)
-	if _, err := m.server.Register("@every 180s", totalServerDataTask); err != nil {
-		logger.Errorf("register total server data task failed: %s", err.Error())
-	}
+	//// schedule total server data task: every 5 minutes
+	//totalServerDataTask := asynq.NewTask(types.SchedulerTotalServerData, nil)
+	//if _, err := m.server.Register("@every 180s", totalServerDataTask); err != nil {
+	//	logger.Errorf("register total server data task failed: %s", err.Error())
+	//}
 	// schedule reset traffic task: every day at 00:30
 	resetTrafficTask := asynq.NewTask(types.SchedulerResetTraffic, nil)
 	if _, err := m.server.Register("30 0 * * *", resetTrafficTask); err != nil {
 		logger.Errorf("register reset traffic task failed: %s", err.Error())
+	}
+
+	// schedule traffic stat task: every day at 00:00
+	trafficStatTask := asynq.NewTask(types.SchedulerTrafficStat, nil)
+	if _, err := m.server.Register("0 0 * * *", trafficStatTask, asynq.MaxRetry(3)); err != nil {
+		logger.Errorf("register traffic stat task failed: %s", err.Error())
 	}
 
 	if err := m.server.Run(); err != nil {

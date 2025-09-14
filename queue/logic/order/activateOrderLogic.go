@@ -7,15 +7,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/logic/telegram"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/subscribe"
@@ -42,11 +44,6 @@ const (
 	OrderStatusClose    = 3 // Order closed/cancelled
 	OrderStatusFailed   = 4 // Order processing failed
 	OrderStatusFinished = 5 // Order successfully completed
-)
-
-// Commission type constants define the types of commission transactions
-const (
-	CommissionTypeRecharge = 1 // Commission from balance recharge
 )
 
 // Predefined error variables for common error conditions
@@ -81,7 +78,7 @@ func (l *ActivateOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task) 
 		return nil // Log and continue
 	}
 
-	if err := l.processOrderByType(ctx, orderInfo); err != nil {
+	if err = l.processOrderByType(ctx, orderInfo); err != nil {
 		logger.WithContext(ctx).Error("[ActivateOrderLogic] Process task failed", logger.Field("error", err.Error()))
 		return nil
 	}
@@ -90,7 +87,7 @@ func (l *ActivateOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task) 
 	return nil
 }
 
-// parsePayload unmarshals the task payload into a structured format
+// parsePayload unMarshals the task payload into a structured format
 func (l *ActivateOrderLogic) parsePayload(ctx context.Context, payload []byte) (*types.ForthwithActivateOrderPayload, error) {
 	var p types.ForthwithActivateOrderPayload
 	if err := json.Unmarshal(payload, &p); err != nil {
@@ -185,7 +182,7 @@ func (l *ActivateOrderLogic) NewPurchase(ctx context.Context, orderInfo *order.O
 	}
 
 	// Handle commission in separate goroutine to avoid blocking
-	go l.handleCommission(context.Background(), userInfo, orderInfo, true)
+	go l.handleCommission(context.Background(), userInfo, orderInfo)
 
 	// Clear cache
 	l.clearServerCache(ctx, sub)
@@ -280,8 +277,12 @@ func (l *ActivateOrderLogic) getTempOrderInfo(ctx context.Context, orderNo strin
 	}
 
 	var tempOrder constant.TemporaryOrderInfo
-	if err = json.Unmarshal([]byte(data), &tempOrder); err != nil {
-		logger.WithContext(ctx).Error("Unmarshal temp order failed", logger.Field("error", err.Error()))
+	if err = tempOrder.Unmarshal([]byte(data)); err != nil {
+		logger.WithContext(ctx).Error("Unmarshal temp order cache failed",
+			logger.Field("error", err.Error()),
+			logger.Field("cache_key", cacheKey),
+			logger.Field("data", data),
+		)
 		return nil, err
 	}
 
@@ -352,8 +353,8 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 
 // handleCommission processes referral commission for the referrer if applicable.
 // This runs asynchronously to avoid blocking the main order processing flow.
-func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *user.User, orderInfo *order.Order, isNewPurchase bool) {
-	if !l.shouldProcessCommission(userInfo, orderInfo, isNewPurchase) {
+func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *user.User, orderInfo *order.Order) {
+	if !l.shouldProcessCommission(userInfo, orderInfo.IsNew) {
 		return
 	}
 
@@ -366,21 +367,45 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 		return
 	}
 
-	amount := l.calculateCommission(orderInfo.Price)
+	var referralPercentage uint8
+	if referer.ReferralPercentage != 0 {
+		referralPercentage = referer.ReferralPercentage
+	} else {
+		referralPercentage = uint8(l.svc.Config.Invite.ReferralPercentage)
+	}
+
+	// Order commission calculation： (Order Amount - Order Fee) * Referral Percentage
+	amount := l.calculateCommission(orderInfo.Amount-orderInfo.FeeAmount, referralPercentage)
 
 	// Use transaction for commission updates
 	err = l.svc.DB.Transaction(func(tx *gorm.DB) error {
 		referer.Commission += amount
-		if err := l.svc.UserModel.Update(ctx, referer, tx); err != nil {
+		if err = l.svc.UserModel.Update(ctx, referer, tx); err != nil {
 			return err
 		}
 
-		commissionLog := &user.CommissionLog{
-			UserId:  referer.Id,
-			OrderNo: orderInfo.OrderNo,
-			Amount:  amount,
+		var commissionType uint16
+		switch orderInfo.Type {
+		case OrderTypeSubscribe:
+			commissionType = log.CommissionTypePurchase
+		case OrderTypeRenewal:
+			commissionType = log.CommissionTypeRenewal
 		}
-		return l.svc.UserModel.InsertCommissionLog(ctx, commissionLog, tx)
+
+		commissionLog := &log.Commission{
+			Type:      commissionType,
+			Amount:    amount,
+			OrderNo:   orderInfo.OrderNo,
+			Timestamp: orderInfo.CreatedAt.UnixMilli(),
+		}
+
+		content, _ := commissionLog.Marshal()
+		return tx.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			Type:     log.TypeCommission.Uint8(),
+			Date:     time.Now().Format("2006-01-02"),
+			ObjectID: referer.Id,
+			Content:  string(content),
+		}).Error
 	})
 
 	if err != nil {
@@ -389,7 +414,7 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 	}
 
 	// Update cache
-	if err := l.svc.UserModel.UpdateUserCache(ctx, referer); err != nil {
+	if err = l.svc.UserModel.UpdateUserCache(ctx, referer); err != nil {
 		logger.WithContext(ctx).Error("Update referer cache failed",
 			logger.Field("error", err.Error()),
 			logger.Field("user_id", referer.Id),
@@ -399,47 +424,60 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 
 // shouldProcessCommission determines if commission should be processed based on
 // referrer existence, commission settings, and order type
-func (l *ActivateOrderLogic) shouldProcessCommission(userInfo *user.User, orderInfo *order.Order, isNewPurchase bool) bool {
-	return userInfo.RefererId != 0 &&
-		l.svc.Config.Invite.ReferralPercentage != 0 &&
-		(!l.svc.Config.Invite.OnlyFirstPurchase || (isNewPurchase && orderInfo.IsNew))
+func (l *ActivateOrderLogic) shouldProcessCommission(userInfo *user.User, isFirstPurchase bool) bool {
+	if userInfo == nil || userInfo.RefererId == 0 {
+		return false
+	}
+
+	referer, err := l.svc.UserModel.FindOne(context.Background(), userInfo.RefererId)
+	if err != nil {
+		logger.Errorw("Find referer failed",
+			logger.Field("error", err.Error()),
+			logger.Field("referer_id", userInfo.RefererId))
+		return false
+	}
+	if referer == nil {
+		return false
+	}
+
+	// use referer's custom settings if set
+	if referer.ReferralPercentage > 0 {
+		if referer.OnlyFirstPurchase != nil && *referer.OnlyFirstPurchase && !isFirstPurchase {
+			return false
+		}
+		return true
+	}
+
+	// use global settings
+	if l.svc.Config.Invite.ReferralPercentage == 0 {
+		return false
+	}
+	if l.svc.Config.Invite.OnlyFirstPurchase && !isFirstPurchase {
+		return false
+	}
+
+	return true
 }
 
 // calculateCommission computes the commission amount based on order price and referral percentage
-func (l *ActivateOrderLogic) calculateCommission(price int64) int64 {
-	return int64(float64(price) * (float64(l.svc.Config.Invite.ReferralPercentage) / 100))
+func (l *ActivateOrderLogic) calculateCommission(price int64, percentage uint8) int64 {
+	return int64(float64(price) * (float64(percentage) / 100))
 }
 
 // clearServerCache clears user list cache for all servers associated with the subscription
 func (l *ActivateOrderLogic) clearServerCache(ctx context.Context, sub *subscribe.Subscribe) {
-	serverIds := tool.StringToInt64Slice(sub.Server)
-	groupServerIds := l.getServerIdsByGroups(ctx, sub.ServerGroup)
-	allServerIds := append(serverIds, groupServerIds...)
+	nodeIds := tool.StringToInt64Slice(sub.Nodes)
+	tags := strings.Split(sub.NodeTags, ",")
 
-	for _, id := range allServerIds {
-		cacheKey := fmt.Sprintf("%s%d", config.ServerUserListCacheKey, id)
-		if err := l.svc.Redis.Del(ctx, cacheKey).Err(); err != nil {
-			logger.WithContext(ctx).Error("Del server user list cache failed",
-				logger.Field("error", err.Error()),
-				logger.Field("cache_key", cacheKey),
-			)
-		}
-	}
-}
-
-// getServerIdsByGroups retrieves server IDs from server groups
-func (l *ActivateOrderLogic) getServerIdsByGroups(ctx context.Context, serverGroup string) []int64 {
-	data, err := l.svc.ServerModel.FindServerListByGroupIds(ctx, tool.StringToInt64Slice(serverGroup))
+	err := l.svc.NodeModel.ClearNodeCache(ctx, &node.FilterNodeParams{
+		Page:     1,
+		Size:     1000,
+		ServerId: nodeIds,
+		Tag:      tags,
+	})
 	if err != nil {
-		logger.WithContext(ctx).Error("Find server list failed", logger.Field("error", err.Error()))
-		return nil
+		logger.WithContext(ctx).Error("[Order Queue] Clear node cache failed", logger.Field("error", err.Error()))
 	}
-
-	serverIds := make([]int64, len(data))
-	for i, item := range data {
-		serverIds[i] = item.Id
-	}
-	return serverIds
 }
 
 // Renewal handles subscription renewal including subscription extension,
@@ -460,7 +498,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 		return err
 	}
 
-	if err := l.updateSubscriptionForRenewal(ctx, userSub, sub, orderInfo); err != nil {
+	if err = l.updateSubscriptionForRenewal(ctx, userSub, sub, orderInfo); err != nil {
 		return err
 	}
 
@@ -478,7 +516,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 	l.clearServerCache(ctx, sub)
 
 	// Handle commission
-	go l.handleCommission(context.Background(), userInfo, orderInfo, false)
+	go l.handleCommission(context.Background(), userInfo, orderInfo)
 
 	// Send notifications
 	l.sendNotifications(ctx, orderInfo, userInfo, sub, userSub, telegram.RenewalNotify)
@@ -573,6 +611,24 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 	// Clear cache
 	l.clearServerCache(ctx, sub)
 
+	// insert reset traffic log
+	resetLog := &log.ResetSubscribe{
+		Type:      log.ResetSubscribeTypePaid,
+		UserId:    userInfo.Id,
+		OrderNo:   orderInfo.OrderNo,
+		Timestamp: time.Now().UnixMilli(),
+	}
+
+	content, _ := resetLog.Marshal()
+	if err = l.svc.LogModel.Insert(ctx, &log.SystemLog{
+		Type:     log.TypeResetSubscribe.Uint8(),
+		Date:     time.Now().Format(time.DateOnly),
+		ObjectID: userSub.Id,
+		Content:  string(content),
+	}); err != nil {
+		logger.WithContext(ctx).Error("[Order Queue]Insert reset subscribe log failed", logger.Field("error", err.Error()))
+	}
+
 	// Send notifications
 	l.sendNotifications(ctx, orderInfo, userInfo, sub, userSub, telegram.ResetTrafficNotify)
 
@@ -590,22 +646,35 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 	// Update balance in transaction
 	err = l.svc.DB.Transaction(func(tx *gorm.DB) error {
 		userInfo.Balance += orderInfo.Price
-		if err := l.svc.UserModel.Update(ctx, userInfo, tx); err != nil {
+		if err = l.svc.UserModel.Update(ctx, userInfo, tx); err != nil {
 			return err
 		}
 
-		balanceLog := &user.BalanceLog{
-			UserId:  orderInfo.UserId,
-			Amount:  orderInfo.Price,
-			Type:    CommissionTypeRecharge,
-			OrderId: orderInfo.Id,
-			Balance: userInfo.Balance,
+		balanceLog := &log.Balance{
+			Amount:    orderInfo.Price,
+			Type:      log.BalanceTypeRecharge,
+			OrderNo:   orderInfo.OrderNo,
+			Balance:   userInfo.Balance,
+			Timestamp: time.Now().UnixMilli(),
 		}
-		return l.svc.UserModel.InsertBalanceLog(ctx, balanceLog, tx)
+		content, _ := balanceLog.Marshal()
+
+		return tx.Model(&log.Balance{}).Create(&log.SystemLog{
+			Type:     log.TypeBalance.Uint8(),
+			Date:     time.Now().Format("2006-01-02"),
+			ObjectID: userInfo.Id,
+			Content:  string(content),
+		}).Error
 	})
 
 	if err != nil {
-		logger.WithContext(ctx).Error("Database transaction failed", logger.Field("error", err.Error()))
+		logger.WithContext(ctx).Error("[Recharge] Database transaction failed", logger.Field("error", err.Error()))
+		return err
+	}
+
+	// clear user cache
+	if err = l.svc.UserModel.UpdateUserCache(ctx, userInfo); err != nil {
+		logger.WithContext(ctx).Error("[Recharge] Update user cache failed", logger.Field("error", err.Error()))
 		return err
 	}
 

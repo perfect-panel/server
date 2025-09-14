@@ -26,6 +26,7 @@ type ServerFilter struct {
 	Size   int
 }
 
+// Deprecated: use internal/model/node/server.go
 type Server struct {
 	Id             int64     `gorm:"primary_key"`
 	Name           string    `gorm:"type:varchar(100);not null;default:'';comment:Node Name"`

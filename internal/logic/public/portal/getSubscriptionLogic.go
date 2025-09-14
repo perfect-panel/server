@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -27,12 +28,18 @@ func NewGetSubscriptionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 	}
 }
 
-func (l *GetSubscriptionLogic) GetSubscription() (resp *types.GetSubscriptionResponse, err error) {
+func (l *GetSubscriptionLogic) GetSubscription(req *types.GetSubscriptionRequest) (resp *types.GetSubscriptionResponse, err error) {
 	resp = &types.GetSubscriptionResponse{
 		List: make([]types.Subscribe, 0),
 	}
 	// Get the subscription list
-	data, err := l.svcCtx.SubscribeModel.QuerySubscribeListByShow(l.ctx)
+	_, data, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+		Page:            1,
+		Size:            9999,
+		Show:            true,
+		Language:        req.Language,
+		DefaultLanguage: true,
+	})
 	if err != nil {
 		l.Errorw("[Site GetSubscription]", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscription list error: %v", err.Error())

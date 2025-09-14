@@ -46,13 +46,19 @@ type StripeConfig struct {
 	Payment       string `json:"payment"`
 }
 
-func (l *StripeConfig) Marshal() string {
-	b, _ := json.Marshal(l)
-	return string(b)
+func (l *StripeConfig) Marshal() ([]byte, error) {
+	type Alias StripeConfig
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(l),
+	})
 }
 
-func (l *StripeConfig) Unmarshal(s string) error {
-	return json.Unmarshal([]byte(s), l)
+func (l *StripeConfig) Unmarshal(data []byte) error {
+	type Alias StripeConfig
+	aux := (*Alias)(l)
+	return json.Unmarshal(data, &aux)
 }
 
 type AlipayF2FConfig struct {
@@ -63,13 +69,19 @@ type AlipayF2FConfig struct {
 	Sandbox     bool   `json:"sandbox"`
 }
 
-func (l *AlipayF2FConfig) Marshal() string {
-	b, _ := json.Marshal(l)
-	return string(b)
+func (l *AlipayF2FConfig) Marshal() ([]byte, error) {
+	type Alias AlipayF2FConfig
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(l),
+	})
 }
 
-func (l *AlipayF2FConfig) Unmarshal(s string) error {
-	return json.Unmarshal([]byte(s), l)
+func (l *AlipayF2FConfig) Unmarshal(data []byte) error {
+	type Alias AlipayF2FConfig
+	aux := (*Alias)(l)
+	return json.Unmarshal(data, &aux)
 }
 
 type EPayConfig struct {
@@ -78,11 +90,38 @@ type EPayConfig struct {
 	Key string `json:"key"`
 }
 
-func (l *EPayConfig) Marshal() string {
-	b, _ := json.Marshal(l)
-	return string(b)
+func (l *EPayConfig) Marshal() ([]byte, error) {
+	type Alias EPayConfig
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(l),
+	})
 }
 
-func (l *EPayConfig) Unmarshal(s string) error {
-	return json.Unmarshal([]byte(s), l)
+func (l *EPayConfig) Unmarshal(data []byte) error {
+	type Alias EPayConfig
+	aux := (*Alias)(l)
+	return json.Unmarshal(data, &aux)
+}
+
+type CryptoSaaSConfig struct {
+	Endpoint  string `json:"endpoint"`
+	AccountID string `json:"account_id"`
+	SecretKey string `json:"secret_key"`
+}
+
+func (l *CryptoSaaSConfig) Marshal() ([]byte, error) {
+	type Alias CryptoSaaSConfig
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(l),
+	})
+}
+
+func (l *CryptoSaaSConfig) Unmarshal(data []byte) error {
+	type Alias CryptoSaaSConfig
+	aux := (*Alias)(l)
+	return json.Unmarshal(data, &aux)
 }

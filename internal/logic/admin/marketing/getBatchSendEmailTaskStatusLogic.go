@@ -28,15 +28,15 @@ func NewGetBatchSendEmailTaskStatusLogic(ctx context.Context, svcCtx *svc.Servic
 func (l *GetBatchSendEmailTaskStatusLogic) GetBatchSendEmailTaskStatus(req *types.GetBatchSendEmailTaskStatusRequest) (resp *types.GetBatchSendEmailTaskStatusResponse, err error) {
 	tx := l.svcCtx.DB
 
-	var taskInfo *task.EmailTask
-	err = tx.Model(&task.EmailTask{}).Where("id = ?", req.Id).First(&taskInfo).Error
+	var taskInfo *task.Task
+	err = tx.Model(&task.Task{}).Where("id = ?", req.Id).First(&taskInfo).Error
 	if err != nil {
 		l.Errorf("failed to get email task status, error: %v", err)
 		return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 	}
 
 	return &types.GetBatchSendEmailTaskStatusResponse{
-		Status:  taskInfo.Status,
+		Status:  uint8(taskInfo.Status),
 		Total:   int64(taskInfo.Total),
 		Current: int64(taskInfo.Current),
 		Errors:  taskInfo.Errors,

@@ -2,7 +2,9 @@ package marketing
 
 import (
 	"context"
+	"time"
 
+	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -37,36 +39,41 @@ func (l *GetPreSendEmailCountLogic) GetPreSendEmailCount(req *types.GetPreSendEm
 			Where("auth_type = ?", "email")
 
 		if req.RegisterStartTime != 0 {
-			query = query.Where("user.created_at >= ?", req.RegisterStartTime)
+
+			registerStartTime := time.UnixMilli(req.RegisterStartTime)
+
+			query = query.Where("user.created_at >= ?", registerStartTime)
 		}
 		if req.RegisterEndTime != 0 {
-			query = query.Where("user.created_at <= ?", req.RegisterEndTime)
+			registerEndTime := time.UnixMilli(req.RegisterEndTime)
+			query = query.Where("user.created_at <= ?", registerEndTime)
 		}
 		return query
 	}
 	var query *gorm.DB
-	switch req.Scope {
-	case "all":
+	scope := task.ParseScopeType(req.Scope)
+
+	switch scope {
+	case task.ScopeAll:
 		query = baseQuery()
 
-	case "active":
+	case task.ScopeActive:
 		query = baseQuery().
 			Joins("JOIN user_subscribe ON user.id = user_subscribe.user_id").
 			Where("user_subscribe.status IN ?", []int64{1, 2})
 
-	case "expired":
+	case task.ScopeExpired:
 		query = baseQuery().
 			Joins("JOIN user_subscribe ON user.id = user_subscribe.user_id").
 			Where("user_subscribe.status = ?", 3)
 
-	case "none":
+	case task.ScopeNone:
 		query = baseQuery().
 			Joins("LEFT JOIN user_subscribe ON user.id = user_subscribe.user_id").
 			Where("user_subscribe.user_id IS NULL")
-	case "skip":
+	case task.ScopeSkip:
 		// Skip scope does not require a count
 		query = nil
-
 	default:
 		l.Errorf("[CreateBatchSendEmailTask] Invalid scope: %v", req.Scope)
 		return nil, xerr.NewErrMsg("Invalid email scope")

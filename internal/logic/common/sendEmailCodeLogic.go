@@ -1,11 +1,9 @@
 package common
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"text/template"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -88,14 +86,16 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *types.SendCodeRequest) (resp *ty
 	var taskPayload queue.SendEmailPayload
 	// Generate verification code
 	code := random.Key(6, 0)
+	taskPayload.Type = queue.EmailTypeVerify
 	taskPayload.Email = req.Email
 	taskPayload.Subject = "Verification code"
-	content, err := l.initTemplate(req.Type, code)
-	if err != nil {
-		l.Logger.Error("[SendEmailCode]: InitTemplate Error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Failed to init template")
+	taskPayload.Content = map[string]interface{}{
+		"Type":     req.Type,
+		"SiteLogo": l.svcCtx.Config.Site.SiteLogo,
+		"SiteName": l.svcCtx.Config.Site.SiteName,
+		"Expire":   5,
+		"Code":     code,
 	}
-	taskPayload.Content = content
 	// Save to Redis
 	payload = CacheKeyPayload{
 		Code:   code,
@@ -133,24 +133,4 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *types.SendCodeRequest) (resp *ty
 			Status: true,
 		}, nil
 	}
-}
-
-func (l *SendEmailCodeLogic) initTemplate(t uint8, code string) (string, error) {
-	data := VerifyTemplate{
-		Type:     t,
-		SiteLogo: l.svcCtx.Config.Site.SiteLogo,
-		SiteName: l.svcCtx.Config.Site.SiteName,
-		Expire:   5,
-		Code:     code,
-	}
-	tpl, err := template.New("verify").Parse(l.svcCtx.Config.Email.VerifyEmailTemplate)
-	if err != nil {
-		return "", err
-	}
-	var result bytes.Buffer
-	err = tpl.Execute(&result, data)
-	if err != nil {
-		return "", err
-	}
-	return result.String(), nil
 }

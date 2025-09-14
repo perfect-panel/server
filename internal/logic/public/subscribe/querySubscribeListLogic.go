@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -27,15 +28,22 @@ func NewQuerySubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *QuerySubscribeListLogic) QuerySubscribeList() (resp *types.QuerySubscribeListResponse, err error) {
+func (l *QuerySubscribeListLogic) QuerySubscribeList(req *types.QuerySubscribeListRequest) (resp *types.QuerySubscribeListResponse, err error) {
 
-	data, err := l.svcCtx.SubscribeModel.QuerySubscribeList(l.ctx)
+	total, data, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+		Page:            1,
+		Size:            9999,
+		Language:        req.Language,
+		Sell:            true,
+		DefaultLanguage: true,
+	})
 	if err != nil {
 		l.Errorw("[QuerySubscribeListLogic] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QuerySubscribeList error: %v", err.Error())
 	}
+
 	resp = &types.QuerySubscribeListResponse{
-		Total: int64(len(data)),
+		Total: total,
 	}
 	list := make([]types.Subscribe, len(data))
 	for i, item := range data {

@@ -60,7 +60,13 @@ func (m *defaultUserModel) FindOneSubscribe(ctx context.Context, id int64) (*Sub
 func (m *defaultUserModel) FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error) {
 	var data []*Subscribe
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND `status` IN ?", subscribeId, []int64{1, 0}).Find(&data).Error
+		err := conn.Model(&Subscribe{}).Where("subscribe_id = ? AND `status` IN ?", subscribeId, []int64{1, 0}).Find(v).Error
+
+		if err != nil {
+			return err
+		}
+		// update user subscribe status
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND `status` = ?", subscribeId, 0).Update("status", 1).Error
 	})
 	return data, err
 }

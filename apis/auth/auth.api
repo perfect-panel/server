@@ -65,6 +65,7 @@ type (
 		TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 		Password          string `json:"password"`
 		IP                string `header:"X-Original-Forwarded-For"`
+		UserAgent         string `header:"User-Agent"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	// Check user is exist request
@@ -84,6 +85,7 @@ type (
 		Invite            string `json:"invite,optional"`
 		Code              string `json:"code,optional"`
 		IP                string `header:"X-Original-Forwarded-For"`
+		UserAgent         string `header:"User-Agent"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	// User login response
@@ -93,6 +95,7 @@ type (
 		Password          string `json:"password" validate:"required"`
 		Code              string `json:"code,optional"`
 		IP                string `header:"X-Original-Forwarded-For"`
+		UserAgent         string `header:"User-Agent"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	AppleLoginCallbackRequest {

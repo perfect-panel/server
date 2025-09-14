@@ -44,8 +44,8 @@ func (l *BatchEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) err
 		return asynq.SkipRetry
 	}
 	tx := l.svcCtx.DB.WithContext(ctx)
-	var taskInfo taskModel.EmailTask
-	if err = tx.Model(&taskModel.EmailTask{}).Where("id = ?", taskID).First(&taskInfo).Error; err != nil {
+	var taskInfo taskModel.Task
+	if err = tx.Model(&taskModel.Task{}).Where("id = ?", taskID).First(&taskInfo).Error; err != nil {
 		logger.WithContext(ctx).Error("[BatchEmailLogic] ProcessTask failed",
 			logger.Field("error", err.Error()),
 			logger.Field("taskID", taskID),

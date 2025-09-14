@@ -10,6 +10,12 @@ info (
 
 import "../types.api"
 
+type (
+	QuerySubscribeListRequest {
+		Language string `form:"language"`
+	}
+)
+
 @server (
 	prefix:     v1/public/subscribe
 	group:      public/subscribe
@@ -18,14 +24,6 @@ import "../types.api"
 service ppanel {
 	@doc "Get subscribe list"
 	@handler QuerySubscribeList
-	get /list returns (QuerySubscribeListResponse)
-
-	@doc "Get subscribe group list"
-	@handler QuerySubscribeGroupList
-	get /group/list returns (QuerySubscribeGroupListResponse)
-
-	@doc "Get application config"
-	@handler QueryApplicationConfig
-	get /application/config returns (ApplicationResponse)
+	get /list (QuerySubscribeListRequest) returns (QuerySubscribeListResponse)
 }
 

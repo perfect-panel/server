@@ -25,12 +25,12 @@ type (
 
 func NewSubscribeApplicationModel(db *gorm.DB) Model {
 	return &DefaultSubscribeApplicationModel{
-		DB: db.Model(&SubscribeApplication{}),
+		DB: db,
 	}
 }
 
 func (m *DefaultSubscribeApplicationModel) Insert(ctx context.Context, data *SubscribeApplication) error {
-	if err := m.WithContext(ctx).Create(data).Error; err != nil {
+	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Create(data).Error; err != nil {
 		return err
 	}
 	return nil
@@ -38,7 +38,7 @@ func (m *DefaultSubscribeApplicationModel) Insert(ctx context.Context, data *Sub
 
 func (m *DefaultSubscribeApplicationModel) FindOne(ctx context.Context, id int64) (*SubscribeApplication, error) {
 	var resp SubscribeApplication
-	if err := m.WithContext(ctx).Where("id = ?", id).First(&resp).Error; err != nil {
+	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Where("id = ?", id).First(&resp).Error; err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -48,14 +48,14 @@ func (m *DefaultSubscribeApplicationModel) Update(ctx context.Context, data *Sub
 	if _, err := m.FindOne(ctx, data.Id); err != nil {
 		return err
 	}
-	if err := m.WithContext(ctx).Save(data).Error; err != nil {
+	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Where("`id` = ?", data.Id).Save(data).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 func (m *DefaultSubscribeApplicationModel) Delete(ctx context.Context, id int64) error {
-	if err := m.WithContext(ctx).Delete(&SubscribeApplication{}, id).Error; err != nil {
+	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Where("`id` = ?", id).Delete(&SubscribeApplication{}).Error; err != nil {
 		return err
 	}
 	return nil

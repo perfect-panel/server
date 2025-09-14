@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/hibiken/asynq"
@@ -196,18 +197,26 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 				return e
 			}
 			// create deduction record
-			giftAmountLog := user.GiftAmountLog{
-				UserId:  orderInfo.UserId,
-				OrderNo: orderInfo.OrderNo,
-				Amount:  orderInfo.GiftAmount,
-				Type:    2,
-				Balance: u.GiftAmount,
-				Remark:  "Purchase order deduction",
+			giftLog := log.Gift{
+				Type:        log.GiftTypeReduce,
+				OrderNo:     orderInfo.OrderNo,
+				SubscribeId: 0,
+				Amount:      orderInfo.GiftAmount,
+				Balance:     u.GiftAmount,
+				Remark:      "Purchase order deduction",
+				Timestamp:   time.Now().UnixMilli(),
 			}
-			if e := db.Model(&user.GiftAmountLog{}).Create(&giftAmountLog).Error; e != nil {
+			content, _ := giftLog.Marshal()
+
+			if e := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+				Type:     log.TypeGift.Uint8(),
+				Date:     time.Now().Format(time.DateOnly),
+				ObjectID: u.Id,
+				Content:  string(content),
+			}).Error; e != nil {
 				l.Errorw("[Purchase] Database insert error",
 					logger.Field("error", e.Error()),
-					logger.Field("deductionLog", giftAmountLog),
+					logger.Field("deductionLog", giftLog),
 				)
 				return e
 			}

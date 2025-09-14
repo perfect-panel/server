@@ -19,7 +19,7 @@ type UpdatePaymentMethodLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
-// Update Payment Method
+// NewUpdatePaymentMethodLogic Update Payment Method
 func NewUpdatePaymentMethodLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdatePaymentMethodLogic {
 	return &UpdatePaymentMethodLogic{
 		Logger: logger.WithContext(ctx),

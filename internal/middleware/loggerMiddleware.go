@@ -44,6 +44,9 @@ func LoggerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 		// Start recording logs
 		cost := time.Since(start)
 		responseStatus := c.Writer.Status()
+
+		host := c.Request.Host
+
 		logs := []logger.LogField{
 			{
 				Key:   "status",
@@ -51,7 +54,7 @@ func LoggerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			},
 			{
 				Key:   "request",
-				Value: c.Request.Method + " " + c.Request.URL.String(),
+				Value: c.Request.Method + " " + host + c.Request.URL.String(),
 			},
 			{
 				Key:   "query",
@@ -87,6 +90,10 @@ func LoggerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			logger.WithContext(c.Request.Context()).Errorw("HTTP Error", logs...)
 		} else {
 			logger.WithContext(c.Request.Context()).Infow("HTTP Request", logs...)
+		}
+
+		if responseStatus == 404 {
+			logger.WithContext(c.Request.Context()).Debugf("404 Not Found: Host:%s Path:%s IsPanDomain:%v", host, c.Request.URL.Path, svc.Config.Subscribe.PanDomain)
 		}
 	}
 }

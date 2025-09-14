@@ -8,7 +8,7 @@ import (
 	"github.com/perfect-panel/server/pkg/result"
 )
 
-// Update node
+// Update Node
 func UpdateNodeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var req types.UpdateNodeRequest

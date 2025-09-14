@@ -11,9 +11,10 @@ import (
 )
 
 type Proxy struct {
+	Sort   int
 	Name   string
 	Server string
-	Port   uint64
+	Port   uint16
 	Type   string
 	Tags   []string
 
@@ -33,20 +34,30 @@ type Proxy struct {
 	Path        string // For HTTP/HTTPS
 	ServiceName string // For gRPC
 	// Shadowsocks Options
-	Method    string
-	ServerKey string // For Shadowsocks 2022
+	Method        string
+	ServerKey     string // For Shadowsocks 2022
+	Plugin        string // Plugin for Shadowsocks
+	PluginOptions string // Plugin options for Shadowsocks
 	// Vmess/Vless/Trojan Options
 	Flow string // Flow for Vmess/Vless/Trojan
 	// Hysteria2 Options
 	HopPorts     string // Comma-separated list of hop ports
 	HopInterval  int    // Interval for hop ports in seconds
 	ObfsPassword string // Obfuscation password for Hysteria2
+	UpMbps       int    // Upload speed in Mbps
+	DownMbps     int    // Download speed in Mbps
 
 	// Tuic Options
 	DisableSNI           bool   // Disable SNI
 	ReduceRtt            bool   // Reduce RTT
 	UDPRelayMode         string // UDP relay mode (e.g., "full", "partial")
 	CongestionController string // Congestion controller (e.g., "cubic", "bbr")
+
+	// AnyTLS
+	PaddingScheme string
+
+	// Mieru
+	Multiplex string
 }
 
 type User struct {

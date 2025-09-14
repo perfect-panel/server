@@ -8,10 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/queue/types"
 
 	"github.com/hibiken/asynq"
@@ -115,13 +118,6 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 				logger.Field("retryCount", retryCount))
 		}
 	}()
-
-	// Reset today's traffic data
-	err = l.svc.NodeCache.ResetTodayTrafficData(ctx)
-	if err != nil {
-		logger.Errorw("[ResetTodayTraffic] Failed to reset today traffic data",
-			logger.Field("error", err.Error()))
-	}
 
 	// Load last reset time from cache
 	var cache resetTrafficCache
@@ -237,8 +233,10 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 
 			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", monthlyResetUsers).
 				Updates(map[string]interface{}{
-					"upload":   0,
-					"download": 0,
+					"upload":      0,
+					"download":    0,
+					"status":      1, // Ensure status is active
+					"finished_at": nil,
 				}).Error
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update monthly reset users", logger.Field("error", err.Error()))
@@ -252,16 +250,7 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 				return err
 			}
 			// Clear cache for these subscriptions
-			for _, sub := range userSubs {
-				if sub.SubscribeId > 0 {
-					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
-					if err != nil {
-						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
-							logger.Field("subscribeId", sub.SubscribeId),
-							logger.Field("error", err.Error()))
-					}
-				}
-			}
+			l.clearCache(ctx, userSubs)
 			logger.Infow("[ResetTraffic] Monthly reset completed", logger.Field("count", len(monthlyResetUsers)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for monthly reset")
@@ -329,8 +318,10 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 			// Reset upload and download traffic to zero
 			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", users1stReset).
 				Updates(map[string]interface{}{
-					"upload":   0,
-					"download": 0,
+					"upload":      0,
+					"download":    0,
+					"status":      1, // Ensure status is active
+					"finished_at": nil,
 				}).Error
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update 1st reset users", logger.Field("error", err.Error()))
@@ -344,17 +335,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 			}
 
 			// Clear cache for these subscriptions
-			for _, sub := range userSubs {
-				if sub.SubscribeId > 0 {
-					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
-					if err != nil {
-						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
-							logger.Field("subscribeId", sub.SubscribeId),
-							logger.Field("error", err.Error()))
-					}
-				}
-			}
-
+			l.clearCache(ctx, userSubs)
 			logger.Infow("[ResetTraffic] 1st reset completed", logger.Field("count", len(users1stReset)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for 1st reset")
@@ -423,8 +404,10 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 			// Reset upload and download traffic to zero
 			err = db.Model(&user.Subscribe{}).Where("`id` IN ?", usersYearReset).
 				Updates(map[string]interface{}{
-					"upload":   0,
-					"download": 0,
+					"upload":      0,
+					"download":    0,
+					"status":      1, // Ensure status is active
+					"finished_at": nil,
 				}).Error
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update yearly reset users", logger.Field("error", err.Error()))
@@ -438,16 +421,7 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 				return err
 			}
 			// Clear cache for these subscriptions
-			for _, sub := range userSubs {
-				if sub.SubscribeId > 0 {
-					err = l.svc.UserModel.ClearSubscribeCache(ctx, sub)
-					if err != nil {
-						logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
-							logger.Field("subscribeId", sub.SubscribeId),
-							logger.Field("error", err.Error()))
-					}
-				}
-			}
+			l.clearCache(ctx, userSubs)
 			logger.Infow("[ResetTraffic] Yearly reset completed", logger.Field("count", len(usersYearReset)))
 		} else {
 			logger.Infow("[ResetTraffic] No users found for yearly reset")
@@ -600,4 +574,74 @@ func (l *ResetTrafficLogic) isRetryableError(err error) bool {
 	logger.Infow("[ResetTraffic] Unknown error type, treating as retryable",
 		logger.Field("error", err.Error()))
 	return true
+}
+
+// clearCache clears the reset traffic cache
+func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscribe) {
+	if len(list) != 0 {
+		subs := make(map[int64]bool)
+
+		for _, sub := range list {
+			if sub.SubscribeId > 0 {
+				err := l.svc.UserModel.ClearSubscribeCache(ctx, sub)
+				if err != nil {
+					logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
+						logger.Field("subscribeId", sub.SubscribeId),
+						logger.Field("error", err.Error()))
+				}
+				if _, ok := subs[sub.SubscribeId]; !ok {
+					subs[sub.SubscribeId] = true
+				}
+			}
+			// Insert traffic reset log
+			l.insertLog(ctx, sub.Id, sub.UserId)
+		}
+
+		for sub, _ := range subs {
+			info, err := l.svc.SubscribeModel.FindOne(ctx, sub)
+			if err != nil {
+				logger.Errorw("[CheckSubscription] FindOne subscribe failed", logger.Field("error", err.Error()), logger.Field("subscribe_id", sub))
+				continue
+			}
+			if info != nil && info.Id == sub {
+				var nodes []int64
+				if info.Nodes != "" {
+					nodes = tool.StringToInt64Slice(info.Nodes)
+				}
+				var tag []string
+				if info.NodeTags != "" {
+					tag = strings.Split(info.NodeTags, ",")
+				}
+
+				err = l.svc.NodeModel.ClearNodeCache(ctx, &node.FilterNodeParams{
+					Page:     1,
+					Size:     1000,
+					Tag:      tag,
+					ServerId: nodes,
+				})
+				if err != nil {
+					logger.Errorw("[CheckSubscription] ClearNodeCache failed", logger.Field("error", err.Error()), logger.Field("subscribe_id", sub))
+					continue
+				}
+			}
+		}
+	}
+}
+
+// insertLog inserts a reset traffic log entry
+func (l *ResetTrafficLogic) insertLog(ctx context.Context, subId, userId int64) {
+	trafficLog := log.ResetSubscribe{
+		Type:      log.ResetSubscribeTypeAuto,
+		UserId:    userId,
+		Timestamp: time.Now().UnixMilli(),
+	}
+	content, _ := trafficLog.Marshal()
+	if err := l.svc.DB.WithContext(ctx).Model(&log.SystemLog{}).Create(&log.SystemLog{
+		Type:     log.TypeResetSubscribe.Uint8(),
+		ObjectID: subId,
+		Date:     time.Now().Format(time.DateOnly),
+		Content:  string(content),
+	}).Error; err != nil {
+		logger.Errorw("[ResetTraffic] Failed to create system log for subscription", logger.Field("error", err.Error()))
+	}
 }

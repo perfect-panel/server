@@ -14,6 +14,8 @@ type (
 		Avatar                string           `json:"avatar"`
 		Balance               int64            `json:"balance"`
 		Commission            int64            `json:"commission"`
+		ReferralPercentage    uint8            `json:"referral_percentage"`
+		OnlyFirstPurchase     bool             `json:"only_first_purchase"`
 		GiftAmount            int64            `json:"gift_amount"`
 		Telegram              int64            `json:"telegram"`
 		ReferCode             string           `json:"refer_code"`
@@ -183,6 +185,7 @@ type (
 	Subscribe {
 		Id             int64               `json:"id"`
 		Name           string              `json:"name"`
+		Language       string              `json:"language"`
 		Description    string              `json:"description"`
 		UnitPrice      int64               `json:"unit_price"`
 		UnitTime       string              `json:"unit_time"`
@@ -193,9 +196,8 @@ type (
 		SpeedLimit     int64               `json:"speed_limit"`
 		DeviceLimit    int64               `json:"device_limit"`
 		Quota          int64               `json:"quota"`
-		GroupId        int64               `json:"group_id"`
-		ServerGroup    []int64             `json:"server_group"`
-		Server         []int64             `json:"server"`
+		Nodes          []int64             `json:"nodes"`
+		NodeTags       []string            `json:"node_tags"`
 		Show           bool                `json:"show"`
 		Sell           bool                `json:"sell"`
 		Sort           int64               `json:"sort"`
@@ -274,37 +276,37 @@ type (
 		Host        string `json:"host"`
 		ServiceName string `json:"service_name"`
 	}
-	Server {
-		Id           int64       `json:"id"`
-		Tags         []string    `json:"tags"`
-		Country      string      `json:"country"`
-		City         string      `json:"city"`
-		Name         string      `json:"name"`
-		ServerAddr   string      `json:"server_addr"`
-		RelayMode    string      `json:"relay_mode"`
-		RelayNode    []NodeRelay `json:"relay_node"`
-		SpeedLimit   int         `json:"speed_limit"`
-		TrafficRatio float32     `json:"traffic_ratio"`
-		GroupId      int64       `json:"group_id"`
-		Protocol     string      `json:"protocol"`
-		Config       interface{} `json:"config"`
-		Enable       *bool       `json:"enable"`
-		CreatedAt    int64       `json:"created_at"`
-		UpdatedAt    int64       `json:"updated_at"`
-		Status       *NodeStatus `json:"status"`
-		Sort         int64       `json:"sort"`
-	}
-	OnlineUser {
-		SID int64  `json:"uid"`
-		IP  string `json:"ip"`
-	}
-	NodeStatus {
-		Online    interface{} `json:"online"`
-		Cpu       float64     `json:"cpu"`
-		Mem       float64     `json:"mem"`
-		Disk      float64     `json:"disk"`
-		UpdatedAt int64       `json:"updated_at"`
-	}
+	// Server {
+	//  Id           int64       `json:"id"`
+	//  Tags         []string    `json:"tags"`
+	//  Country      string      `json:"country"`
+	//  City         string      `json:"city"`
+	//  Name         string      `json:"name"`
+	//  ServerAddr   string      `json:"server_addr"`
+	//  RelayMode    string      `json:"relay_mode"`
+	//  RelayNode    []NodeRelay `json:"relay_node"`
+	//  SpeedLimit   int         `json:"speed_limit"`
+	//  TrafficRatio float32     `json:"traffic_ratio"`
+	//  GroupId      int64       `json:"group_id"`
+	//  Protocol     string      `json:"protocol"`
+	//  Config       interface{} `json:"config"`
+	//  Enable       *bool       `json:"enable"`
+	//  CreatedAt    int64       `json:"created_at"`
+	//  UpdatedAt    int64       `json:"updated_at"`
+	//  Status       *NodeStatus `json:"status"`
+	//  Sort         int64       `json:"sort"`
+	// }
+	// OnlineUser {
+	//  SID int64  `json:"uid"`
+	//  IP  string `json:"ip"`
+	// }
+	// NodeStatus {
+	//  Online    interface{} `json:"online"`
+	//  Cpu       float64     `json:"cpu"`
+	//  Mem       float64     `json:"mem"`
+	//  Disk      float64     `json:"disk"`
+	//  UpdatedAt int64       `json:"updated_at"`
+	// }
 	ServerGroup {
 		Id          int64  `json:"id"`
 		Name        string `json:"name"`
@@ -446,15 +448,6 @@ type (
 		CreatedAt   int64     `json:"created_at"`
 		UpdatedAt   int64     `json:"updated_at"`
 	}
-	UserBalanceLog {
-		Id        int64 `json:"id"`
-		UserId    int64 `json:"user_id"`
-		Amount    int64 `json:"amount"`
-		Type      uint8 `json:"type"`
-		OrderId   int64 `json:"order_id"`
-		Balance   int64 `json:"balance"`
-		CreatedAt int64 `json:"created_at"`
-	}
 	UserAffiliate {
 		Avatar       string `json:"avatar"`
 		Identifier   string `json:"identifier"`
@@ -474,14 +467,6 @@ type (
 		Host   string `json:"host"`
 		Port   int    `json:"port"`
 		Prefix string `json:"prefix"`
-	}
-	ApplicationConfig {
-		AppId                  int64    `json:"app_id"`
-		EncryptionKey          string   `json:"encryption_key"`
-		EncryptionMethod       string   `json:"encryption_method"`
-		Domains                []string `json:"domains" validate:"required"`
-		StartupPicture         string   `json:"startup_picture"`
-		StartupPictureSkipTime int64    `json:"startup_picture_skip_time"`
 	}
 	UserDevice {
 		Id         int64  `json:"id"`
@@ -532,7 +517,7 @@ type (
 		Token           string `json:"token"`
 		IP              string `json:"ip"`
 		UserAgent       string `json:"user_agent"`
-		CreatedAt       int64  `json:"created_at"`
+		Timestamp       int64  `json:"timestamp"`
 	}
 	UserLoginLog {
 		Id        int64  `json:"id"`
@@ -540,18 +525,17 @@ type (
 		LoginIP   string `json:"login_ip"`
 		UserAgent string `json:"user_agent"`
 		Success   bool   `json:"success"`
-		CreatedAt int64  `json:"created_at"`
+		Timestamp int64  `json:"timestamp"`
 	}
 	MessageLog {
-		Id        int64  `json:"id"`
-		Type      string `json:"type"`
-		Platform  string `json:"platform"`
-		To        string `json:"to"`
-		Subject   string `json:"subject"`
-		Content   string `json:"content"`
-		Status    int    `json:"status"`
-		CreatedAt int64  `json:"created_at"`
-		UpdatedAt int64  `json:"updated_at"`
+		Id        int64       `json:"id"`
+		Type      uint8       `json:"type"`
+		Platform  string      `json:"platform"`
+		To        string      `json:"to"`
+		Subject   string      `json:"subject"`
+		Content   interface{} `json:"content"`
+		Status    uint8       `json:"status"`
+		CreatedAt int64       `json:"created_at"`
 	}
 	Ads {
 		Id          int    `json:"id"`
@@ -762,6 +746,61 @@ type (
 		Mac     string `json:"mac,omitempty"`
 		Linux   string `json:"linux,omitempty"`
 		Harmony string `json:"harmony,omitempty"`
+	}
+	ResetSubscribeTrafficLog {
+		Id              int64  `json:"id"`
+		Type            uint16 `json:"type"`
+		UserSubscribeId int64  `json:"user_subscribe_id"`
+		OrderNo         string `json:"order_no,omitempty"`
+		Timestamp       int64  `json:"timestamp"`
+	}
+	BalanceLog {
+		Type      uint16 `json:"type"`
+		UserId    int64  `json:"user_id"`
+		Amount    int64  `json:"amount"`
+		OrderNo   string `json:"order_no,omitempty"`
+		Balance   int64  `json:"balance"`
+		Timestamp int64  `json:"timestamp"`
+	}
+	CommissionLog {
+		Type      uint16 `json:"type"`
+		UserId    int64  `json:"user_id"`
+		Amount    int64  `json:"amount"`
+		OrderNo   string `json:"order_no"`
+		Timestamp int64  `json:"timestamp"`
+	}
+	Protocol {
+		Type                 string `json:"type"`
+		Port                 uint16 `json:"port"`
+		Security             string `json:"security,omitempty"`
+		SNI                  string `json:"sni,omitempty"`
+		AllowInsecure        bool   `json:"allow_insecure,omitempty"`
+		Fingerprint          string `json:"fingerprint,omitempty"`
+		RealityServerAddr    string `json:"reality_server_addr,omitempty"`
+		RealityServerPort    int    `json:"reality_server_port,omitempty"`
+		RealityPrivateKey    string `json:"reality_private_key,omitempty"`
+		RealityPublicKey     string `json:"reality_public_key,omitempty"`
+		RealityShortId       string `json:"reality_short_id,omitempty"`
+		Transport            string `json:"transport,omitempty"`
+		Host                 string `json:"host,omitempty"`
+		Path                 string `json:"path,omitempty"`
+		ServiceName          string `json:"service_name,omitempty"`
+		Cipher               string `json:"cipher,omitempty"`
+		ServerKey            string `json:"server_key,omitempty"`
+		Flow                 string `json:"flow,omitempty"`
+		HopPorts             string `json:"hop_ports,omitempty"`
+		HopInterval          int    `json:"hop_interval,omitempty"`
+		ObfsPassword         string `json:"obfs_password,omitempty"`
+		DisableSNI           bool   `json:"disable_sni,omitempty"`
+		ReduceRtt            bool   `json:"reduce_rtt,omitempty"`
+		UDPRelayMode         string `json:"udp_relay_mode,omitempty"`
+		CongestionController string `json:"congestion_controller,omitempty"`
+		Plugin               string `json:"plugin,omitempty"` // obfs, none,v2ray-plugin, simple-obfs
+		PluginOptions        string `json:"plugin_options,omitempty"` // plugin options, eg: obfs=http;obfs-host=www.bing.com
+		Multiplex            string `json:"multiplex,omitempty"` // mux, eg: off/low/medium/high
+		PaddingScheme        string `json:"padding_scheme,omitempty"` // padding scheme
+		UpMbps               int    `json:"up_mbps,omitempty"` // upload speed limit
+		DownMbps             int    `json:"down_mbps,omitempty"` // download speed limit
 	}
 )
 

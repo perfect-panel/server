@@ -1,8 +1,6 @@
 package constant
 
-import (
-	"encoding/json"
-)
+import "encoding/json"
 
 // Used for type cloning conversion
 const (
@@ -46,7 +44,17 @@ type TemporaryOrderInfo struct {
 	InviteCode string `json:"invite_code,omitempty"`
 }
 
-func (t TemporaryOrderInfo) Marshal() string {
-	value, _ := json.Marshal(t)
-	return string(value)
+func (t *TemporaryOrderInfo) Unmarshal(data []byte) error {
+	type Alias TemporaryOrderInfo
+	aux := (*Alias)(t)
+	return json.Unmarshal(data, aux)
+}
+
+func (t *TemporaryOrderInfo) Marshal() ([]byte, error) {
+	type Alias TemporaryOrderInfo
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(t),
+	})
 }

@@ -37,14 +37,5 @@ import (
 	"apis/public/payment.api"
 	"apis/public/document.api"
 	"apis/public/portal.api"
-	"apis/app/auth.api"
-	"apis/app/user.api"
-	"apis/app/node.api"
-	"apis/app/ws.api"
-	"apis/app/order.api"
-	"apis/app/announcement.api"
-	"apis/app/payment.api"
-	"apis/app/document.api"
-	"apis/app/subscribe.api"
 )
 

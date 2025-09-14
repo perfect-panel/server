@@ -144,3 +144,10 @@ func DayDiff(startTime, endTime time.Time) int64 {
 	duration := endTime.Sub(startTime)
 	return int64(duration.Hours() / 24) // 转换为整天数
 }
+
+// HourDiff 计算两个时间点之间的小时差
+func HourDiff(startTime, endTime time.Time) int64 {
+	// 计算时间差
+	duration := endTime.Sub(startTime)
+	return int64(duration.Hours()) // 返回小时数，可能包含小数部分
+}

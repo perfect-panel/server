@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/adapter"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -28,7 +29,11 @@ func NewPreviewSubscribeTemplateLogic(ctx context.Context, svcCtx *svc.ServiceCo
 }
 
 func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.PreviewSubscribeTemplateRequest) (resp *types.PreviewSubscribeTemplateResponse, err error) {
-	servers, err := l.svcCtx.ServerModel.FindAllServer(l.ctx)
+	_, servers, err := l.svcCtx.NodeModel.FilterNodeList(l.ctx, &node.FilterNodeParams{
+		Page:    1,
+		Size:    1000,
+		Preload: true,
+	})
 	if err != nil {
 		l.Errorf("[PreviewSubscribeTemplateLogic] FindAllServer error: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindAllServer error: %v", err.Error())

@@ -6,12 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/xerr"
-
+	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/traffic"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type QueryServerTotalDataLogic struct {
@@ -35,127 +38,194 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		return l.mockRevenueStatistics(), nil
 	}
 
-	resp = &types.ServerTotalDataResponse{
-		ServerTrafficRankingToday:     make([]types.ServerTrafficData, 0),
-		ServerTrafficRankingYesterday: make([]types.ServerTrafficData, 0),
-		UserTrafficRankingToday:       make([]types.UserTrafficData, 0),
-		UserTrafficRankingYesterday:   make([]types.UserTrafficData, 0),
+	now := time.Now()
+
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	todayEnd := todayStart.Add(24 * time.Hour).Add(-time.Second)
+	query := l.svcCtx.DB.WithContext(l.ctx)
+	var todayTop10User []log.UserTraffic
+
+	err = query.Model(&traffic.TrafficLog{}).
+		Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
+		Where("timestamp BETWEEN ? AND ?", todayStart, todayEnd).
+		Group("user_id, subscribe_id").
+		Order("total DESC").
+		Limit(10).
+		Scan(&todayTop10User).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		logger.Errorf("[Traffic Stat Queue] Query user traffic failed: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " Query user traffic failed: %v", err.Error())
+	}
+	var userTodayTrafficRanking []types.UserTrafficData
+	for _, item := range todayTop10User {
+		userTodayTrafficRanking = append(userTodayTrafficRanking, types.UserTrafficData{
+			SID:      item.SubscribeId,
+			Upload:   item.Upload,
+			Download: item.Download,
+		})
 	}
 
-	// Query node server status
-	servers, err := l.svcCtx.ServerModel.FindAllServer(l.ctx)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] FindAllServer error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(err, "FindAllServer error: %v", err)
-	}
-	onlineServers, err := l.svcCtx.NodeCache.GetOnlineNodeStatusCount(l.ctx)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] GetOnlineNodeStatusCount error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(err, "GetOnlineNodeStatusCount error: %v", err)
-	}
-	resp.OnlineServers = onlineServers
-	resp.OfflineServers = int64(len(servers) - int(onlineServers))
+	// query yesterday user traffic rank log
+	yesterday := todayStart.Add(-24 * time.Hour).Format(time.DateOnly)
 
-	// 获取所有节点在线用户
-	allNodeOnlineUser, err := l.svcCtx.NodeCache.GetAllNodeOnlineUser(l.ctx)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] Get all node online user failed", logger.Field("error", err.Error()))
+	var yesterdayLog log.SystemLog
+	err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", yesterday, log.TypeUserTrafficRank).First(&yesterdayLog).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Query yesterday user traffic rank log error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday user traffic rank log error: %v", err)
 	}
-	resp.OnlineUserIPs = int64(len(allNodeOnlineUser))
 
-	// 获取所有节点今日上传下载流量
-	allNodeUploadTraffic, err := l.svcCtx.NodeCache.GetAllNodeUploadTraffic(l.ctx)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] Get all node upload traffic failed", logger.Field("error", err.Error()))
+	var yesterdayUserRankData []types.UserTrafficData
+	if yesterdayLog.Id > 0 {
+		var rank log.UserTrafficRank
+		err = rank.Unmarshal([]byte(yesterdayLog.Content))
+		if err != nil {
+			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday user traffic rank log error", logger.Field("error", err.Error()))
+		}
+		for _, v := range rank.Rank {
+			yesterdayUserRankData = append(yesterdayUserRankData, types.UserTrafficData{
+				SID:      v.SubscribeId,
+				Upload:   v.Upload,
+				Download: v.Download,
+			})
+		}
 	}
-	resp.TodayUpload = allNodeUploadTraffic
-	allNodeDownloadTraffic, err := l.svcCtx.NodeCache.GetAllNodeDownloadTraffic(l.ctx)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] Get all node download traffic failed", logger.Field("error", err.Error()))
+
+	// query server traffic rank today
+	var todayTop10Server []log.ServerTraffic
+	err = query.Model(&traffic.TrafficLog{}).Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
+		Where("timestamp BETWEEN ? AND ?", todayStart, todayEnd).
+		Group("server_id").
+		Order("total DESC").
+		Limit(10).
+		Scan(&todayTop10Server).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		logger.Errorf("[Traffic Stat Queue] Query server traffic failed: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " Query server traffic failed: %v", err.Error())
 	}
-	resp.TodayDownload = allNodeDownloadTraffic
-	// 获取节点流量排行榜 前10
-	nodeTrafficRankingToday, err := l.svcCtx.NodeCache.GetNodeTodayTotalTrafficRank(l.ctx, 10)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] Get node today total traffic rank failed", logger.Field("error", err.Error()))
+
+	var todayServerRanking []types.ServerTrafficData
+	for _, item := range todayTop10Server {
+		info, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, item.ServerId)
+		if err != nil {
+			l.Errorw("[QueryServerTotalDataLogic] FindOneServer error", logger.Field("error", err.Error()), logger.Field("server_id", item.ServerId))
+			continue
+		}
+		todayServerRanking = append(todayServerRanking, types.ServerTrafficData{
+			ServerId: item.ServerId,
+			Name:     info.Name,
+			Upload:   item.Upload,
+			Download: item.Download,
+		})
 	}
-	if len(nodeTrafficRankingToday) > 0 {
-		var serverTrafficData []types.ServerTrafficData
-		for _, rank := range nodeTrafficRankingToday {
-			serverInfo, err := l.svcCtx.ServerModel.FindOne(l.ctx, rank.ID)
+
+	// query server traffic rank yesterday
+	var yesterdayTop10Server []types.ServerTrafficData
+	var yesterdayServerTrafficLog log.SystemLog
+	err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", yesterday, log.TypeServerTrafficRank).First(&yesterdayServerTrafficLog).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Query yesterday server traffic rank log error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday server traffic rank log error: %v", err)
+	}
+	if yesterdayServerTrafficLog.Id > 0 {
+		var rank log.ServerTrafficRank
+		err = rank.Unmarshal([]byte(yesterdayServerTrafficLog.Content))
+		if err != nil {
+			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday server traffic rank log error", logger.Field("error", err.Error()))
+		}
+
+		for _, v := range rank.Rank {
+			info, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, v.ServerId)
 			if err != nil {
-				l.Errorw("[QueryServerTotalDataLogic] FindOne error", logger.Field("error", err))
+				l.Errorw("[QueryServerTotalDataLogic] FindOneServer error", logger.Field("error", err.Error()), logger.Field("server_id", v.ServerId))
 				continue
 			}
-			serverTrafficData = append(serverTrafficData, types.ServerTrafficData{
-				ServerId: rank.ID,
-				Name:     serverInfo.Name,
-				Upload:   rank.Upload,
-				Download: rank.Download,
+			yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
+				ServerId: v.ServerId,
+				Name:     info.Name,
+				Upload:   v.Upload,
+				Download: v.Download,
 			})
 		}
-		resp.ServerTrafficRankingToday = serverTrafficData
-	}
-	// 获取用户流量排行榜 前10
-	userTrafficRankingToday, err := l.svcCtx.NodeCache.GetUserTodayTotalTrafficRank(l.ctx, 10)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] Get user today total traffic rank failed", logger.Field("error", err.Error()))
 	}
 
-	if len(userTrafficRankingToday) > 0 {
-		var userTrafficData []types.UserTrafficData
-		for _, rank := range userTrafficRankingToday {
-			userTrafficData = append(userTrafficData, types.UserTrafficData{
-				SID:      rank.SID,
-				Upload:   rank.Upload,
-				Download: rank.Download,
-			})
-		}
-		resp.UserTrafficRankingToday = userTrafficData
-	}
-	// 获取昨日节点流量排行榜 前10
-	nodeTrafficRankingYesterday, err := l.svcCtx.NodeCache.GetYesterdayNodeTotalTrafficRank(l.ctx)
+	// query online user count
+	onlineUsers, err := l.svcCtx.NodeModel.OnlineUserSubscribeGlobal(l.ctx)
 	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] Get yesterday node total traffic rank failed", logger.Field("error", err.Error()))
-	}
-	if len(nodeTrafficRankingYesterday) > 0 {
-		var serverTrafficData []types.ServerTrafficData
-		for _, rank := range nodeTrafficRankingYesterday {
-			serverTrafficData = append(serverTrafficData, types.ServerTrafficData{
-				ServerId: rank.ID,
-				Name:     rank.Name,
-				Upload:   rank.Upload,
-				Download: rank.Download,
-			})
-		}
-		resp.ServerTrafficRankingYesterday = serverTrafficData
-	}
-	// 获取昨日用户流量排行榜 前10
-	userTrafficRankingYesterday, err := l.svcCtx.NodeCache.GetYesterdayUserTotalTrafficRank(l.ctx)
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] Get yesterday user total traffic rank failed", logger.Field("error", err.Error()))
-	}
-	if len(userTrafficRankingYesterday) > 0 {
-		var userTrafficData []types.UserTrafficData
-		for _, rank := range userTrafficRankingYesterday {
-			userTrafficData = append(userTrafficData, types.UserTrafficData{
-				SID:      rank.SID,
-				Upload:   rank.Upload,
-				Download: rank.Download,
-			})
-		}
-		resp.UserTrafficRankingYesterday = userTrafficData
+		l.Errorw("[QueryServerTotalDataLogic] OnlineUserSubscribeGlobal error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "OnlineUserSubscribeGlobal error: %v", err)
 	}
 
-	// Query node traffic by monthly
-	nodeTraffic, err := l.svcCtx.TrafficLogModel.QueryTrafficByMonthly(l.ctx, time.Now())
-
-	if err != nil {
-		l.Errorw("[QueryServerTotalDataLogic] QueryTrafficByMonthly error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryTrafficByMonthly error: %v", err.Error())
+	// query online/offline server count
+	var onlineServers, offlineServers int64
+	err = query.Model(&node.Server{}).Where("`last_reported_at` > ?", now.Add(-5*time.Minute)).Count(&onlineServers).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Count online servers error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count online servers error: %v", err)
 	}
-	resp.MonthlyUpload = nodeTraffic.Upload
-	resp.MonthlyDownload = nodeTraffic.Download
+
+	err = query.Model(&node.Server{}).Where("`last_reported_at` <= ? OR `last_reported_at` IS NULL", now.Add(-5*time.Minute)).Count(&offlineServers).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Count offline servers error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count offline servers error: %v", err)
+	}
+	// TodayUpload, TodayDownload, MonthlyUpload, MonthlyDownload
+	var todayUpload, todayDownload, monthlyUpload, monthlyDownload int64
+
+	type trafficSum struct {
+		Upload   int64
+		Download int64
+	}
+	var todayTraffic trafficSum
+	// Today
+	err = query.Model(&traffic.TrafficLog{}).Select("SUM(upload) AS upload, SUM(download) AS download").
+		Where("timestamp BETWEEN ? AND ?", todayStart, todayEnd).
+		Scan(&todayTraffic).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorw("[QueryServerTotalDataLogic] Sum today traffic error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Sum today traffic error: %v", err)
+	}
+	todayUpload = todayTraffic.Upload
+	todayDownload = todayTraffic.Download
+
+	// Monthly
+	monthlyUpload += todayUpload
+	monthlyDownload += todayDownload
+
+	for i := now.Day() - 1; i >= 1; i-- {
+		var logInfo log.SystemLog
+		date := time.Date(now.Year(), now.Month(), i, 0, 0, 0, 0, now.Location()).Format(time.DateOnly)
+		err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", date, log.TypeTrafficStat).First(&logInfo).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			l.Errorw("[QueryServerTotalDataLogic] Query daily traffic stat log error", logger.Field("error", err.Error()), logger.Field("date", date))
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query daily traffic stat log error: %v", err)
+		}
+		if logInfo.Id > 0 {
+			var stat log.TrafficStat
+			err = stat.Unmarshal([]byte(logInfo.Content))
+			if err != nil {
+				l.Errorw("[QueryServerTotalDataLogic] Unmarshal daily traffic stat log error", logger.Field("error", err.Error()), logger.Field("date", date))
+				continue
+			}
+			monthlyUpload += stat.Upload
+			monthlyDownload += stat.Download
+		}
+	}
+
+	resp = &types.ServerTotalDataResponse{
+		OnlineUsers:                   onlineUsers,
+		OnlineServers:                 onlineServers,
+		OfflineServers:                offlineServers,
+		TodayUpload:                   todayUpload,
+		TodayDownload:                 todayDownload,
+		MonthlyUpload:                 monthlyUpload,
+		MonthlyDownload:               monthlyDownload,
+		UpdatedAt:                     now.Unix(),
+		ServerTrafficRankingToday:     todayServerRanking,
+		ServerTrafficRankingYesterday: yesterdayTop10Server,
+		UserTrafficRankingToday:       userTodayTrafficRanking,
+		UserTrafficRankingYesterday:   yesterdayUserRankData,
+	}
 
 	return resp, nil
 }
@@ -215,7 +285,7 @@ func (l *QueryServerTotalDataLogic) mockRevenueStatistics() *types.ServerTotalDa
 	//}
 	//
 	return &types.ServerTotalDataResponse{
-		OnlineUserIPs:                 1688,
+		OnlineUsers:                   1688,
 		OnlineServers:                 8,
 		OfflineServers:                2,
 		TodayUpload:                   8888888888,   // ~8.3GB
