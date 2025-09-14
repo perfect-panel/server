@@ -14,6 +14,19 @@
 
 </div>
 
+> **Article 1.**  
+> All human beings are born free and equal in dignity and rights.  
+> They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood.
+>
+> **Article 12.**  
+> No one shall be subjected to arbitrary interference with his privacy, family, home or correspondence, nor to attacks upon his honour and reputation.  
+> Everyone has the right to the protection of the law against such interference or attacks.
+>
+> **Article 19.**  
+> Everyone has the right to freedom of opinion and expression; this right includes freedom to hold opinions without interference and to seek, receive and impart information and ideas through any media and regardless of frontiers.
+>
+> *Source: [United Nations – Universal Declaration of Human Rights (UN.org)](https://www.un.org/sites/un2.un.org/files/2021/03/udhr.pdf)*
+
 ## 📋 Overview
 
 PPanel Server is the backend component of the PPanel project, providing robust APIs and core functionality for managing
