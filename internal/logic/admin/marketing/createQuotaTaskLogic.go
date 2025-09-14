@@ -43,11 +43,11 @@ func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest
 	}
 	if req.StartTime != 0 {
 		start := time.UnixMilli(req.StartTime)
-		query = query.Where("`start_time` >= ?", start)
+		query = query.Where("`start_time` <= ?", start)
 	}
 	if req.EndTime != 0 {
 		end := time.UnixMilli(req.EndTime)
-		query = query.Where("`expire_time` <= ?", end)
+		query = query.Where("`expire_time` >= ?", end)
 	}
 
 	if err := query.Find(&subs).Error; err != nil {

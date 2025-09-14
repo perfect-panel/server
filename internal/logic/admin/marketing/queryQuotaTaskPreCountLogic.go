@@ -38,11 +38,11 @@ func (l *QueryQuotaTaskPreCountLogic) QueryQuotaTaskPreCount(req *types.QueryQuo
 	}
 	if req.StartTime != 0 {
 		start := time.UnixMilli(req.StartTime)
-		tx = tx.Where("`start_time` >= ?", start)
+		tx = tx.Where("`start_time` <= ?", start)
 	}
 	if req.EndTime != 0 {
 		end := time.UnixMilli(req.EndTime)
-		tx = tx.Where("`expire_time` <= ?", end)
+		tx = tx.Where("`expire_time` >= ?", end)
 	}
 	if err = tx.Count(&count).Error; err != nil {
 		l.Errorf("[QueryQuotaTaskPreCount] count error: %v", err.Error())
