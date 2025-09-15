@@ -91,7 +91,6 @@ CREATE TABLE IF NOT EXISTS `auth_method`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uni_auth_method` (`method`)
 ) ENGINE = InnoDB
-  AUTO_INCREMENT = 9
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci;
 
@@ -305,7 +304,6 @@ CREATE TABLE IF NOT EXISTS `subscribe_type`
     `updated_at` datetime(3)                                                            DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
-  AUTO_INCREMENT = 15
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci;
 
@@ -323,7 +321,6 @@ CREATE TABLE IF NOT EXISTS `system`
     UNIQUE KEY `uni_system_key` (`key`),
     KEY `index_key` (`key`)
 ) ENGINE = InnoDB
-  AUTO_INCREMENT = 42
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci;
 
@@ -398,7 +395,6 @@ CREATE TABLE IF NOT EXISTS `user`
     PRIMARY KEY (`id`),
     KEY `idx_referer` (`referer_id`)
 ) ENGINE = InnoDB
-  AUTO_INCREMENT = 2
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci;
 
@@ -415,7 +411,6 @@ CREATE TABLE IF NOT EXISTS `user_auth_methods`
     UNIQUE KEY `idx_auth_identifier` (`auth_identifier`),
     KEY `idx_user_id` (`user_id`)
 ) ENGINE = InnoDB
-  AUTO_INCREMENT = 2
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci;
 
