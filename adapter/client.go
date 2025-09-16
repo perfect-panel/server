@@ -34,10 +34,9 @@ type Proxy struct {
 	Path        string // For HTTP/HTTPS
 	ServiceName string // For gRPC
 	// Shadowsocks Options
-	Method        string
-	ServerKey     string // For Shadowsocks 2022
-	Plugin        string // Plugin for Shadowsocks
-	PluginOptions string // Plugin options for Shadowsocks
+	Method    string
+	ServerKey string // For Shadowsocks 2022
+
 	// Vmess/Vless/Trojan Options
 	Flow string // Flow for Vmess/Vless/Trojan
 	// Hysteria2 Options
@@ -58,6 +57,25 @@ type Proxy struct {
 
 	// Mieru
 	Multiplex string
+
+	// Obfs
+	Obfs     string // obfs, 'none', 'http', 'tls'
+	ObfsHost string // obfs host
+	ObfsPath string // obfs path
+
+	// Vless
+	XhttpMode  string // xhttp mode
+	XhttpExtra string // xhttp path
+
+	// encryption
+	Encryption              string // encryption，'none', 'mlkem768x25519plus'
+	EncryptionMode          string // encryption mode，'native', 'xorpub', 'random'
+	EncryptionRtt           string // encryption rtt，'0rtt', '1rtt'
+	EncryptionTicket        string // encryption ticket
+	EncryptionServerPadding string // encryption server padding
+	EncryptionPrivateKey    string // encryption private key
+	EncryptionClientPadding string // encryption client padding
+	EncryptionPassword      string // encryption password
 }
 
 type User struct {
