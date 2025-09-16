@@ -57,7 +57,7 @@ func (m *customServerModel) FilterServerList(ctx context.Context, params *Filter
 	if len(params.Ids) > 0 {
 		query = query.Where("id IN ?", params.Ids)
 	}
-	err := query.Count(&total).Limit(params.Size).Offset((params.Page - 1) * params.Size).Find(&servers).Error
+	err := query.Count(&total).Order("sort ASC").Limit(params.Size).Offset((params.Page - 1) * params.Size).Find(&servers).Error
 	return total, servers, err
 }
 
@@ -92,7 +92,7 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 		query = query.Preload("Server")
 	}
 
-	err := query.Count(&total).Limit(params.Size).Offset((params.Page - 1) * params.Size).Find(&nodes).Error
+	err := query.Count(&total).Order("sort ASC").Limit(params.Size).Offset((params.Page - 1) * params.Size).Find(&nodes).Error
 	return total, nodes, err
 }
 
