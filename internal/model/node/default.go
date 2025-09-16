@@ -79,7 +79,7 @@ func (m *defaultServerModel) UpdateServer(ctx context.Context, data *Server, tx 
 	if len(tx) > 0 {
 		db = tx[0]
 	}
-	return db.WithContext(ctx).Save(data).Error
+	return db.WithContext(ctx).Where("`id` = ?", data.Id).Save(data).Error
 
 }
 
@@ -115,7 +115,7 @@ func (m *defaultServerModel) UpdateNode(ctx context.Context, data *Node, tx ...*
 	if len(tx) > 0 {
 		db = tx[0]
 	}
-	return db.WithContext(ctx).Save(data).Error
+	return db.WithContext(ctx).Where("`id` = ?", data.Id).Save(data).Error
 }
 
 func (m *defaultServerModel) DeleteNode(ctx context.Context, id int64, tx ...*gorm.DB) error {
