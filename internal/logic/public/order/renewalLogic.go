@@ -84,7 +84,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 			}
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
 		}
-		if couponInfo.Count <= couponInfo.UsedCount {
+		if couponInfo.Count != 0 && couponInfo.Count <= couponInfo.UsedCount {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon used")
 		}
 		couponSub := tool.StringToInt64Slice(couponInfo.Subscribe)
