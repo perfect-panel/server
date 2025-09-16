@@ -21,7 +21,7 @@ func (m *defaultUserModel) QueryActiveSubscriptions(ctx context.Context, subscri
 	var result []SubscriptionCount
 	err := m.QueryNoCacheCtx(ctx, &result, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Subscribe{}).
-			Where("subscribe_id IN ? AND `status` IN ?", subscribeId, []int64{1, 0, 3}).
+			Where("subscribe_id IN ? AND `status` IN ?", subscribeId, []int64{1, 0}).
 			Select("subscribe_id, COUNT(id) as total").
 			Group("subscribe_id").
 			Scan(&result).
