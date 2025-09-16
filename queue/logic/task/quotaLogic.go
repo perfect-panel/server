@@ -9,8 +9,6 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/order"
-	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -318,16 +316,17 @@ func (l *QuotaTaskLogic) processGift(tx *gorm.DB, sub *user.Subscribe, content t
 	case 1:
 		giftAmount = int64(content.GiftValue)
 	case 2:
-		orderAmount, err := l.calculateOrderAmount(tx, sub, now)
+		// 获取订阅对应的套餐信息
+		subscribeInfo, err := l.svcCtx.SubscribeModel.FindOne(context.Background(), sub.SubscribeId)
 		if err != nil {
 			*errors = append(*errors, ErrorInfo{
 				UserSubscribeId: sub.Id,
-				Error:           err.Error(),
+				Error:           "find subscribe error: " + err.Error(),
 			})
 			return nil
 		}
-		if orderAmount > 0 {
-			giftAmount = int64(float64(orderAmount) * (float64(content.GiftValue) / 100))
+		if subscribeInfo.UnitPrice > 0 {
+			giftAmount = int64(float64(subscribeInfo.UnitPrice) * (float64(content.GiftValue) / 100))
 		}
 	}
 
@@ -362,48 +361,6 @@ func (l *QuotaTaskLogic) getStartTime(sub *user.Subscribe, now time.Time) time.T
 		return now
 	}
 	return sub.StartTime
-}
-
-func (l *QuotaTaskLogic) calculateOrderAmount(tx *gorm.DB, sub *user.Subscribe, now time.Time) (int64, error) {
-	if sub.OrderId != 0 {
-		var orderInfo *order.Order
-		if err := tx.Model(&order.Order{}).Where("id = ?", sub.OrderId).First(&orderInfo).Error; err != nil {
-			return 0, fmt.Errorf("find order error: %v", err)
-		}
-		return orderInfo.Amount + orderInfo.GiftAmount, nil
-	}
-
-	var subInfo *subscribe.Subscribe
-	if err := tx.Model(&subscribe.Subscribe{}).Where("id = ?", sub.SubscribeId).First(&subInfo).Error; err != nil {
-		return 0, fmt.Errorf("find subscribe error: %v", err)
-	}
-
-	startTime := l.getStartTime(sub, now)
-	if sub.ExpireTime.Before(startTime) {
-		return subInfo.UnitPrice, nil
-	}
-
-	switch subInfo.UnitTime {
-	case UnitTimeNoLimit:
-		return subInfo.UnitPrice, nil
-	case UnitTimeYear:
-		days := tool.DayDiff(startTime, sub.ExpireTime)
-		return subInfo.UnitPrice / 365 * days, nil
-	case UnitTimeMonth:
-		days := tool.DayDiff(startTime, sub.ExpireTime)
-		return subInfo.UnitPrice / 30 * days, nil
-	case UnitTimeDay:
-		days := tool.DayDiff(startTime, sub.ExpireTime)
-		return subInfo.UnitPrice * days, nil
-	case UnitTimeHour:
-		hours := int(tool.HourDiff(startTime, sub.ExpireTime))
-		return subInfo.UnitPrice * int64(hours), nil
-	case UnitTimeMinute:
-		minutes := tool.HourDiff(startTime, sub.ExpireTime) * 60
-		return subInfo.UnitPrice * minutes, nil
-	default:
-		return subInfo.UnitPrice, nil
-	}
 }
 
 func (l *QuotaTaskLogic) createGiftLog(tx *gorm.DB, subscribeId, userId, amount, balance int64, now time.Time) error {
