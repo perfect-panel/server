@@ -659,7 +659,7 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 		}
 		content, _ := balanceLog.Marshal()
 
-		return tx.Model(&log.Balance{}).Create(&log.SystemLog{
+		return tx.Model(&log.SystemLog{}).Create(&log.SystemLog{
 			Type:     log.TypeBalance.Uint8(),
 			Date:     time.Now().Format("2006-01-02"),
 			ObjectID: userInfo.Id,
