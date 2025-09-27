@@ -54,6 +54,9 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 	now := time.Now()
 	realTimeMultiplier := l.svc.NodeMultiplierManager.GetMultiplier(now)
 	for _, log := range payload.Logs {
+		if log.Upload == 0 && log.Download == 0 {
+			continue
+		}
 		// update user subscribe with log
 		d := int64(float32(log.Download) * serverRatio * realTimeMultiplier)
 		u := int64(float32(log.Upload) * serverRatio * realTimeMultiplier)
