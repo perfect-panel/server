@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"strings"
 
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -39,5 +41,11 @@ func (l *ToggleNodeStatusLogic) ToggleNodeStatus(req *types.ToggleNodeStatusRequ
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "[ToggleNodeStatus] Update Database Error")
 	}
 
-	return nil
+	return l.svcCtx.NodeModel.ClearNodeCache(l.ctx, &node.FilterNodeParams{
+		Page:     1,
+		Size:     1000,
+		ServerId: []int64{data.ServerId},
+		Tag:      strings.Split(data.Tags, ","),
+		Search:   "",
+	})
 }

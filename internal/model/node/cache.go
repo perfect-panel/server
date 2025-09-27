@@ -66,6 +66,12 @@ func (m *customServerModel) UpdateStatusCache(ctx context.Context, serverId int6
 
 }
 
+// DeleteStatusCache Delete server status from cache
+func (m *customServerModel) DeleteStatusCache(ctx context.Context, serverId int64) error {
+	key := fmt.Sprintf(StatusCacheKey, serverId)
+	return m.Cache.Del(ctx, key).Err()
+}
+
 // StatusCache Get server status from cache
 func (m *customServerModel) StatusCache(ctx context.Context, serverId int64) (Status, error) {
 	var status Status
@@ -113,6 +119,12 @@ func (m *customServerModel) UpdateOnlineUserSubscribe(ctx context.Context, serve
 	return m.Cache.Set(ctx, key, data, Expiry).Err()
 }
 
+// DeleteOnlineUserSubscribe Delete online user subscribe
+func (m *customServerModel) DeleteOnlineUserSubscribe(ctx context.Context, serverId int64, protocol string) error {
+	key := fmt.Sprintf(OnlineUserCacheKeyWithSubscribe, serverId, protocol)
+	return m.Cache.Del(ctx, key).Err()
+}
+
 // OnlineUserSubscribeGlobal Get global online user subscribe count
 func (m *customServerModel) OnlineUserSubscribeGlobal(ctx context.Context) (int64, error) {
 	now := time.Now().Unix()
@@ -143,4 +155,9 @@ func (m *customServerModel) UpdateOnlineUserSubscribeGlobal(ctx context.Context,
 
 	_, err := pipe.Exec(ctx)
 	return err
+}
+
+// DeleteOnlineUserSubscribeGlobal Delete global online user subscribe count
+func (m *customServerModel) DeleteOnlineUserSubscribeGlobal(ctx context.Context) error {
+	return m.Cache.Del(ctx, OnlineUserSubscribeCacheKeyWithGlobal).Err()
 }
