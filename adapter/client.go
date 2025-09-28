@@ -59,9 +59,9 @@ type Proxy struct {
 	Multiplex string
 
 	// Obfs
-	Obfs     string // obfs, 'none', 'http', 'tls'
-	ObfsHost string // obfs host
-	ObfsPath string // obfs path
+	//Obfs     string // obfs, 'none', 'http', 'tls'
+	//ObfsHost string // obfs host
+	//ObfsPath string // obfs path
 
 	// Vless
 	XhttpMode  string // xhttp mode
@@ -76,6 +76,11 @@ type Proxy struct {
 	EncryptionPrivateKey    string // encryption private key
 	EncryptionClientPadding string // encryption client padding
 	EncryptionPassword      string // encryption password
+
+	Ratio           float64 // Traffic ratio, default is 1
+	CertMode        string  // Certificate mode, `none`｜`http`｜`dns`｜`self`
+	CertDNSProvider string  // DNS provider for certificate
+	CertDNSEnv      string  // Environment for DNS provider
 }
 
 type User struct {

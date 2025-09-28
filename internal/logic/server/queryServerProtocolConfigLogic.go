@@ -41,7 +41,53 @@ func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.Qu
 	}
 	tool.DeepCopy(&protocols, dst)
 
+	// filter by req.Protocols
+
+	if len(req.Protocols) > 0 {
+		var filtered []types.Protocol
+		protocolSet := make(map[string]struct{})
+		for _, p := range req.Protocols {
+			protocolSet[p] = struct{}{}
+		}
+		for _, p := range protocols {
+			if _, exists := protocolSet[p.Type]; exists {
+				filtered = append(filtered, p)
+			}
+		}
+		protocols = filtered
+	}
+
+	var dns []types.NodeDNS
+	if len(l.svcCtx.Config.Node.DNS) > 0 {
+		for _, d := range l.svcCtx.Config.Node.DNS {
+			dns = append(dns, types.NodeDNS{
+				Proto:   d.Proto,
+				Address: d.Address,
+				Domains: d.Domains,
+			})
+		}
+	}
+	var outbound []types.NodeOutbound
+	if len(l.svcCtx.Config.Node.Outbound) > 0 {
+		for _, o := range l.svcCtx.Config.Node.Outbound {
+			outbound = append(outbound, types.NodeOutbound{
+				Name:     o.Name,
+				Protocol: o.Protocol,
+				Address:  o.Address,
+				Port:     o.Port,
+				Password: o.Password,
+				Rules:    o.Rules,
+			})
+		}
+	}
+
 	return &types.QueryServerConfigResponse{
-		Protocols: protocols,
+		TrafficReportThreshold: l.svcCtx.Config.Node.TrafficReportThreshold,
+		IPStrategy:             l.svcCtx.Config.Node.IPStrategy,
+		DNS:                    dns,
+		Block:                  l.svcCtx.Config.Node.Block,
+		Outbound:               outbound,
+		Protocols:              protocols,
+		Total:                  int64(len(protocols)),
 	}, nil
 }

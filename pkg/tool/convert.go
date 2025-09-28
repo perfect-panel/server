@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -26,6 +27,16 @@ func ConvertValueToString(value reflect.Value) string {
 		default:
 			return ""
 		}
+	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
+		bytes, err := json.Marshal(value.Interface())
+		if err != nil {
+			fmt.Println("Error marshaling struct:", err.Error())
+			return ""
+		}
+		if string(bytes) == "null" {
+			return ""
+		}
+		return string(bytes)
 	default:
 		return ""
 	}

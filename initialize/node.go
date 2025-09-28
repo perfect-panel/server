@@ -3,7 +3,6 @@ package initialize
 import (
 	"context"
 	"encoding/json"
-
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/internal/config"
@@ -19,9 +18,40 @@ func Node(ctx *svc.ServiceContext) {
 	if err != nil {
 		panic(err)
 	}
-	var nodeConfig config.NodeConfig
+	var nodeConfig config.NodeDBConfig
 	tool.SystemConfigSliceReflectToStruct(configs, &nodeConfig)
-	ctx.Config.Node = nodeConfig
+	c := config.NodeConfig{
+		NodeSecret:             nodeConfig.NodeSecret,
+		NodePullInterval:       nodeConfig.NodePullInterval,
+		NodePushInterval:       nodeConfig.NodePushInterval,
+		IPStrategy:             nodeConfig.IPStrategy,
+		TrafficReportThreshold: nodeConfig.TrafficReportThreshold,
+	}
+	if nodeConfig.DNS != "" {
+		var dns []config.NodeDNS
+		err = json.Unmarshal([]byte(nodeConfig.DNS), &dns)
+		if err != nil {
+			logger.Errorf("[Node] Unmarshal DNS config error: %s", err.Error())
+			panic(err)
+		}
+		c.DNS = dns
+	}
+	if nodeConfig.Block != "" {
+		var block []string
+		_ = json.Unmarshal([]byte(nodeConfig.Block), &block)
+		c.Block = tool.RemoveDuplicateElements(block...)
+	}
+	if nodeConfig.Outbound != "" {
+		var outbound []config.NodeOutbound
+		err = json.Unmarshal([]byte(nodeConfig.Outbound), &outbound)
+		if err != nil {
+			logger.Errorf("[Node] Unmarshal Outbound config error: %s", err.Error())
+			panic(err)
+		}
+		c.Outbound = outbound
+	}
+
+	ctx.Config.Node = c
 
 	// Manager initialization
 	if ctx.DB.Model(&system.System{}).Where("`key` = ?", "NodeMultiplierConfig").Find(&system.System{}).RowsAffected == 0 {

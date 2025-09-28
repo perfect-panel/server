@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -26,13 +27,14 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) func(c *gin.Co
 		}
 		req.ServerID = serverID
 
-		key := c.GetHeader("secret_key")
-		if key == "" || key != svcCtx.Config.Node.NodeSecret {
-			logger.Debugf("[QueryServerProtocolConfigHandler] - secret_key error: %s", key)
-			c.String(http.StatusUnauthorized, "Unauthorized")
+		if err = c.ShouldBindQuery(&req); err != nil {
+			logger.Debugf("[QueryServerProtocolConfigHandler] - ShouldBindQuery error: %v, Query: %v", err, c.Request.URL.Query())
+			c.String(http.StatusBadRequest, "Invalid Params")
 			c.Abort()
 			return
 		}
+
+		fmt.Printf("[QueryServerProtocolConfigHandler] - ShouldBindQuery request: %+v\n", req)
 
 		l := server.NewQueryServerProtocolConfigLogic(c.Request.Context(), svcCtx)
 		resp, err := l.QueryServerProtocolConfig(&req)

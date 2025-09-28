@@ -2,7 +2,8 @@ package system
 
 import (
 	"context"
-
+	"encoding/json"
+	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -26,15 +27,45 @@ func NewGetNodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 }
 
 func (l *GetNodeConfigLogic) GetNodeConfig() (*types.NodeConfig, error) {
-	resp := &types.NodeConfig{}
-
 	// get server config from db
 	configs, err := l.svcCtx.SystemModel.GetNodeConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetNodeConfigLogic] GetNodeConfig get server config error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetNodeConfig get server config error: %v", err.Error())
 	}
-	// reflect to response
-	tool.SystemConfigSliceReflectToStruct(configs, resp)
-	return resp, nil
+	var dbConfig config.NodeDBConfig
+	tool.SystemConfigSliceReflectToStruct(configs, &dbConfig)
+	c := &types.NodeConfig{
+		NodeSecret:             dbConfig.NodeSecret,
+		NodePullInterval:       dbConfig.NodePullInterval,
+		NodePushInterval:       dbConfig.NodePushInterval,
+		IPStrategy:             dbConfig.IPStrategy,
+		TrafficReportThreshold: dbConfig.TrafficReportThreshold,
+	}
+
+	if dbConfig.DNS != "" {
+		var dns []types.NodeDNS
+		err = json.Unmarshal([]byte(dbConfig.DNS), &dns)
+		if err != nil {
+			logger.Errorf("[Node] Unmarshal DNS config error: %s", err.Error())
+			panic(err)
+		}
+		c.DNS = dns
+	}
+	if dbConfig.Block != "" {
+		var block []string
+		_ = json.Unmarshal([]byte(dbConfig.Block), &block)
+		c.Block = tool.RemoveDuplicateElements(block...)
+	}
+	if dbConfig.Outbound != "" {
+		var outbound []types.NodeOutbound
+		err = json.Unmarshal([]byte(dbConfig.Outbound), &outbound)
+		if err != nil {
+			logger.Errorf("[Node] Unmarshal Outbound config error: %s", err.Error())
+			panic(err)
+		}
+		c.Outbound = outbound
+	}
+
+	return c, nil
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
 )
@@ -105,9 +106,76 @@ type SiteConfig struct {
 }
 
 type NodeConfig struct {
-	NodeSecret       string `yaml:"NodeSecret" default:""`
-	NodePullInterval int64  `yaml:"NodePullInterval" default:"60"`
-	NodePushInterval int64  `yaml:"NodePushInterval" default:"60"`
+	NodeSecret             string         `yaml:"NodeSecret" default:""`
+	NodePullInterval       int64          `yaml:"NodePullInterval" default:"60"`
+	NodePushInterval       int64          `yaml:"NodePushInterval" default:"60"`
+	TrafficReportThreshold int64          `yaml:"TrafficReportThreshold" default:"0"`
+	IPStrategy             string         `yaml:"IPStrategy" default:""`
+	DNS                    []NodeDNS      `yaml:"DNS"`
+	Block                  []string       `yaml:"Block" `
+	Outbound               []NodeOutbound `yaml:"Outbound"`
+}
+
+func (n *NodeConfig) Marshal() ([]byte, error) {
+	type Alias NodeConfig
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(n),
+	})
+}
+
+func (n *NodeConfig) Unmarshal(data []byte) error {
+	type Alias NodeConfig
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(n),
+	}
+	return json.Unmarshal(data, &aux)
+}
+
+type NodeDNS struct {
+	Proto   string   `json:"proto"`
+	Address string   `json:"address"`
+	Domains []string `json:"domains"`
+}
+
+func (n *NodeDNS) Marshal() ([]byte, error) {
+	type Alias NodeDNS
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(n),
+	})
+}
+
+func (n *NodeDNS) Unmarshal(data []byte) error {
+	type Alias NodeDNS
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(n),
+	}
+	return json.Unmarshal(data, &aux)
+}
+
+type NodeOutbound struct {
+	Name     string   `json:"name"`
+	Protocol string   `json:"protocol"`
+	Address  string   `json:"address"`
+	Port     int64    `json:"port"`
+	Password string   `json:"password"`
+	Rules    []string `json:"rules"`
+}
+
+func (n *NodeOutbound) Marshal() ([]byte, error) {
+	type Alias NodeOutbound
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(n),
+	})
 }
 
 type File struct {
@@ -151,4 +219,15 @@ type VerifyCode struct {
 type Log struct {
 	AutoClear bool  `yaml:"AutoClear" default:"true"`
 	ClearDays int64 `yaml:"ClearDays" default:"7"`
+}
+
+type NodeDBConfig struct {
+	NodeSecret             string
+	NodePullInterval       int64
+	NodePushInterval       int64
+	TrafficReportThreshold int64
+	IPStrategy             string
+	DNS                    string
+	Block                  string
+	Outbound               string
 }
