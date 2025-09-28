@@ -359,7 +359,6 @@ type CreateServerRequest struct {
 	Name      string     `json:"name"`
 	Country   string     `json:"country,omitempty"`
 	City      string     `json:"city,omitempty"`
-	Ratio     float32    `json:"ratio"`
 	Address   string     `json:"address"`
 	Sort      int        `json:"sort,omitempty"`
 	Protocols []Protocol `json:"protocols"`
@@ -1812,7 +1811,6 @@ type Server struct {
 	Name           string       `json:"name"`
 	Country        string       `json:"country"`
 	City           string       `json:"city"`
-	Ratio          float32      `json:"ratio"`
 	Address        string       `json:"address"`
 	Sort           int          `json:"sort"`
 	Protocols      []Protocol   `json:"protocols"`
@@ -2319,7 +2317,6 @@ type UpdateServerRequest struct {
 	Name      string     `json:"name"`
 	Country   string     `json:"country,omitempty"`
 	City      string     `json:"city,omitempty"`
-	Ratio     float32    `json:"ratio"`
 	Address   string     `json:"address"`
 	Sort      int        `json:"sort,omitempty"`
 	Protocols []Protocol `json:"protocols"`

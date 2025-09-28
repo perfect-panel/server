@@ -94,18 +94,18 @@ type (
 		Users []OnlineUser `json:"users"`
 	}
 	QueryServerConfigRequest {
-		ServerID int64 `path:"server_id"`
-		SecretKey string `form:"secret_key"`
+		ServerID  int64    `path:"server_id"`
+		SecretKey string   `form:"secret_key"`
 		Protocols []string `form:"protocols,omitempty"`
 	}
 	QueryServerConfigResponse {
-		TrafficReportThreshold int64 `json:"traffic_report_threshold"`
-		IPStrategy string `json:"ip_strategy"`
-		DNS []NodeDNS `json:"dns"`
-		Block []string `json:"block"`
-		Outbound []NodeOutbound `json:"outbound"`
-		Protocols []Protocol `json:"protocols"`
-		Total int64 `json:"total"`
+		TrafficReportThreshold int64          `json:"traffic_report_threshold"`
+		IPStrategy             string         `json:"ip_strategy"`
+		DNS                    []NodeDNS      `json:"dns"`
+		Block                  []string       `json:"block"`
+		Outbound               []NodeOutbound `json:"outbound"`
+		Protocols              []Protocol     `json:"protocols"`
+		Total                  int64          `json:"total"`
 	}
 )
 

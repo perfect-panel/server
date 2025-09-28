@@ -38,7 +38,6 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 	data.Name = req.Name
 	data.Country = req.Country
 	data.City = req.City
-	data.Ratio = req.Ratio
 	// only update address when it's  different
 	if req.Address != data.Address {
 		// query server ip location

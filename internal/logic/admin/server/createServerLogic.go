@@ -34,7 +34,6 @@ func (l *CreateServerLogic) CreateServer(req *types.CreateServerRequest) error {
 		Name:      req.Name,
 		Country:   req.Country,
 		City:      req.City,
-		Ratio:     req.Ratio,
 		Address:   req.Address,
 		Sort:      req.Sort,
 		Protocols: "",
