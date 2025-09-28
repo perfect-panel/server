@@ -119,11 +119,11 @@ func (l *MigrateServerNodeLogic) MigrateServerNode() (resp *types.MigrateServerN
 
 func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Server, error) {
 	result := &node.Server{
-		Id:        info.Id,
-		Name:      info.Name,
-		Country:   info.Country,
-		City:      info.City,
-		Ratio:     info.TrafficRatio,
+		Id:      info.Id,
+		Name:    info.Name,
+		Country: info.Country,
+		City:    info.City,
+		//Ratio:     info.TrafficRatio,
 		Address:   info.ServerAddr,
 		Sort:      int(info.Sort),
 		Protocols: "",
@@ -142,6 +142,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			Cipher:    src.Method,
 			Port:      uint16(src.Port),
 			ServerKey: src.ServerKey,
+			Ratio:     float64(info.TrafficRatio),
 		})
 	case Vmess:
 		var src server.Vmess
@@ -166,6 +167,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			Path:              src.TransportConfig.Path,
 			ServiceName:       src.TransportConfig.ServiceName,
 			Flow:              src.Flow,
+			Ratio:             float64(info.TrafficRatio),
 		}
 		protocols = append(protocols, protocol)
 		protocols = append(protocols, protocol)
@@ -192,6 +194,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			Path:              src.TransportConfig.Path,
 			ServiceName:       src.TransportConfig.ServiceName,
 			Flow:              src.Flow,
+			Ratio:             float64(info.TrafficRatio),
 		}
 		protocols = append(protocols, protocol)
 	case Trojan:
@@ -217,6 +220,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			Path:              src.TransportConfig.Path,
 			ServiceName:       src.TransportConfig.ServiceName,
 			Flow:              src.Flow,
+			Ratio:             float64(info.TrafficRatio),
 		}
 		protocols = append(protocols, protocol)
 	case Hysteria2:
@@ -239,6 +243,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			RealityPrivateKey: src.SecurityConfig.RealityPrivateKey,
 			RealityPublicKey:  src.SecurityConfig.RealityPublicKey,
 			RealityShortId:    src.SecurityConfig.RealityShortId,
+			Ratio:             float64(info.TrafficRatio),
 		}
 		protocols = append(protocols, protocol)
 	case Tuic:
@@ -262,6 +267,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			RealityPrivateKey:    src.SecurityConfig.RealityPrivateKey,
 			RealityPublicKey:     src.SecurityConfig.RealityPublicKey,
 			RealityShortId:       src.SecurityConfig.RealityShortId,
+			Ratio:                float64(info.TrafficRatio),
 		}
 		protocols = append(protocols, protocol)
 	case AnyTLS:
@@ -281,6 +287,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			RealityPrivateKey: src.SecurityConfig.RealityPrivateKey,
 			RealityPublicKey:  src.SecurityConfig.RealityPublicKey,
 			RealityShortId:    src.SecurityConfig.RealityShortId,
+			Ratio:             float64(info.TrafficRatio),
 		}
 		protocols = append(protocols, protocol)
 	}
