@@ -108,7 +108,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 
 	case paymentPlatform.CryptoSaaS:
 		// Process EPay payment - generates payment URL for redirect
-		url, err := l.epayPayment(paymentConfig, orderInfo, req.ReturnUrl)
+		url, err := l.CryptoSaaSPayment(paymentConfig, orderInfo, req.ReturnUrl)
 		if err != nil {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "epayPayment error: %v", err.Error())
 		}
