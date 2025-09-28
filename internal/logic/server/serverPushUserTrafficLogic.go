@@ -41,6 +41,7 @@ func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPush
 	// Create traffic task
 	var request task.TrafficStatistics
 	request.ServerId = serverInfo.Id
+	request.Protocol = req.Protocol
 	tool.DeepCopy(&request.Logs, req.Traffic)
 
 	// Push traffic task
