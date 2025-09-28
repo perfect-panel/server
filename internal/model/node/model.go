@@ -37,6 +37,7 @@ type FilterNodeParams struct {
 	Search   string   // Search Address or Name
 	Protocol string   // Protocol
 	Preload  bool     // Preload Server
+	Enabled  *bool    // Enabled
 }
 
 // FilterServerList Filter Server List
@@ -86,6 +87,10 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 	}
 	if params.Protocol != "" {
 		query = query.Where("protocol = ?", params.Protocol)
+	}
+
+	if params.Enabled != nil {
+		query = query.Where("enabled = ?", *params.Enabled)
 	}
 
 	if params.Preload {

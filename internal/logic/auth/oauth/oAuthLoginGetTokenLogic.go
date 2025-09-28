@@ -357,7 +357,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 			logger.Field("avatar", avatar),
 		)
 
-		userInfo = &user.User{Avatar: avatar}
+		userInfo = &user.User{Avatar: avatar, OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase}
 		if err := db.Create(userInfo).Error; err != nil {
 			l.Errorw("failed to create user record",
 				logger.Field("request_id", requestID),

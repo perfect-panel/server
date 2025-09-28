@@ -31,20 +31,21 @@ jobs:
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            if [ $(docker ps -a -q -f name=ppanel-server-dev) ]; then
-              echo "Stopping and removing existing ppanel-server container..."
-              docker stop ppanel-server-dev
-              docker rm ppanel-server-dev
-            else
-              echo "No existing ppanel-server-dev container running."
-            fi
-            
-            docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-            docker run -d --restart=always --log-driver=journald --name ppanel-server-dev -p 8080:8080 -v /www/wwwroot/api/etc:/app/etc -v /www/wwwroot/api/logs:/app/logs --restart=always -d ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}
+#      - name: Deploy to server
+#        uses: appleboy/ssh-action@v0.1.6
+#        with:
+#          host: ${{ secrets.SSH_HOST }}
+#          username: ${{ secrets.SSH_USER }}
+#          key: ${{ secrets.SSH_PRIVATE_KEY }}
+#          script: |
+#            if [ $(docker ps -a -q -f name=ppanel-server-dev) ]; then
+#              echo "Stopping and removing existing ppanel-server container..."
+#              docker stop ppanel-server-dev
+#              docker rm ppanel-server-dev
+#            else
+#              echo "No existing ppanel-server-dev container running."
+#            fi
+#
+#            docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+#            docker run -d --restart=always --log-driver=journald --name ppanel-server-dev -p 8080:8080 -v /www/wwwroot/api/etc:/app/etc -v /www/wwwroot/api/logs:/app/logs --restart=always -d ${{ secrets.DOCKER_USERNAME }}/ppanel-server-dev:${{ env.COMMIT_ID }}
+#
