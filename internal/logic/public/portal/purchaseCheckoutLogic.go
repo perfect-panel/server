@@ -484,7 +484,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 
 		// Store gift amount used in order for potential refund tracking
 		o.GiftAmount = giftUsed
-		err = l.svcCtx.OrderModel.Update(l.ctx, o)
+		err = l.svcCtx.OrderModel.Update(l.ctx, o, db)
 		if err != nil {
 			return err
 		}
