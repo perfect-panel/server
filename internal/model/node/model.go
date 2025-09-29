@@ -32,6 +32,7 @@ type FilterParams struct {
 type FilterNodeParams struct {
 	Page     int      // Page Number
 	Size     int      // Page Size
+	NodeId   []int64  // Node IDs
 	ServerId []int64  // Server IDs
 	Tag      []string // Tags
 	Search   string   // Search Address or Name
@@ -76,6 +77,9 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 	if params.Search != "" {
 		s := "%" + params.Search + "%"
 		query = query.Where("`name` LIKE ? OR `address` LIKE ? OR `tags` LIKE ? OR `port` LIKE ? ", s, s, s, s)
+	}
+	if len(params.NodeId) > 0 {
+		query = query.Where("id IN ?", params.NodeId)
 	}
 	if len(params.ServerId) > 0 {
 		query = query.Where("server_id IN ?", params.ServerId)

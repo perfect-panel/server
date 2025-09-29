@@ -470,10 +470,10 @@ func (l *ActivateOrderLogic) clearServerCache(ctx context.Context, sub *subscrib
 	tags := strings.Split(sub.NodeTags, ",")
 
 	err := l.svc.NodeModel.ClearNodeCache(ctx, &node.FilterNodeParams{
-		Page:     1,
-		Size:     1000,
-		ServerId: nodeIds,
-		Tag:      tags,
+		Page:   1,
+		Size:   1000,
+		NodeId: nodeIds,
+		Tag:    tags,
 	})
 	if err != nil {
 		logger.WithContext(ctx).Error("[Order Queue] Clear node cache failed", logger.Field("error", err.Error()))
