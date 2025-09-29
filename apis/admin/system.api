@@ -18,6 +18,10 @@ type (
 	SetNodeMultiplierRequest {
 		Periods []TimePeriod `json:"periods"`
 	}
+	PreViewNodeMultiplierResponse {
+		CurrentTime string `json:"current_time"`
+		Ratio float32 `json:"ratio"`
+	}
 )
 
 @server (
@@ -117,5 +121,9 @@ service ppanel {
 	@doc "Update Verify Code Config"
 	@handler UpdateVerifyCodeConfig
 	put /verify_code_config (VerifyCodeConfig)
+
+	@doc "PreView Node Multiplier"
+	@handler PreViewNodeMultiplier
+	get /node_multiplier/preview returns (PreViewNodeMultiplierResponse)
 }
 

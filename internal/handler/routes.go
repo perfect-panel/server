@@ -414,6 +414,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Update node config
 		adminSystemGroupRouter.PUT("/node_config", adminSystem.UpdateNodeConfigHandler(serverCtx))
 
+		// PreView Node Multiplier
+		adminSystemGroupRouter.GET("/node_multiplier/preview", adminSystem.PreViewNodeMultiplierHandler(serverCtx))
+
 		// get Privacy Policy Config
 		adminSystemGroupRouter.GET("/privacy", adminSystem.GetPrivacyPolicyConfigHandler(serverCtx))
 

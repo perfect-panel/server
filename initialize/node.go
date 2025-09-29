@@ -69,7 +69,6 @@ func Node(ctx *svc.ServiceContext) {
 
 	nodeMultiplierData, err := ctx.SystemModel.FindNodeMultiplierConfig(context.Background())
 	if err != nil {
-
 		logger.Error("Get Node Multiplier Config Error: ", logger.Field("error", err.Error()))
 		return
 	}

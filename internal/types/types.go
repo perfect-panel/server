@@ -1429,6 +1429,11 @@ type PreUnsubscribeResponse struct {
 	DeductionAmount int64 `json:"deduction_amount"`
 }
 
+type PreViewNodeMultiplierResponse struct {
+	CurrentTime string  `json:"current_time"`
+	Ratio       float32 `json:"ratio"`
+}
+
 type PreviewSubscribeTemplateRequest struct {
 	Id int64 `form:"id"`
 }
