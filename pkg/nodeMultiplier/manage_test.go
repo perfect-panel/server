@@ -8,9 +8,14 @@ import (
 func TestNewNodeMultiplierManager(t *testing.T) {
 	periods := []TimePeriod{
 		{
-			StartTime:  "23:00",
-			EndTime:    "1:59",
+			StartTime:  "23:00.000",
+			EndTime:    "1:59.000",
 			Multiplier: 1.2,
+		},
+		{
+			StartTime:  "12:00.000",
+			EndTime:    "13:59.000",
+			Multiplier: 0.5,
 		},
 	}
 	m := NewNodeMultiplierManager(periods)
