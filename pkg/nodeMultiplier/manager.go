@@ -28,8 +28,8 @@ func (m *Manager) GetMultiplier(current time.Time) float32 {
 }
 
 func (m *Manager) isInTimePeriod(current time.Time, start, end string) bool {
-	startTime, _ := time.Parse("15:04", start)
-	endTime, _ := time.Parse("15:04", end)
+	startTime, _ := time.Parse("15:04.000", start)
+	endTime, _ := time.Parse("15:04.000", end)
 
 	currentTime := time.Date(0, 1, 1, current.Hour(), current.Minute(), 0, 0, time.UTC)
 	startTimeFormatted := time.Date(0, 1, 1, startTime.Hour(), startTime.Minute(), 0, 0, time.UTC)
