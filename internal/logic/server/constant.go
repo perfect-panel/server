@@ -8,6 +8,7 @@ const (
 	Trojan      = "trojan"
 	AnyTLS      = "anytls"
 	Tuic        = "tuic"
+	Hysteria    = "hysteria"
 	Hysteria2   = "hysteria2"
 )
 

@@ -209,7 +209,7 @@ func (l *GetServerConfigLogic) compatible(config node.Protocol) map[string]inter
 				RealityShortId:       config.RealityShortId,
 			},
 		}
-	case Hysteria2:
+	case Hysteria2, Hysteria:
 		result = Hysteria2Node{
 			Port:         config.Port,
 			HopPorts:     config.HopPorts,

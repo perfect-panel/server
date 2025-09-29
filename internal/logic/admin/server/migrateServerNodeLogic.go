@@ -230,7 +230,7 @@ func (l *MigrateServerNodeLogic) adapterServer(info *server.Server) (*node.Serve
 			return nil, err
 		}
 		protocol := node.Protocol{
-			Type:              "hysteria2",
+			Type:              "hysteria",
 			Port:              uint16(src.Port),
 			HopPorts:          src.HopPorts,
 			HopInterval:       src.HopInterval,
