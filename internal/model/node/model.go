@@ -85,6 +85,7 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 		query = query.Where("server_id IN ?", params.ServerId)
 	}
 	if len(params.Tag) > 0 {
+		query = query.Where("1 = 0")
 		for _, tag := range params.Tag {
 			query = query.Or("FIND_IN_SET(?,tags)", tag)
 		}

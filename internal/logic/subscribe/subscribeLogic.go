@@ -216,12 +216,12 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, erro
 	enable := true
 
 	_, nodes, err := l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
-		Page:     1,
-		Size:     1000,
-		ServerId: nodeIds,
-		Tag:      tool.RemoveDuplicateElements(tags...),
-		Preload:  true,
-		Enabled:  &enable, // Only get enabled nodes
+		Page:    1,
+		Size:    1000,
+		NodeId:  nodeIds,
+		Tag:     tool.RemoveDuplicateElements(tags...),
+		Preload: true,
+		Enabled: &enable, // Only get enabled nodes
 	})
 
 	l.Debugf("[Query Subscribe]found servers: %v", len(nodes))
