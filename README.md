@@ -114,8 +114,8 @@ proxy services. Built with Go, it emphasizes performance, security, and scalabil
 
 4. **Pull from Docker Hub** (after CI/CD publishes):
    ```bash
-   docker pull yourusername/ppanel-server:latest
-   docker run --rm -p 8080:8080 yourusername/ppanel-server:latest
+   docker pull ppanel/ppanel-server:latest
+   docker run --rm -p 8080:8080 ppanel/ppanel-server:latest
    ```
 
 ## 📖 API Documentation

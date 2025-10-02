@@ -113,8 +113,8 @@ PPanel 服务端是 PPanel 项目的后端组件，为代理服务提供强大�
 
 4. **从 Docker Hub 拉取**（CI/CD 发布后）：
    ```bash
-   docker pull yourusername/ppanel-server:latest
-   docker run --rm -p 8080:8080 yourusername/ppanel-server:latest
+   docker pull ppanel/ppanel-server:latest
+   docker run --rm -p 8080:8080 ppanel/ppanel-server:latest
    ```
 
 ## 📖 API 文档
