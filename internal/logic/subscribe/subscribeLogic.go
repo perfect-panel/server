@@ -249,8 +249,9 @@ func (l *SubscribeLogic) createExpiredServers() []*node.Node {
 			Port:    18080,
 			Address: "127.0.0.1",
 			Server: &node.Server{
+				Id:        1,
 				Name:      "Subscribe Expired",
-				Protocols: "[{\"type:\"\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
+				Protocols: "[{\"type\":\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
 			},
 			Protocol: "shadowsocks",
 			Enabled:  &enable,
@@ -261,8 +262,9 @@ func (l *SubscribeLogic) createExpiredServers() []*node.Node {
 			Port:    18080,
 			Address: "127.0.0.1",
 			Server: &node.Server{
+				Id:        1,
 				Name:      "Subscribe Expired",
-				Protocols: "[{\"type:\"\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
+				Protocols: "[{\"type\":\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
 			},
 			Protocol: "shadowsocks",
 			Enabled:  &enable,
