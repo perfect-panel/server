@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/perfect-panel/server/pkg/tool"
+	"gorm.io/gorm"
 )
 
 type customServerLogicModel interface {
@@ -85,10 +86,7 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 		query = query.Where("server_id IN ?", params.ServerId)
 	}
 	if len(params.Tag) > 0 {
-		query = query.Where("1 = 0")
-		for _, tag := range params.Tag {
-			query = query.Or("FIND_IN_SET(?,tags)", tag)
-		}
+		query = query.Scopes(InSet("tags", params.Tag))
 	}
 	if params.Protocol != "" {
 		query = query.Where("protocol = ?", params.Protocol)
@@ -164,4 +162,19 @@ func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64
 		return m.Cache.Del(ctx, cacheKeys...).Err()
 	}
 	return nil
+}
+
+// InSet GORM InSet
+func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(values) == 0 {
+			return db
+		}
+
+		query := db.Where("1=0")
+		for _, v := range values {
+			query = query.Or("FIND_IN_SET(?, "+field+")", v)
+		}
+		return query
+	}
 }
