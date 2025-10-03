@@ -7,11 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 
@@ -466,17 +464,8 @@ func (l *ActivateOrderLogic) calculateCommission(price int64, percentage uint8) 
 
 // clearServerCache clears user list cache for all servers associated with the subscription
 func (l *ActivateOrderLogic) clearServerCache(ctx context.Context, sub *subscribe.Subscribe) {
-	nodeIds := tool.StringToInt64Slice(sub.Nodes)
-	tags := strings.Split(sub.NodeTags, ",")
-
-	err := l.svc.NodeModel.ClearNodeCache(ctx, &node.FilterNodeParams{
-		Page:   1,
-		Size:   1000,
-		NodeId: nodeIds,
-		Tag:    tags,
-	})
-	if err != nil {
-		logger.WithContext(ctx).Error("[Order Queue] Clear node cache failed", logger.Field("error", err.Error()))
+	if err := l.svc.SubscribeModel.ClearCache(ctx, sub.Id); err != nil {
+		logger.WithContext(ctx).Error("[Order Queue] Clear subscribe cache failed", logger.Field("error", err.Error()))
 	}
 }
 
