@@ -9,7 +9,9 @@ const (
 	AnyTLS      = "anytls"
 	Tuic        = "tuic"
 	Hysteria    = "hysteria"
-	Hysteria2   = "hysteria2"
+	// Deprecated: Hysteria2 is deprecated, use Hysteria instead
+	// TODO: remove in future versions
+	Hysteria2 = "hysteria2"
 )
 
 type SecurityConfig struct {
