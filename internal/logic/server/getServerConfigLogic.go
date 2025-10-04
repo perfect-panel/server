@@ -57,6 +57,11 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 		return nil, err
 	}
 
+	// compatible hysteria2, remove in future versions
+	if req.Protocol == Hysteria2 {
+		req.Protocol = Hysteria
+	}
+
 	protocols, err := data.UnmarshalProtocols()
 	if err != nil {
 		return nil, err
@@ -209,7 +214,7 @@ func (l *GetServerConfigLogic) compatible(config node.Protocol) map[string]inter
 				RealityShortId:       config.RealityShortId,
 			},
 		}
-	case Hysteria2, Hysteria:
+	case Hysteria:
 		result = Hysteria2Node{
 			Port:         config.Port,
 			HopPorts:     config.HopPorts,
