@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/perfect-panel/server/pkg/tool"
 	"gorm.io/gorm"
@@ -164,17 +165,21 @@ func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64
 	return nil
 }
 
-// InSet GORM InSet
+// InSet 支持多值 OR 查询
 func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		if len(values) == 0 {
 			return db
 		}
 
-		query := db.Where("1=0")
-		for _, v := range values {
-			query = query.Or("FIND_IN_SET(?, "+field+")", v)
+		conds := make([]string, len(values))
+		args := make([]interface{}, len(values))
+		for i, v := range values {
+			conds[i] = "FIND_IN_SET(?, " + field + ")"
+			args[i] = v
 		}
-		return query
+
+		// 用括号包裹 OR 条件，保证外层 AND 不受影响
+		return db.Where("("+strings.Join(conds, " OR ")+")", args...)
 	}
 }
