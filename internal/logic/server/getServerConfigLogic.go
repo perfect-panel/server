@@ -58,8 +58,9 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 	}
 
 	// compatible hysteria2, remove in future versions
-	if req.Protocol == Hysteria2 {
-		req.Protocol = Hysteria
+	protocolRequest := req.Protocol
+	if protocolRequest == Hysteria2 {
+		protocolRequest = Hysteria
 	}
 
 	protocols, err := data.UnmarshalProtocols()
@@ -68,7 +69,7 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 	}
 	var cfg map[string]interface{}
 	for _, protocol := range protocols {
-		if protocol.Type == req.Protocol {
+		if protocol.Type == protocolRequest {
 			cfg = l.compatible(protocol)
 			break
 		}
