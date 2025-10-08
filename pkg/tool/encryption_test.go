@@ -1,7 +1,15 @@
 package tool
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestEncodePassWord(t *testing.T) {
 	t.Logf("EncodePassWord: %v", EncodePassWord(""))
+}
+
+func TestMultiPasswordVerify(t *testing.T) {
+	pwd := "$2y$10$WFO17pdtohfeBILjEChoGeVxpDG.u9kVCKhjDAeEeNmCjIlj3tDRy"
+	status := MultiPasswordVerify("", "", "admin", pwd)
+	t.Logf("MultiPasswordVerify: %v", status)
 }
