@@ -10,6 +10,6 @@ func TestEncodePassWord(t *testing.T) {
 
 func TestMultiPasswordVerify(t *testing.T) {
 	pwd := "$2y$10$WFO17pdtohfeBILjEChoGeVxpDG.u9kVCKhjDAeEeNmCjIlj3tDRy"
-	status := MultiPasswordVerify("", "", "admin", pwd)
+	status := MultiPasswordVerify("bcrypt", "", "admin1", pwd)
 	t.Logf("MultiPasswordVerify: %v", status)
 }

@@ -223,6 +223,7 @@ func (l *ActivateOrderLogic) createGuestUser(ctx context.Context, orderInfo *ord
 
 	userInfo := &user.User{
 		Password: tool.EncodePassWord(tempOrder.Password),
+		Algo:     "default",
 		AuthMethods: []user.AuthMethods{
 			{
 				AuthType:       tempOrder.AuthType,

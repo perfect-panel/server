@@ -104,7 +104,8 @@ func (l *ResetPasswordLogic) ResetPassword(req *types.ResetPasswordRequest) (res
 
 	// Update password
 	userInfo.Password = tool.EncodePassWord(req.Password)
-	if err := l.svcCtx.UserModel.Update(l.ctx, userInfo); err != nil {
+	userInfo.Algo = "default"
+	if err = l.svcCtx.UserModel.Update(l.ctx, userInfo); err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update user info failed: %v", err.Error())
 	}
 	// Generate session id

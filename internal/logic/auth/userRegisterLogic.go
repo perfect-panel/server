@@ -90,6 +90,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo := &user.User{
 		Password:          pwd,
+		Algo:              "default",
 		OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase,
 	}
 	if referer != nil {

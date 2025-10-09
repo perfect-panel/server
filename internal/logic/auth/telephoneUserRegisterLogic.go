@@ -107,6 +107,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo := &user.User{
 		Password:          pwd,
+		Algo:              "default",
 		OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase,
 		AuthMethods: []user.AuthMethods{
 			{

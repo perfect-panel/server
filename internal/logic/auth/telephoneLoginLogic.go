@@ -98,7 +98,7 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r
 
 	if req.TelephoneCode == "" {
 		// Verify password
-		if !tool.VerifyPassWord(req.Password, userInfo.Password) {
+		if !tool.MultiPasswordVerify(userInfo.Algo, userInfo.Salt, req.Password, userInfo.Password) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
 		}
 	} else {

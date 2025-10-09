@@ -7,6 +7,8 @@ import (
 type User struct {
 	Id                    int64         `gorm:"primaryKey"`
 	Password              string        `gorm:"type:varchar(100);not null;comment:User Password"`
+	Algo                  string        `gorm:"type:varchar(20);default:'default';comment:Encryption Algorithm"`
+	Salt                  string        `gorm:"type:varchar(20);default:null;comment:Password Salt"`
 	Avatar                string        `gorm:"type:MEDIUMTEXT;comment:User Avatar"`
 	Balance               int64         `gorm:"default:0;comment:User Balance"` // User Balance Amount
 	ReferCode             string        `gorm:"type:varchar(20);default:'';comment:Referral Code"`
