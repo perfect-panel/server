@@ -99,6 +99,7 @@ type customUserLogicModel interface {
 	UpdateDevice(ctx context.Context, data *Device, tx ...*gorm.DB) error
 	FindOneDeviceByIdentifier(ctx context.Context, id string) (*Device, error)
 	DeleteDevice(ctx context.Context, id int64, tx ...*gorm.DB) error
+	InsertDevice(ctx context.Context, data *Device, tx ...*gorm.DB) error
 
 	ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error
 	ClearUserCache(ctx context.Context, data ...*User) error

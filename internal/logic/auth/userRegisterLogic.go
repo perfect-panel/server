@@ -125,6 +125,20 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		}
 		return nil
 	})
+
+	// Bind device to user if identifier is provided
+	if req.Identifier != "" {
+		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)
+		if err := bindLogic.BindDeviceToUser(req.Identifier, req.IP, req.UserAgent, userInfo.Id); err != nil {
+			l.Errorw("failed to bind device to user",
+				logger.Field("user_id", userInfo.Id),
+				logger.Field("identifier", req.Identifier),
+				logger.Field("error", err.Error()),
+			)
+			// Don't fail register if device binding fails, just log the error
+		}
+	}
+
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
 	// Generate token

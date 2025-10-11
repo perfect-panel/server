@@ -589,6 +589,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// User login
 		authGroupRouter.POST("/login", auth.UserLoginHandler(serverCtx))
 
+		// Device Login
+		authGroupRouter.POST("/login/device", auth.DeviceLoginHandler(serverCtx))
+
 		// User Telephone login
 		authGroupRouter.POST("/login/telephone", auth.TelephoneLoginHandler(serverCtx))
 

@@ -76,3 +76,18 @@ func (m *customUserModel) DeleteDevice(ctx context.Context, id int64, tx ...*gor
 	}, data.GetCacheKeys()...)
 	return err
 }
+
+func (m *customUserModel) InsertDevice(ctx context.Context, data *Device, tx ...*gorm.DB) error {
+	defer func() {
+		if clearErr := m.ClearDeviceCache(ctx, data); clearErr != nil {
+			// log cache clear error
+		}
+	}()
+
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
+		return conn.Create(data).Error
+	})
+}

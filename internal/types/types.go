@@ -517,6 +517,13 @@ type DeleteUserSubscribeRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
+type DeviceLoginRequest struct {
+	Identifier string `json:"identifier" validate:"required"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `json:"user_agent" validate:"required"`
+	CfToken    string `json:"cf_token,optional"`
+}
+
 type Document struct {
 	Id        int64    `json:"id"`
 	Title     string   `json:"title"`
@@ -2090,6 +2097,7 @@ type TelephoneCheckUserResponse struct {
 }
 
 type TelephoneLoginRequest struct {
+	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneCode     string `json:"telephone_code"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
@@ -2100,6 +2108,7 @@ type TelephoneLoginRequest struct {
 }
 
 type TelephoneRegisterRequest struct {
+	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 	Password          string `json:"password" validate:"required"`
@@ -2490,21 +2499,23 @@ type UserLoginLog struct {
 }
 
 type UserLoginRequest struct {
-	Email     string `json:"email" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	IP        string `header:"X-Original-Forwarded-For"`
-	UserAgent string `header:"User-Agent"`
-	CfToken   string `json:"cf_token,optional"`
+	Identifier string `json:"identifier"`
+	Email      string `json:"email" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `header:"User-Agent"`
+	CfToken    string `json:"cf_token,optional"`
 }
 
 type UserRegisterRequest struct {
-	Email     string `json:"email" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	Invite    string `json:"invite,optional"`
-	Code      string `json:"code,optional"`
-	IP        string `header:"X-Original-Forwarded-For"`
-	UserAgent string `header:"User-Agent"`
-	CfToken   string `json:"cf_token,optional"`
+	Identifier string `json:"identifier"`
+	Email      string `json:"email" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	Invite     string `json:"invite,optional"`
+	Code       string `json:"code,optional"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `header:"User-Agent"`
+	CfToken    string `json:"cf_token,optional"`
 }
 
 type UserStatistics struct {
