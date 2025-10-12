@@ -74,6 +74,7 @@ func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigRes
 			}
 		}
 	}
+	resp.OAuthMethods = methods
 
 	webAds, err := l.svcCtx.SystemModel.FindOneByKey(l.ctx, "WebAD")
 	if err != nil {
