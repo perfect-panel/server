@@ -95,6 +95,7 @@ type customUserLogicModel interface {
 	FindUserAuthMethodByPlatform(ctx context.Context, userId int64, platform string) (*AuthMethods, error)
 	FindOneByEmail(ctx context.Context, email string) (*User, error)
 	FindOneDevice(ctx context.Context, id int64) (*Device, error)
+	QueryDeviceList(ctx context.Context, userid int64) ([]*Device, int64, error)
 	QueryDevicePageList(ctx context.Context, userid, subscribeId int64, page, size int) ([]*Device, int64, error)
 	UpdateDevice(ctx context.Context, data *Device, tx ...*gorm.DB) error
 	FindOneDeviceByIdentifier(ctx context.Context, id string) (*Device, error)
