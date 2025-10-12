@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
 )
@@ -20,6 +21,7 @@ type Config struct {
 	Node          NodeConfig      `yaml:"Node"`
 	Mobile        MobileConfig    `yaml:"Mobile"`
 	Email         EmailConfig     `yaml:"Email"`
+	Device        DeviceConfig    `yaml:"device"`
 	Verify        Verify          `yaml:"Verify"`
 	VerifyCode    VerifyCode      `yaml:"VerifyCode"`
 	Register      RegisterConfig  `yaml:"Register"`
@@ -93,6 +95,14 @@ type MobileConfig struct {
 	EnableVerify    bool     `yaml:"enable_verify"`
 	EnableWhitelist bool     `yaml:"enable_whitelist"`
 	Whitelist       []string `yaml:"whitelist"`
+}
+
+type DeviceConfig struct {
+	Enable         bool   `yaml:"enable" default:"true"`
+	ShowAds        bool   `yaml:"show_ads"`
+	EnableSecurity bool   `yaml:"enable_security"`
+	OnlyRealDevice bool   `yaml:"only_real_device"`
+	SecuritySecret string `yaml:"security_secret"`
 }
 
 type SiteConfig struct {

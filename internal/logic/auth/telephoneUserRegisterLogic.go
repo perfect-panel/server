@@ -139,6 +139,8 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 		return nil
 	})
 
+	loginType := "pc"
+
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {
 		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)
@@ -150,6 +152,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 			)
 			// Don't fail register if device binding fails, just log the error
 		}
+		loginType = "mobile"
 	}
 
 	// Generate session id
@@ -161,6 +164,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
+		jwt.WithOption("LoginType", loginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))

@@ -92,6 +92,7 @@ type (
 @server (
 	prefix: v1/common
 	group:  common
+    middleware: DeviceMiddleware
 )
 service ppanel {
 	@doc "Get global config"

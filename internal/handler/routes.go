@@ -578,6 +578,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	authGroupRouter := router.Group("/v1/auth")
+	authGroupRouter.Use(middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Check user is exist
@@ -622,6 +623,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	commonGroupRouter := router.Group("/v1/common")
+	commonGroupRouter.Use(middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get Ads
@@ -653,7 +655,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicAnnouncementGroupRouter := router.Group("/v1/public/announcement")
-	publicAnnouncementGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicAnnouncementGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Query announcement
@@ -661,7 +663,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicDocumentGroupRouter := router.Group("/v1/public/document")
-	publicDocumentGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicDocumentGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get document detail
@@ -672,7 +674,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicOrderGroupRouter := router.Group("/v1/public/order")
-	publicOrderGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicOrderGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Close order
@@ -701,7 +703,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicPaymentGroupRouter := router.Group("/v1/public/payment")
-	publicPaymentGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicPaymentGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get available payment methods
@@ -709,6 +711,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicPortalGroupRouter := router.Group("/v1/public/portal")
+	publicPortalGroupRouter.Use(middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Purchase Checkout
@@ -731,7 +734,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicSubscribeGroupRouter := router.Group("/v1/public/subscribe")
-	publicSubscribeGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicSubscribeGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get subscribe list
@@ -739,7 +742,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicTicketGroupRouter := router.Group("/v1/public/ticket")
-	publicTicketGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicTicketGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Update ticket status
@@ -759,7 +762,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicUserGroupRouter := router.Group("/v1/public/user")
-	publicUserGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicUserGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Query User Affiliate Count

@@ -19,7 +19,7 @@ type (
 @server (
 	prefix:     v1/public/subscribe
 	group:      public/subscribe
-	middleware: AuthMiddleware
+	middleware: AuthMiddleware,DeviceMiddleware
 )
 service ppanel {
 	@doc "Get subscribe list"

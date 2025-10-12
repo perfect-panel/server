@@ -102,7 +102,7 @@ type (
 @server (
 	prefix:     v1/public/user
 	group:      public/user
-	middleware: AuthMiddleware
+	middleware: AuthMiddleware,DeviceMiddleware
 )
 service ppanel {
 	@doc "Query User Info"

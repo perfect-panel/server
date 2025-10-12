@@ -8,4 +8,5 @@ const (
 	CtxKeyRequestHost CtxKey = "requestHost"
 	CtxKeyPlatform    CtxKey = "platform"
 	CtxKeyPayment     CtxKey = "payment"
+	LoginType         CtxKey = "loginType"
 )

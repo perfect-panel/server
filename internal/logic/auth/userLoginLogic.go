@@ -79,6 +79,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	if !tool.VerifyPassWord(req.Password, userInfo.Password) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
 	}
+	loginType := "pc"
 
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {
@@ -91,6 +92,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 			)
 			// Don't fail login if device binding fails, just log the error
 		}
+		loginType = "device"
 	}
 
 	// Generate session id
@@ -102,6 +104,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
+		jwt.WithOption("LoginType", loginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))

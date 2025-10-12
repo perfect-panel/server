@@ -39,6 +39,7 @@ type (
 	}
 	// User login response
 	ResetPasswordRequest {
+        Identifier        string `json:"identifier"`
 		Email     string `json:"email" validate:"required"`
 		Password  string `json:"password" validate:"required"`
 		Code      string `json:"code,optional"`
@@ -94,6 +95,7 @@ type (
 	}
 	// User login response
 	TelephoneResetPasswordRequest {
+        Identifier        string `json:"identifier"`
 		Telephone         string `json:"telephone" validate:"required"`
 		TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 		Password          string `json:"password" validate:"required"`
@@ -122,6 +124,7 @@ type (
 @server (
 	prefix: v1/auth
 	group:  auth
+    middleware: DeviceMiddleware
 )
 service ppanel {
 	@doc "User login"

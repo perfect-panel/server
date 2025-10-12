@@ -1752,12 +1752,13 @@ type RenewalOrderResponse struct {
 }
 
 type ResetPasswordRequest struct {
-	Email     string `json:"email" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	Code      string `json:"code,optional"`
-	IP        string `header:"X-Original-Forwarded-For"`
-	UserAgent string `header:"User-Agent"`
-	CfToken   string `json:"cf_token,optional"`
+	Identifier string `json:"identifier"`
+	Email      string `json:"email" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	Code       string `json:"code,optional"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `header:"User-Agent"`
+	CfToken    string `json:"cf_token,optional"`
 }
 
 type ResetSortRequest struct {
@@ -2128,6 +2129,7 @@ type TelephoneRegisterRequest struct {
 }
 
 type TelephoneResetPasswordRequest struct {
+	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 	Password          string `json:"password" validate:"required"`

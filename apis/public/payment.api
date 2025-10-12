@@ -13,7 +13,7 @@ import "../types.api"
 @server (
 	prefix:     v1/public/payment
 	group:      public/payment
-	middleware: AuthMiddleware
+	middleware: AuthMiddleware,DeviceMiddleware
 )
 service ppanel {
 	@doc "Get available payment methods"
