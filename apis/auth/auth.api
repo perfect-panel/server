@@ -16,6 +16,7 @@ type (
 		Password   string `json:"password" validate:"required"`
 		IP         string `header:"X-Original-Forwarded-For"`
 		UserAgent  string `header:"User-Agent"`
+        LoginType         string `header:"Login-Type"`
 		CfToken    string `json:"cf_token,optional"`
 	}
 	// Check user is exist request
@@ -35,6 +36,7 @@ type (
 		Code       string `json:"code,optional"`
 		IP         string `header:"X-Original-Forwarded-For"`
 		UserAgent  string `header:"User-Agent"`
+        LoginType         string `header:"Login-Type"`
 		CfToken    string `json:"cf_token,optional"`
 	}
 	// User login response
@@ -45,6 +47,7 @@ type (
 		Code      string `json:"code,optional"`
 		IP        string `header:"X-Original-Forwarded-For"`
 		UserAgent string `header:"User-Agent"`
+        LoginType         string `header:"Login-Type"`
 		CfToken   string `json:"cf_token,optional"`
 	}
 	LoginResponse {
@@ -70,6 +73,7 @@ type (
 		Password          string `json:"password"`
 		IP                string `header:"X-Original-Forwarded-For"`
 		UserAgent         string `header:"User-Agent"`
+        LoginType         string `header:"Login-Type"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	// Check user is exist request
@@ -91,6 +95,7 @@ type (
 		Code              string `json:"code,optional"`
 		IP                string `header:"X-Original-Forwarded-For"`
 		UserAgent         string `header:"User-Agent"`
+        LoginType         string `header:"Login-Type,optional"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	// User login response
@@ -102,6 +107,7 @@ type (
 		Code              string `json:"code,optional"`
 		IP                string `header:"X-Original-Forwarded-For"`
 		UserAgent         string `header:"User-Agent"`
+        LoginType         string `header:"Login-Type,optional"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	AppleLoginCallbackRequest {

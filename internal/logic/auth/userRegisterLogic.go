@@ -125,7 +125,6 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		}
 		return nil
 	})
-	loginType := "pc"
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {
 		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)
@@ -137,9 +136,10 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 			)
 			// Don't fail register if device binding fails, just log the error
 		}
-		loginType = "device"
 	}
-
+	if l.ctx.Value(constant.LoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
 	// Generate token
@@ -149,7 +149,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("LoginType", loginType),
+		jwt.WithOption("LoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))

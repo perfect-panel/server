@@ -41,7 +41,10 @@ func AuthMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			return
 		}
 
-		loginType := claims["LoginType"].(string)
+		loginType := ""
+		if claims["LoginType"] != nil {
+			loginType = claims["LoginType"].(string)
+		}
 		// get user id from token
 		userId := int64(claims["UserId"].(float64))
 		// get session id from token

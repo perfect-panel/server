@@ -817,6 +817,11 @@ type GetDetailRequest struct {
 	Id int64 `form:"id" validate:"required"`
 }
 
+type GetDeviceListResponse struct {
+	List  []UserDevice `json:"list"`
+	Total int64        `json:"total"`
+}
+
 type GetDocumentDetailRequest struct {
 	Id int64 `json:"id" validate:"required"`
 }
@@ -1758,6 +1763,7 @@ type ResetPasswordRequest struct {
 	Code       string `json:"code,optional"`
 	IP         string `header:"X-Original-Forwarded-For"`
 	UserAgent  string `header:"User-Agent"`
+	LoginType  string `header:"Login-Type"`
 	CfToken    string `json:"cf_token,optional"`
 }
 
@@ -2113,6 +2119,7 @@ type TelephoneLoginRequest struct {
 	Password          string `json:"password"`
 	IP                string `header:"X-Original-Forwarded-For"`
 	UserAgent         string `header:"User-Agent"`
+	LoginType         string `header:"Login-Type"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
@@ -2125,6 +2132,7 @@ type TelephoneRegisterRequest struct {
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For"`
 	UserAgent         string `header:"User-Agent"`
+	LoginType         string `header:"Login-Type,optional"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
@@ -2136,6 +2144,7 @@ type TelephoneResetPasswordRequest struct {
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For"`
 	UserAgent         string `header:"User-Agent"`
+	LoginType         string `header:"Login-Type,optional"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
@@ -2228,6 +2237,10 @@ type Tuic struct {
 	UDPRelayMode         string         `json:"udp_relay_mode"`
 	CongestionController string         `json:"congestion_controller"`
 	SecurityConfig       SecurityConfig `json:"security_config"`
+}
+
+type UnbindDeviceRequest struct {
+	Id int64 `json:"id" validate:"required"`
 }
 
 type UnbindOAuthRequest struct {
@@ -2514,6 +2527,7 @@ type UserLoginRequest struct {
 	Password   string `json:"password" validate:"required"`
 	IP         string `header:"X-Original-Forwarded-For"`
 	UserAgent  string `header:"User-Agent"`
+	LoginType  string `header:"Login-Type"`
 	CfToken    string `json:"cf_token,optional"`
 }
 
@@ -2525,6 +2539,7 @@ type UserRegisterRequest struct {
 	Code       string `json:"code,optional"`
 	IP         string `header:"X-Original-Forwarded-For"`
 	UserAgent  string `header:"User-Agent"`
+	LoginType  string `header:"Login-Type"`
 	CfToken    string `json:"cf_token,optional"`
 }
 

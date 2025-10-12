@@ -3,6 +3,7 @@ package middleware
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -36,6 +37,8 @@ func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *gin.Context) {
 			c.Next()
 			return
 		}
+
+		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), constant.LoginType, loginType))
 
 		if !srvCtx.Config.Device.Enable || srvCtx.Config.Device.SecuritySecret == "" {
 			c.Next()
@@ -123,8 +126,6 @@ func (rw *ResponseWriter) Decrypt() bool {
 				rw.c.Request.URL.RawQuery = query.Encode()
 			}
 		}
-	} else {
-		return false
 	}
 
 	//判断body是否存在数据，存在就尝试解密，并设置回去

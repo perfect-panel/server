@@ -124,7 +124,6 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r
 		l.svcCtx.Redis.Del(l.ctx, cacheKey)
 	}
 
-	loginType := "pc"
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {
 		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)
@@ -136,7 +135,10 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r
 			)
 			// Don't fail login if device binding fails, just log the error
 		}
-		loginType = "device"
+	}
+
+	if l.ctx.Value(constant.LoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.LoginType).(string)
 	}
 
 	// Generate session id
@@ -148,7 +150,7 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("LoginType", loginType),
+		jwt.WithOption("LoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))

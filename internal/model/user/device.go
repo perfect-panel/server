@@ -46,6 +46,16 @@ func (m *customUserModel) QueryDevicePageList(ctx context.Context, userId, subsc
 	return list, total, err
 }
 
+// QueryDeviceList  returns a list of records that meet the conditions.
+func (m *customUserModel) QueryDeviceList(ctx context.Context, userId int64) ([]*Device, int64, error) {
+	var list []*Device
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Device{}).Where("`user_id` = ? and `subscribe_id` = ?", userId).Count(&total).Find(&list).Error
+	})
+	return list, total, err
+}
+
 func (m *customUserModel) UpdateDevice(ctx context.Context, data *Device, tx ...*gorm.DB) error {
 	old, err := m.FindOneDevice(ctx, data.Id)
 	if err != nil {

@@ -83,8 +83,6 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "update user password failed: %v", err.Error())
 	}
 
-	loginType := "pc"
-
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {
 		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)
@@ -96,9 +94,10 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 			)
 			// Don't fail register if device binding fails, just log the error
 		}
-		loginType = "mobile"
 	}
-
+	if l.ctx.Value(constant.LoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
 	// Generate token
@@ -108,7 +107,7 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("LoginType", loginType),
+		jwt.WithOption("LoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Errorw("[UserLogin] token generate error", logger.Field("error", err.Error()))

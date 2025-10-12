@@ -792,6 +792,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Query User Commission Log
 		publicUserGroupRouter.GET("/commission_log", publicUser.QueryUserCommissionLogHandler(serverCtx))
 
+		// Get Device List
+		publicUserGroupRouter.GET("/devices", publicUser.GetDeviceListHandler(serverCtx))
+
 		// Query User Info
 		publicUserGroupRouter.GET("/info", publicUser.QueryUserInfoHandler(serverCtx))
 
@@ -815,6 +818,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Reset User Subscribe Token
 		publicUserGroupRouter.PUT("/subscribe_token", publicUser.ResetUserSubscribeTokenHandler(serverCtx))
+
+		// Unbind Device
+		publicUserGroupRouter.PUT("/unbind_device", publicUser.UnbindDeviceHandler(serverCtx))
 
 		// Unbind OAuth
 		publicUserGroupRouter.POST("/unbind_oauth", publicUser.UnbindOAuthHandler(serverCtx))
