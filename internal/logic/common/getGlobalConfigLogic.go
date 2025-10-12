@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -67,9 +68,12 @@ func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigRes
 	for _, method := range authMethods {
 		if *method.Enabled {
 			methods = append(methods, method.Method)
+			if method.Method == "device" {
+				_ = json.Unmarshal([]byte(method.Config), &resp.Auth.Device)
+				resp.Auth.Device.Enable = true
+			}
 		}
 	}
-	resp.OAuthMethods = methods
 
 	webAds, err := l.svcCtx.SystemModel.FindOneByKey(l.ctx, "WebAD")
 	if err != nil {

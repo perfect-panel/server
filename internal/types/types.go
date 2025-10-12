@@ -118,6 +118,7 @@ type ApplicationVersion struct {
 type AuthConfig struct {
 	Mobile   MobileAuthenticateConfig `json:"mobile"`
 	Email    EmailAuthticateConfig    `json:"email"`
+	Device   DeviceAuthticateConfig   `json:"device"`
 	Register PubilcRegisterConfig     `json:"register"`
 }
 
@@ -515,6 +516,13 @@ type DeleteUserDeivceRequest struct {
 
 type DeleteUserSubscribeRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
+}
+
+type DeviceAuthticateConfig struct {
+	Enable         bool `json:"enable"`
+	ShowAds        bool `json:"show_ads"`
+	EnableSecurity bool `json:"enable_security"`
+	OnlyRealDevice bool `json:"only_real_device"`
 }
 
 type DeviceLoginRequest struct {
