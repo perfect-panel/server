@@ -28,9 +28,23 @@ const (
 
 func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		loginType := c.GetString(string(constant.LoginType))
-		if loginType == "" {
+
+		if !srvCtx.Config.Device.Enable {
+			c.Next()
+			return
+		}
+
+		if srvCtx.Config.Device.SecuritySecret == "" {
+			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.SecretIsEmpty), "Secret is empty"))
+			c.Abort()
+			return
+		}
+
+		var loginType string
+		if c.Value(constant.CtxKeyUser) == nil {
 			loginType = c.GetHeader("Login-Type")
+		} else {
+			loginType = c.GetString(string(constant.LoginType))
 		}
 
 		if loginType != "device" {
@@ -40,10 +54,6 @@ func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *gin.Context) {
 
 		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), constant.LoginType, loginType))
 
-		if !srvCtx.Config.Device.Enable || srvCtx.Config.Device.SecuritySecret == "" {
-			c.Next()
-			return
-		}
 		rw := NewResponseWriter(c, srvCtx)
 		if !rw.Decrypt() {
 			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidCiphertext), "Invalid ciphertext"))
