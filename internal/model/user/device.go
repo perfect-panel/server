@@ -51,7 +51,7 @@ func (m *customUserModel) QueryDeviceList(ctx context.Context, userId int64) ([]
 	var list []*Device
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`user_id` = ? and `subscribe_id` = ?", userId).Count(&total).Find(&list).Error
+		return conn.Model(&Device{}).Where("`user_id` = ?", userId).Count(&total).Find(&list).Error
 	})
 	return list, total, err
 }
