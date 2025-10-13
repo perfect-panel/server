@@ -673,6 +673,7 @@ type (
 		List  []SubscribeGroup `json:"list"`
 		Total int64            `json:"total"`
 	}
+
 	GetUserSubscribeTrafficLogsRequest {
 		Page        int   `form:"page"`
 		Size        int   `form:"size"`

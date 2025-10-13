@@ -23,6 +23,7 @@ type (
 		UpdateServer(ctx context.Context, data *Server, tx ...*gorm.DB) error
 		DeleteServer(ctx context.Context, id int64, tx ...*gorm.DB) error
 		Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
+		QueryServerList(ctx context.Context, ids []int64) (servers []*Server, err error)
 	}
 
 	NodeModel interface {

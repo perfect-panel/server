@@ -1697,6 +1697,10 @@ type QueryUserSubscribeListResponse struct {
 	Total int64           `json:"total"`
 }
 
+type QueryUserSubscribeNodeListResponse struct {
+	List []UserSubscribeInfo `json:"list"`
+}
+
 type QuotaTask struct {
 	Id           int64   `json:"id"`
 	Subscribers  []int64 `json:"subscribers"`
@@ -2595,6 +2599,26 @@ type UserSubscribeDetail struct {
 	UpdatedAt   int64     `json:"updated_at"`
 }
 
+type UserSubscribeInfo struct {
+	Id          int64                    `json:"id"`
+	UserId      int64                    `json:"user_id"`
+	OrderId     int64                    `json:"order_id"`
+	SubscribeId int64                    `json:"subscribe_id"`
+	StartTime   int64                    `json:"start_time"`
+	ExpireTime  int64                    `json:"expire_time"`
+	FinishedAt  int64                    `json:"finished_at"`
+	ResetTime   int64                    `json:"reset_time"`
+	Traffic     int64                    `json:"traffic"`
+	Download    int64                    `json:"download"`
+	Upload      int64                    `json:"upload"`
+	Token       string                   `json:"token"`
+	Status      uint8                    `json:"status"`
+	CreatedAt   int64                    `json:"created_at"`
+	UpdatedAt   int64                    `json:"updated_at"`
+	IsTryOut    bool                     `json:"is_try_out"`
+	Nodes       []*UserSubscribeNodeInfo `json:"nodes"`
+}
+
 type UserSubscribeLog struct {
 	Id              int64  `json:"id"`
 	UserId          int64  `json:"user_id"`
@@ -2603,6 +2627,19 @@ type UserSubscribeLog struct {
 	IP              string `json:"ip"`
 	UserAgent       string `json:"user_agent"`
 	Timestamp       int64  `json:"timestamp"`
+}
+
+type UserSubscribeNodeInfo struct {
+	Id        int64    `json:"id"`
+	Name      string   `json:"name"`
+	Uuid      string   `json:"uuid"`
+	Protocol  string   `json:"protocol"`
+	Port      uint16   `json:"port"`
+	Address   string   `json:"address"`
+	Tags      []string `json:"tags"`
+	Country   string   `json:"country"`
+	City      string   `json:"city"`
+	CreatedAt int64    `json:"created_at"`
 }
 
 type UserSubscribeTrafficLog struct {
