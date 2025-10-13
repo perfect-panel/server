@@ -739,6 +739,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	{
 		// Get subscribe list
 		publicSubscribeGroupRouter.GET("/list", publicSubscribe.QuerySubscribeListHandler(serverCtx))
+
+		// Get user subscribe node info
+		publicSubscribeGroupRouter.GET("/node/list", publicSubscribe.QueryUserSubscribeNodeListHandler(serverCtx))
 	}
 
 	publicTicketGroupRouter := router.Group("/v1/public/ticket")
