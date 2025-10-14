@@ -40,19 +40,17 @@ func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *gin.Context) {
 			return
 		}
 
-		var loginType string
-		if c.Value(constant.CtxKeyUser) == nil {
-			loginType = c.GetHeader("Login-Type")
-		} else {
-			loginType = c.GetString(string(constant.LoginType))
+		ctx := c.Request.Context()
+		if ctx.Value(constant.CtxKeyUser) == nil && c.GetHeader("Login-Type") != "" {
+			ctx = context.WithValue(ctx, constant.LoginType, c.GetHeader("Login-Type"))
+			c.Request = c.Request.WithContext(ctx)
 		}
 
-		if loginType != "device" {
+		loginType, ok := ctx.Value(constant.LoginType).(string)
+		if !ok || loginType != "device" {
 			c.Next()
 			return
 		}
-
-		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), constant.LoginType, loginType))
 
 		rw := NewResponseWriter(c, srvCtx)
 		if !rw.Decrypt() {
