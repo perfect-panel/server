@@ -35,11 +35,9 @@ func NewDeviceLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Devic
 }
 
 func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *types.LoginResponse, err error) {
-	//TODO : check device login rate limit
-	// Check if device login is enabled
-	//if !l.svcCtx.Config.Register.EnableDevice {
-	//	return nil, xerr.NewErrMsg("Device login is disabled")
-	//}
+	if !l.svcCtx.Config.Device.Enable {
+		return nil, xerr.NewErrMsg("Device login is disabled")
+	}
 
 	loginStatus := false
 	var userInfo *user.User
