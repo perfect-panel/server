@@ -20,11 +20,9 @@ RUN go mod download
 COPY . .
 
 # Build the binary with version and build time
-RUN BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
-    go build -ldflags "-s -w \
-        -X github.com/perfect-panel/server/pkg/constant.Version=${VERSION} \
-        -X github.com/perfect-panel/server/pkg/constant.BuildTime=${BUILD_TIME}" \
-        -o /app/ppanel ppanel.go
+RUN BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M:%S") && \
+    go build -ldflags="-s -w -X 'github.com/perfect-panel/server/pkg/constant.Version=${VERSION}' -X 'github.com/perfect-panel/server/pkg/constant.BuildTime=${BUILD_TIME}'" -o /app/ppanel ppanel.go
+
 # Final minimal image
 FROM scratch
 
