@@ -46,6 +46,12 @@ func (m *Service) Start() {
 		logger.Errorf("register traffic stat task failed: %s", err.Error())
 	}
 
+	// schedule update exchange rate task: every day at 01:00
+	rateTask := asynq.NewTask(types.ForthwithQuotaTask, nil)
+	if _, err := m.server.Register("0 1 * * *", rateTask, asynq.MaxRetry(3)); err != nil {
+		logger.Errorf("register update exchange rate task failed: %s", err.Error())
+	}
+
 	if err := m.server.Run(); err != nil {
 		logger.Errorf("run scheduler failed: %s", err.Error())
 	}

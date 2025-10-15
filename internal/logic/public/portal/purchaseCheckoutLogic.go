@@ -347,6 +347,11 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 	// Convert cents to decimal amount
 	amount = float64(src) / float64(100)
 
+	if l.svcCtx.ExchangeRate != 0 && to == "CNY" {
+		amount = amount * l.svcCtx.ExchangeRate
+		return amount, nil
+	}
+
 	// Retrieve system currency configuration
 	currency, err := l.svcCtx.SystemModel.GetCurrencyConfig(l.ctx)
 	if err != nil {
