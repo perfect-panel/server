@@ -118,6 +118,7 @@ type ApplicationVersion struct {
 type AuthConfig struct {
 	Mobile   MobileAuthenticateConfig `json:"mobile"`
 	Email    EmailAuthticateConfig    `json:"email"`
+	Device   DeviceAuthticateConfig   `json:"device"`
 	Register PubilcRegisterConfig     `json:"register"`
 }
 
@@ -517,6 +518,20 @@ type DeleteUserSubscribeRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
+type DeviceAuthticateConfig struct {
+	Enable         bool `json:"enable"`
+	ShowAds        bool `json:"show_ads"`
+	EnableSecurity bool `json:"enable_security"`
+	OnlyRealDevice bool `json:"only_real_device"`
+}
+
+type DeviceLoginRequest struct {
+	Identifier string `json:"identifier" validate:"required"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `json:"user_agent" validate:"required"`
+	CfToken    string `json:"cf_token,optional"`
+}
+
 type Document struct {
 	Id        int64    `json:"id"`
 	Title     string   `json:"title"`
@@ -800,6 +815,11 @@ type GetCouponListResponse struct {
 
 type GetDetailRequest struct {
 	Id int64 `form:"id" validate:"required"`
+}
+
+type GetDeviceListResponse struct {
+	List  []UserDevice `json:"list"`
+	Total int64        `json:"total"`
 }
 
 type GetDocumentDetailRequest struct {
@@ -1520,7 +1540,7 @@ type PurchaseOrderResponse struct {
 
 type QueryAnnouncementRequest struct {
 	Page   int   `form:"page"`
-	Size   int   `form:"size"`
+	Size   int   `form:"size,default=15"`
 	Pinned *bool `form:"pinned"`
 	Popup  *bool `form:"popup"`
 }
@@ -1677,6 +1697,10 @@ type QueryUserSubscribeListResponse struct {
 	Total int64           `json:"total"`
 }
 
+type QueryUserSubscribeNodeListResponse struct {
+	List []UserSubscribeInfo `json:"list"`
+}
+
 type QuotaTask struct {
 	Id           int64   `json:"id"`
 	Subscribers  []int64 `json:"subscribers"`
@@ -1737,12 +1761,14 @@ type RenewalOrderResponse struct {
 }
 
 type ResetPasswordRequest struct {
-	Email     string `json:"email" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	Code      string `json:"code,optional"`
-	IP        string `header:"X-Original-Forwarded-For"`
-	UserAgent string `header:"User-Agent"`
-	CfToken   string `json:"cf_token,optional"`
+	Identifier string `json:"identifier"`
+	Email      string `json:"email" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	Code       string `json:"code,optional"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `header:"User-Agent"`
+	LoginType  string `header:"Login-Type"`
+	CfToken    string `json:"cf_token,optional"`
 }
 
 type ResetSortRequest struct {
@@ -2090,16 +2116,19 @@ type TelephoneCheckUserResponse struct {
 }
 
 type TelephoneLoginRequest struct {
+	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneCode     string `json:"telephone_code"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 	Password          string `json:"password"`
 	IP                string `header:"X-Original-Forwarded-For"`
 	UserAgent         string `header:"User-Agent"`
+	LoginType         string `header:"Login-Type"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
 type TelephoneRegisterRequest struct {
+	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 	Password          string `json:"password" validate:"required"`
@@ -2107,16 +2136,19 @@ type TelephoneRegisterRequest struct {
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For"`
 	UserAgent         string `header:"User-Agent"`
+	LoginType         string `header:"Login-Type,optional"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
 type TelephoneResetPasswordRequest struct {
+	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 	Password          string `json:"password" validate:"required"`
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For"`
 	UserAgent         string `header:"User-Agent"`
+	LoginType         string `header:"Login-Type,optional"`
 	CfToken           string `json:"cf_token,optional"`
 }
 
@@ -2209,6 +2241,10 @@ type Tuic struct {
 	UDPRelayMode         string         `json:"udp_relay_mode"`
 	CongestionController string         `json:"congestion_controller"`
 	SecurityConfig       SecurityConfig `json:"security_config"`
+}
+
+type UnbindDeviceRequest struct {
+	Id int64 `json:"id" validate:"required"`
 }
 
 type UnbindOAuthRequest struct {
@@ -2490,21 +2526,25 @@ type UserLoginLog struct {
 }
 
 type UserLoginRequest struct {
-	Email     string `json:"email" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	IP        string `header:"X-Original-Forwarded-For"`
-	UserAgent string `header:"User-Agent"`
-	CfToken   string `json:"cf_token,optional"`
+	Identifier string `json:"identifier"`
+	Email      string `json:"email" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `header:"User-Agent"`
+	LoginType  string `header:"Login-Type"`
+	CfToken    string `json:"cf_token,optional"`
 }
 
 type UserRegisterRequest struct {
-	Email     string `json:"email" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	Invite    string `json:"invite,optional"`
-	Code      string `json:"code,optional"`
-	IP        string `header:"X-Original-Forwarded-For"`
-	UserAgent string `header:"User-Agent"`
-	CfToken   string `json:"cf_token,optional"`
+	Identifier string `json:"identifier"`
+	Email      string `json:"email" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	Invite     string `json:"invite,optional"`
+	Code       string `json:"code,optional"`
+	IP         string `header:"X-Original-Forwarded-For"`
+	UserAgent  string `header:"User-Agent"`
+	LoginType  string `header:"Login-Type"`
+	CfToken    string `json:"cf_token,optional"`
 }
 
 type UserStatistics struct {
@@ -2559,6 +2599,26 @@ type UserSubscribeDetail struct {
 	UpdatedAt   int64     `json:"updated_at"`
 }
 
+type UserSubscribeInfo struct {
+	Id          int64                    `json:"id"`
+	UserId      int64                    `json:"user_id"`
+	OrderId     int64                    `json:"order_id"`
+	SubscribeId int64                    `json:"subscribe_id"`
+	StartTime   int64                    `json:"start_time"`
+	ExpireTime  int64                    `json:"expire_time"`
+	FinishedAt  int64                    `json:"finished_at"`
+	ResetTime   int64                    `json:"reset_time"`
+	Traffic     int64                    `json:"traffic"`
+	Download    int64                    `json:"download"`
+	Upload      int64                    `json:"upload"`
+	Token       string                   `json:"token"`
+	Status      uint8                    `json:"status"`
+	CreatedAt   int64                    `json:"created_at"`
+	UpdatedAt   int64                    `json:"updated_at"`
+	IsTryOut    bool                     `json:"is_try_out"`
+	Nodes       []*UserSubscribeNodeInfo `json:"nodes"`
+}
+
 type UserSubscribeLog struct {
 	Id              int64  `json:"id"`
 	UserId          int64  `json:"user_id"`
@@ -2567,6 +2627,19 @@ type UserSubscribeLog struct {
 	IP              string `json:"ip"`
 	UserAgent       string `json:"user_agent"`
 	Timestamp       int64  `json:"timestamp"`
+}
+
+type UserSubscribeNodeInfo struct {
+	Id        int64    `json:"id"`
+	Name      string   `json:"name"`
+	Uuid      string   `json:"uuid"`
+	Protocol  string   `json:"protocol"`
+	Port      uint16   `json:"port"`
+	Address   string   `json:"address"`
+	Tags      []string `json:"tags"`
+	Country   string   `json:"country"`
+	City      string   `json:"city"`
+	CreatedAt int64    `json:"created_at"`
 }
 
 type UserSubscribeTrafficLog struct {

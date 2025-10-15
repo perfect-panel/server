@@ -578,6 +578,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	authGroupRouter := router.Group("/v1/auth")
+	authGroupRouter.Use(middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Check user is exist
@@ -588,6 +589,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// User login
 		authGroupRouter.POST("/login", auth.UserLoginHandler(serverCtx))
+
+		// Device Login
+		authGroupRouter.POST("/login/device", auth.DeviceLoginHandler(serverCtx))
 
 		// User Telephone login
 		authGroupRouter.POST("/login/telephone", auth.TelephoneLoginHandler(serverCtx))
@@ -619,6 +623,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	commonGroupRouter := router.Group("/v1/common")
+	commonGroupRouter.Use(middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get Ads
@@ -650,7 +655,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicAnnouncementGroupRouter := router.Group("/v1/public/announcement")
-	publicAnnouncementGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicAnnouncementGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Query announcement
@@ -658,7 +663,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicDocumentGroupRouter := router.Group("/v1/public/document")
-	publicDocumentGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicDocumentGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get document detail
@@ -669,7 +674,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicOrderGroupRouter := router.Group("/v1/public/order")
-	publicOrderGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicOrderGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Close order
@@ -698,7 +703,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicPaymentGroupRouter := router.Group("/v1/public/payment")
-	publicPaymentGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicPaymentGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get available payment methods
@@ -706,6 +711,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicPortalGroupRouter := router.Group("/v1/public/portal")
+	publicPortalGroupRouter.Use(middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Purchase Checkout
@@ -728,15 +734,18 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicSubscribeGroupRouter := router.Group("/v1/public/subscribe")
-	publicSubscribeGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicSubscribeGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Get subscribe list
 		publicSubscribeGroupRouter.GET("/list", publicSubscribe.QuerySubscribeListHandler(serverCtx))
+
+		// Get user subscribe node info
+		publicSubscribeGroupRouter.GET("/node/list", publicSubscribe.QueryUserSubscribeNodeListHandler(serverCtx))
 	}
 
 	publicTicketGroupRouter := router.Group("/v1/public/ticket")
-	publicTicketGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicTicketGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Update ticket status
@@ -756,7 +765,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	}
 
 	publicUserGroupRouter := router.Group("/v1/public/user")
-	publicUserGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+	publicUserGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 
 	{
 		// Query User Affiliate Count
@@ -786,6 +795,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Query User Commission Log
 		publicUserGroupRouter.GET("/commission_log", publicUser.QueryUserCommissionLogHandler(serverCtx))
 
+		// Get Device List
+		publicUserGroupRouter.GET("/devices", publicUser.GetDeviceListHandler(serverCtx))
+
 		// Query User Info
 		publicUserGroupRouter.GET("/info", publicUser.QueryUserInfoHandler(serverCtx))
 
@@ -809,6 +821,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Reset User Subscribe Token
 		publicUserGroupRouter.PUT("/subscribe_token", publicUser.ResetUserSubscribeTokenHandler(serverCtx))
+
+		// Unbind Device
+		publicUserGroupRouter.PUT("/unbind_device", publicUser.UnbindDeviceHandler(serverCtx))
 
 		// Unbind OAuth
 		publicUserGroupRouter.POST("/unbind_oauth", publicUser.UnbindOAuthHandler(serverCtx))

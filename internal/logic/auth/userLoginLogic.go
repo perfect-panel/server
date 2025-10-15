@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/internal/config"
@@ -79,6 +80,22 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	if !tool.MultiPasswordVerify(userInfo.Algo, userInfo.Salt, req.Password, userInfo.Password) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
 	}
+
+	// Bind device to user if identifier is provided
+	if req.Identifier != "" {
+		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)
+		if err := bindLogic.BindDeviceToUser(req.Identifier, req.IP, req.UserAgent, userInfo.Id); err != nil {
+			l.Errorw("failed to bind device to user",
+				logger.Field("user_id", userInfo.Id),
+				logger.Field("identifier", req.Identifier),
+				logger.Field("error", err.Error()),
+			)
+			// Don't fail login if device binding fails, just log the error
+		}
+	}
+	if l.ctx.Value(constant.LoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
 	// Generate token
@@ -88,6 +105,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
+		jwt.WithOption("LoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))

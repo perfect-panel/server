@@ -92,6 +92,9 @@ func (l *UpdateAuthMethodConfigLogic) UpdateGlobal(method string) {
 	if method == "mobile" {
 		initialize.Mobile(l.svcCtx)
 	}
+	if method == "device" {
+		initialize.Device(l.svcCtx)
+	}
 }
 
 func validatePlatformConfig(platform string, cfg map[string]interface{}) (interface{}, error) {

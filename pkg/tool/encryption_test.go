@@ -5,7 +5,7 @@ import (
 )
 
 func TestEncodePassWord(t *testing.T) {
-	t.Logf("EncodePassWord: %v", EncodePassWord(""))
+	t.Logf("EncodePassWord: %v", EncodePassWord("password"))
 }
 
 func TestMultiPasswordVerify(t *testing.T) {

@@ -65,6 +65,12 @@ func (m *customServerModel) FilterServerList(ctx context.Context, params *Filter
 	return total, servers, err
 }
 
+func (m *customServerModel) QueryServerList(ctx context.Context, ids []int64) (servers []*Server, err error) {
+	query := m.WithContext(ctx).Model(&Server{})
+	err = query.Where("id IN (?)", ids).Find(&servers).Error
+	return
+}
+
 // FilterNodeList Filter Node List
 func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNodeParams) (int64, []*Node, error) {
 	var nodes []*Node

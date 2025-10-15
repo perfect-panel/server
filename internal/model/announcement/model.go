@@ -43,7 +43,7 @@ func (m *customAnnouncementModel) GetAnnouncementListByPage(ctx context.Context,
 		if filter.Search != "" {
 			conn = conn.Where("`title` LIKE ? OR `content` LIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
 		}
-		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
+		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(&list).Error
 	})
 	return total, list, err
 }

@@ -70,6 +70,7 @@ type (
 @server (
 	prefix: v1/public/portal
 	group:  public/portal
+    middleware: DeviceMiddleware
 )
 service ppanel {
 	@doc "Get available payment methods"

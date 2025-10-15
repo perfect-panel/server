@@ -47,6 +47,7 @@ const (
 	ErrorTokenExpire  uint32 = 40004
 	InvalidAccess     uint32 = 40005
 	InvalidCiphertext uint32 = 40006
+	SecretIsEmpty     uint32 = 40007
 )
 
 //coupon error

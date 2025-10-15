@@ -14,6 +14,7 @@ func init() {
 		ErrorTokenEmpty:   "User token is empty",
 		ErrorTokenInvalid: "User token is invalid",
 		ErrorTokenExpire:  "User token is expired",
+		SecretIsEmpty:     "Secret is empty",
 		InvalidAccess:     "Invalid access",
 		InvalidCiphertext: "Invalid ciphertext",
 		// Database error
