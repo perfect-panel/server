@@ -65,9 +65,10 @@ func GetSupportedPlatforms() []types.PlatformInfo {
 			Platform:    EPay.String(),
 			PlatformUrl: "",
 			PlatformFieldDescription: map[string]string{
-				"pid": "PID",
-				"url": "URL",
-				"key": "Key",
+				"pid":  "PID",
+				"url":  "URL",
+				"key":  "Key",
+				"type": "Type",
 			},
 		},
 		{
