@@ -46,6 +46,7 @@ func init() {
 		CouponAlreadyUsed:       "Coupon has already been used",
 		CouponNotApplicable:     "Coupon does not match the order or conditions",
 		CouponInsufficientUsage: "Coupon has insufficient remaining uses",
+		CouponExpired:           "Coupon is expired",
 
 		// Subscribe
 		SubscribeExpired:                "Subscribe is expired",
