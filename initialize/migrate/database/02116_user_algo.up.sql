@@ -22,7 +22,7 @@ SET @colname = 'salt';
 SET @sql = (
     SELECT IF(
         COUNT(*) = 0,
-        'ALTER TABLE `User` ADD COLUMN `salt` VARCHAR(20) NOT NULL DEFAULT ''default'' COMMENT ''Password Salt'' AFTER `algo`;',
+        'ALTER TABLE `user` ADD COLUMN `salt` VARCHAR(20) NOT NULL DEFAULT ''default'' COMMENT ''Password Salt'' AFTER `algo`;',
         'SELECT "Column `salt` already exists";'
     )
     FROM information_schema.COLUMNS
