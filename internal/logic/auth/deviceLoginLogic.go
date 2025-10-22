@@ -125,6 +125,17 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
 	}
 
+	// Store device id in redis
+
+	deviceCacheKey := fmt.Sprintf("%v:%v", config.DeviceCacheKeyKey, req.Identifier)
+	if err = l.svcCtx.Redis.Set(l.ctx, deviceCacheKey, sessionId, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
+		l.Errorw("set device id error",
+			logger.Field("user_id", userInfo.Id),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set device id error: %v", err.Error())
+	}
+
 	loginStatus = true
 	return &types.LoginResponse{
 		Token: token,
