@@ -167,7 +167,7 @@ func (l *StatLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 
 	// Delete old traffic logs
 	if l.svc.Config.Log.AutoClear {
-		err = tx.WithContext(ctx).Model(&traffic.TrafficLog{}).Where("created_at <= ?", end.AddDate(0, 0, int(-l.svc.Config.Log.ClearDays))).Delete(&traffic.TrafficLog{}).Error
+		err = tx.WithContext(ctx).Model(&traffic.TrafficLog{}).Where("timestamp <= ?", end.AddDate(0, 0, int(-l.svc.Config.Log.ClearDays))).Delete(&traffic.TrafficLog{}).Error
 		if err != nil {
 			logger.Errorf("[Traffic Stat Queue] Delete server traffic log failed: %v", err.Error())
 		}

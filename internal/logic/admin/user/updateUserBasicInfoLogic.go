@@ -129,6 +129,7 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 			return errors.Wrapf(xerr.NewErrCodeMsg(503, "Demo mode does not allow modification of the admin user password"), "UpdateUserBasicInfo failed: cannot update admin user password in demo mode")
 		}
 		userInfo.Password = tool.EncodePassWord(req.Password)
+		userInfo.Algo = "default"
 	}
 
 	err = l.svcCtx.UserModel.Update(l.ctx, userInfo)

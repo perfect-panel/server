@@ -3,7 +3,7 @@ package epay
 import "testing"
 
 func TestEpay(t *testing.T) {
-	client := NewClient("", "http://127.0.0.1", "")
+	client := NewClient("", "http://127.0.0.1", "", "")
 	order := Order{
 		Name:      "测试",
 		OrderNo:   "123456789",
@@ -19,7 +19,7 @@ func TestEpay(t *testing.T) {
 
 func TestQueryOrderStatus(t *testing.T) {
 	t.Skipf("Skip TestQueryOrderStatus test")
-	client := NewClient("Pid", "Url", "Key")
+	client := NewClient("Pid", "Url", "Key", "Type")
 	orderNo := "123456789"
 	status := client.QueryOrderStatus(orderNo)
 	t.Logf("OrderNo: %s, Status: %v\n", orderNo, status)
@@ -40,7 +40,7 @@ func TestVerifySign(t *testing.T) {
 	}
 
 	key := "LbTabbB580zWyhXhyyww7wwvy5u8k0wl"
-	c := NewClient("Pid", "Url", key)
+	c := NewClient("Pid", "Url", key, "Type")
 	if c.VerifySign(params) {
 		t.Logf("Sign verification success!")
 	} else {

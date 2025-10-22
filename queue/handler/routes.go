@@ -3,7 +3,6 @@ package handler
 import (
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/svc"
-	countrylogic "github.com/perfect-panel/server/queue/logic/country"
 	orderLogic "github.com/perfect-panel/server/queue/logic/order"
 	smslogic "github.com/perfect-panel/server/queue/logic/sms"
 	"github.com/perfect-panel/server/queue/logic/subscription"
@@ -15,8 +14,6 @@ import (
 )
 
 func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
-	// get country task
-	mux.Handle(types.ForthwithGetCountry, countrylogic.NewGetNodeCountryLogic(serverCtx))
 	// Send email task
 	mux.Handle(types.ForthwithSendEmail, emailLogic.NewSendEmailLogic(serverCtx))
 	// Send sms task

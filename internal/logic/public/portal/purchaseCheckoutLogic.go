@@ -267,7 +267,7 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unmarshal error: %s", err.Error())
 	}
 	// Initialize EPay client with merchant credentials
-	client := epay.NewClient(epayConfig.Pid, epayConfig.Url, epayConfig.Key)
+	client := epay.NewClient(epayConfig.Pid, epayConfig.Url, epayConfig.Key, epayConfig.Type)
 
 	// Convert order amount to CNY using current exchange rate
 	amount, err := l.queryExchangeRate("CNY", info.Amount)
@@ -309,7 +309,7 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unmarshal error: %s", err.Error())
 	}
 	// Initialize EPay client with merchant credentials
-	client := epay.NewClient(epayConfig.AccountID, epayConfig.Endpoint, epayConfig.SecretKey)
+	client := epay.NewClient(epayConfig.AccountID, epayConfig.Endpoint, epayConfig.SecretKey, epayConfig.Type)
 
 	// Convert order amount to CNY using current exchange rate
 	amount, err := l.queryExchangeRate("CNY", info.Amount)
@@ -346,6 +346,11 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount float64, err error) {
 	// Convert cents to decimal amount
 	amount = float64(src) / float64(100)
+
+	if l.svcCtx.ExchangeRate != 0 && to == "CNY" {
+		amount = amount * l.svcCtx.ExchangeRate
+		return amount, nil
+	}
 
 	// Retrieve system currency configuration
 	currency, err := l.svcCtx.SystemModel.GetCurrencyConfig(l.ctx)

@@ -32,10 +32,12 @@ import (
 )
 
 type ServiceContext struct {
-	DB     *gorm.DB
-	Redis  *redis.Client
-	Config config.Config
-	Queue  *asynq.Client
+	DB           *gorm.DB
+	Redis        *redis.Client
+	Config       config.Config
+	Queue        *asynq.Client
+	ExchangeRate float64
+
 	//NodeCache   *cache.NodeCacheClient
 	AuthModel   auth.Model
 	AdsModel    ads.Model
@@ -82,10 +84,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 	authLimiter := limit.NewPeriodLimit(86400, 15, rds, config.SendCountLimitKeyPrefix, limit.Align())
 	srv := &ServiceContext{
-		DB:     db,
-		Redis:  rds,
-		Config: c,
-		Queue:  NewAsynqClient(c),
+		DB:           db,
+		Redis:        rds,
+		Config:       c,
+		Queue:        NewAsynqClient(c),
+		ExchangeRate: 1.0,
 		//NodeCache:   cache.NewNodeCacheClient(rds),
 		AuthLimiter: authLimiter,
 		AdsModel:    ads.NewModel(db, rds),

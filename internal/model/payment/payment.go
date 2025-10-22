@@ -85,9 +85,10 @@ func (l *AlipayF2FConfig) Unmarshal(data []byte) error {
 }
 
 type EPayConfig struct {
-	Pid string `json:"pid"`
-	Url string `json:"url"`
-	Key string `json:"key"`
+	Pid  string `json:"pid"`
+	Url  string `json:"url"`
+	Key  string `json:"key"`
+	Type string `json:"type"`
 }
 
 func (l *EPayConfig) Marshal() ([]byte, error) {
@@ -109,6 +110,7 @@ type CryptoSaaSConfig struct {
 	Endpoint  string `json:"endpoint"`
 	AccountID string `json:"account_id"`
 	SecretKey string `json:"secret_key"`
+	Type      string `json:"type"`
 }
 
 func (l *CryptoSaaSConfig) Marshal() ([]byte, error) {

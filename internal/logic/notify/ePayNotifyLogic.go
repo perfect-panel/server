@@ -57,7 +57,7 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 		return err
 	}
 	// Verify sign
-	client := epay.NewClient(config.Pid, config.Url, config.Key)
+	client := epay.NewClient(config.Pid, config.Url, config.Key, config.Type)
 	if !client.VerifySign(urlParamsToMap(l.ctx.Request.URL.RawQuery)) && !l.svcCtx.Config.Debug {
 		l.Logger.Error("[EPayNotify] Verify sign failed")
 		return nil

@@ -14,9 +14,10 @@ import (
 )
 
 type Client struct {
-	Pid string
-	Url string
-	Key string
+	Pid  string
+	Url  string
+	Key  string
+	Type string
 }
 
 type Order struct {
@@ -37,11 +38,12 @@ type queryOrderStatusResponse struct {
 	Status     int    `json:"status"`
 }
 
-func NewClient(pid, url, key string) *Client {
+func NewClient(pid, url, key string, Type string) *Client {
 	return &Client{
-		Pid: pid,
-		Url: url,
-		Key: key,
+		Pid:  pid,
+		Url:  url,
+		Key:  key,
+		Type: Type,
 	}
 }
 
@@ -53,6 +55,7 @@ func (c *Client) CreatePayUrl(order Order) string {
 	params.Set("notify_url", order.NotifyUrl)
 	params.Set("out_trade_no", order.OrderNo)
 	params.Set("pid", c.Pid)
+	params.Set("type", c.Type)
 	params.Set("return_url", order.ReturnUrl)
 
 	// Generate the sign using the CreateSign function
@@ -117,6 +120,7 @@ func (c *Client) structToMap(order Order) map[string]string {
 	result["notify_url"] = order.NotifyUrl
 	result["out_trade_no"] = order.OrderNo
 	result["pid"] = c.Pid
+	result["type"] = c.Type
 	result["return_url"] = order.ReturnUrl
 	return result
 }

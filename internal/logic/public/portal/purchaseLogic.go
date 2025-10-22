@@ -83,6 +83,12 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 		if couponInfo.Count != 0 && couponInfo.Count <= couponInfo.UsedCount {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon used")
 		}
+		// Check expiration time
+		expireTime := time.Unix(couponInfo.ExpireTime, 0)
+		if time.Now().After(expireTime) {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponExpired), "coupon expired")
+		}
+
 		couponSub := tool.StringToInt64Slice(couponInfo.Subscribe)
 		if len(couponSub) > 0 && !tool.Contains(couponSub, req.SubscribeId) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotApplicable), "coupon not match")
