@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"errors"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/user"
 	"gorm.io/gorm"
@@ -16,6 +17,7 @@ func Migrate(ctx *svc.ServiceContext) {
 	mc := orm.Mysql{
 		Config: ctx.Config.MySQL,
 	}
+	now := time.Now()
 	if err := migrate.Migrate(mc.Dsn()).Up(); err != nil {
 		if errors.Is(err, migrate.NoChange) {
 			logger.Info("[Migrate] database not change")
@@ -23,6 +25,8 @@ func Migrate(ctx *svc.ServiceContext) {
 		}
 		logger.Errorf("[Migrate] Up error: %v", err.Error())
 		panic(err)
+	} else {
+		logger.Info("[Migrate] Database change, took " + time.Since(now).String())
 	}
 	// if not found admin user
 	err := ctx.DB.Transaction(func(tx *gorm.DB) error {
