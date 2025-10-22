@@ -141,6 +141,7 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 				Name:      n.Name,
 				Uuid:      userSub.UUID,
 				Protocol:  n.Protocol,
+				Protocols: server.Protocols,
 				Port:      n.Port,
 				Address:   n.Address,
 				Tags:      strings.Split(n.Tags, ","),

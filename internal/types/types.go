@@ -2634,6 +2634,7 @@ type UserSubscribeNodeInfo struct {
 	Name      string   `json:"name"`
 	Uuid      string   `json:"uuid"`
 	Protocol  string   `json:"protocol"`
+	Protocols string   `json:"protocols"`
 	Port      uint16   `json:"port"`
 	Address   string   `json:"address"`
 	Tags      []string `json:"tags"`
