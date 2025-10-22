@@ -36,6 +36,12 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) func(c *gin.Co
 
 		fmt.Printf("[QueryServerProtocolConfigHandler] - ShouldBindQuery request: %+v\n", req)
 
+		if svcCtx.Config.Node.NodeSecret != req.SecretKey {
+			c.String(http.StatusUnauthorized, "Unauthorized")
+			c.Abort()
+			return
+		}
+
 		l := server.NewQueryServerProtocolConfigLogic(c.Request.Context(), svcCtx)
 		resp, err := l.QueryServerProtocolConfig(&req)
 		result.HttpResult(c, resp, err)
