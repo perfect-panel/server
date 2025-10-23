@@ -48,6 +48,7 @@ type Subscribe struct {
 	Token       string     `gorm:"index:idx_token;unique;type:varchar(255);default:'';comment:Token"`
 	UUID        string     `gorm:"type:varchar(255);unique;index:idx_uuid;default:'';comment:UUID"`
 	Status      uint8      `gorm:"type:tinyint(1);default:0;comment:Subscription Status: 0: Pending 1: Active 2: Finished 3: Expired 4: Deducted"`
+	Note        string     `gorm:"type:varchar(500);default:'';comment:User note for subscription"`
 	CreatedAt   time.Time  `gorm:"<-:create;comment:Creation Time"`
 	UpdatedAt   time.Time  `gorm:"comment:Update Time"`
 }
