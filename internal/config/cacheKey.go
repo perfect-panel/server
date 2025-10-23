@@ -39,6 +39,9 @@ const VerifyCodeConfigKey = "system:verify_code_config"
 // SessionIdKey cache session key
 const SessionIdKey = "auth:session_id"
 
+// DeviceCacheKeyKey cache session key
+const DeviceCacheKeyKey = "auth:device_identifier"
+
 // GlobalConfigKey Global Config Key
 const GlobalConfigKey = "system:global_config"
 

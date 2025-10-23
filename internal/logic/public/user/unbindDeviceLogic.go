@@ -64,9 +64,14 @@ func (l *UnbindDeviceLogic) UnbindDevice(req *types.UnbindDeviceRequest) error {
 		if err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete device online record err: %v", err)
 		}
-		sessionId := l.ctx.Value(constant.CtxKeySessionID)
-		sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
-		l.svcCtx.Redis.Del(l.ctx, sessionIdCacheKey)
+
+		//remove device cache
+		deviceCacheKey := fmt.Sprintf("%v:%v", config.DeviceCacheKeyKey, deleteDevice.Identifier)
+		if sessionId, err := l.svcCtx.Redis.Get(l.ctx, deviceCacheKey).Result(); err == nil && sessionId != "" {
+			_ = l.svcCtx.Redis.Del(l.ctx, deviceCacheKey).Err()
+			sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
+			_ = l.svcCtx.Redis.Del(l.ctx, sessionIdCacheKey).Err()
+		}
 		return nil
 	})
 }
