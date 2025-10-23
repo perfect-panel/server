@@ -52,6 +52,7 @@ func MultiPasswordVerify(algo, salt, password, hash string) bool {
 		// Bcrypt (corresponding to PHP's password_hash/password_verify)
 		err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 		return err == nil
+	default:
+		return VerifyPassWord(password, hash)
 	}
-	return false
 }
