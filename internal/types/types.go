@@ -1804,6 +1804,11 @@ type ResetUserSubscribeTokenRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
+type UpdateUserSubscribeNoteRequest struct {
+	UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
+	Note            string `json:"note" validate:"max=500"`
+}
+
 type RevenueStatisticsResponse struct {
 	Today   OrdersStatistics `json:"today"`
 	Monthly OrdersStatistics `json:"monthly"`
@@ -2576,6 +2581,7 @@ type UserSubscribe struct {
 	Upload      int64     `json:"upload"`
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
+	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2595,6 +2601,7 @@ type UserSubscribeDetail struct {
 	Upload      int64     `json:"upload"`
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
+	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2613,6 +2620,7 @@ type UserSubscribeInfo struct {
 	Upload      int64                    `json:"upload"`
 	Token       string                   `json:"token"`
 	Status      uint8                    `json:"status"`
+	Note        string                   `json:"note"`
 	CreatedAt   int64                    `json:"created_at"`
 	UpdatedAt   int64                    `json:"updated_at"`
 	IsTryOut    bool                     `json:"is_try_out"`
