@@ -152,6 +152,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Create new user
 		userInfo = &user.User{
+			Salt:              "default",
 			OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase,
 		}
 		if err := db.Create(userInfo).Error; err != nil {
