@@ -13,6 +13,7 @@ type customServerLogicModel interface {
 	FilterServerList(ctx context.Context, params *FilterParams) (int64, []*Server, error)
 	FilterNodeList(ctx context.Context, params *FilterNodeParams) (int64, []*Node, error)
 	ClearNodeCache(ctx context.Context, params *FilterNodeParams) error
+	ClearServerAllCache(ctx context.Context) error
 }
 
 const (
@@ -167,6 +168,30 @@ func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64
 	if len(cacheKeys) > 0 {
 		cacheKeys = tool.RemoveDuplicateElements(cacheKeys...)
 		return m.Cache.Del(ctx, cacheKeys...).Err()
+	}
+	return nil
+}
+
+func (m *customServerModel) ClearServerAllCache(ctx context.Context) error {
+	var cursor uint64
+	var keys []string
+	prefix := ServerConfigCacheKey + "*"
+	for {
+		scanKeys, newCursor, err := m.Cache.Scan(ctx, cursor, prefix, 999).Result()
+		if err != nil {
+			m.Logger.Error(ctx, fmt.Sprintf("ClearServerAllCache err:%v", err))
+			break
+		}
+		m.Logger.Info(ctx, fmt.Sprintf("ClearServerAllCache query keys:%v", scanKeys))
+		keys = append(keys, scanKeys...)
+		cursor = newCursor
+		if cursor == 0 {
+			break
+		}
+	}
+	if len(keys) > 0 {
+		m.Logger.Info(ctx, fmt.Sprintf("ClearServerAllCache keys:%v", keys))
+		return m.Cache.Del(ctx, keys...).Err()
 	}
 	return nil
 }

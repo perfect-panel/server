@@ -245,5 +245,12 @@ func (l *TelephoneUserRegisterLogic) activeTrial(uid int64) error {
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
-	return l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
+	err = l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
+	if err != nil {
+		return err
+	}
+	if clearErr := l.svcCtx.NodeModel.ClearServerAllCache(l.ctx); clearErr != nil {
+		l.Errorf("ClearServerAllCache error: %v", clearErr.Error())
+	}
+	return err
 }

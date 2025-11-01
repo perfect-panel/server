@@ -125,6 +125,17 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
 	}
 
+	// Store device id in redis
+
+	deviceCacheKey := fmt.Sprintf("%v:%v", config.DeviceCacheKeyKey, req.Identifier)
+	if err = l.svcCtx.Redis.Set(l.ctx, deviceCacheKey, sessionId, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
+		l.Errorw("set device id error",
+			logger.Field("user_id", userInfo.Id),
+			logger.Field("error", err.Error()),
+		)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set device id error: %v", err.Error())
+	}
+
 	loginStatus = true
 	return &types.LoginResponse{
 		Token: token,
@@ -141,6 +152,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Create new user
 		userInfo = &user.User{
+			Salt:              "default",
 			OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase,
 		}
 		if err := db.Create(userInfo).Error; err != nil {
@@ -289,5 +301,8 @@ func (l *DeviceLoginLogic) activeTrial(userId int64, db *gorm.DB) error {
 		logger.Field("traffic", sub.Traffic),
 	)
 
+	if clearErr := l.svcCtx.NodeModel.ClearServerAllCache(l.ctx); clearErr != nil {
+		l.Errorf("ClearServerAllCache error: %v", clearErr.Error())
+	}
 	return nil
 }

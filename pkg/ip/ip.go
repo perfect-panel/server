@@ -55,11 +55,23 @@ var (
 
 // GetRegionByIp queries the geolocation of an IP address using supported services.
 func GetRegionByIp(ip string) (*GeoLocationResponse, error) {
+	// 如果是域名，先解析成 IP
+	if net.ParseIP(ip) == nil {
+		ips, err := GetIP(ip)
+		if err != nil || len(ips) == 0 {
+			return nil, errors.Wrap(err, "无法解析域名为IP")
+		}
+		ip = ips[0] // 取第一个解析到的IP
+	}
+
 	for service, enabled := range queryUrls {
 		if enabled {
 			response, err := fetchGeolocation(service, ip)
 			if err != nil {
 				zap.S().Errorf("Failed to fetch geolocation from %s: %v", service, err)
+				continue
+			}
+			if response.Country == "" {
 				continue
 			}
 			return response, nil
