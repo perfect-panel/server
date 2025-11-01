@@ -301,5 +301,8 @@ func (l *DeviceLoginLogic) activeTrial(userId int64, db *gorm.DB) error {
 		logger.Field("traffic", sub.Traffic),
 	)
 
+	if clearErr := l.svcCtx.NodeModel.ClearServerAllCache(l.ctx); clearErr != nil {
+		l.Errorf("ClearServerAllCache error: %v", clearErr.Error())
+	}
 	return nil
 }

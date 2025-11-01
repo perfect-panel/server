@@ -69,5 +69,10 @@ func (l *UpdateUserSubscribeLogic) UpdateUserSubscribe(req *types.UpdateUserSubs
 		l.Errorw("failed to clear subscribe cache", logger.Field("error", err.Error()), logger.Field("subscribeId", userSub.SubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "failed to clear subscribe cache: %v", err.Error())
 	}
+
+	if err = l.svcCtx.NodeModel.ClearServerAllCache(l.ctx); err != nil {
+		l.Errorf("ClearServerAllCache error: %v", err.Error())
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "failed to clear server cache: %v", err.Error())
+	}
 	return nil
 }
