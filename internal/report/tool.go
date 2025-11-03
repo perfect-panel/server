@@ -5,6 +5,9 @@ import (
 	"net"
 	"os"
 
+	"github.com/go-resty/resty/v2"
+	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/pkg/errors"
 )
 
@@ -43,9 +46,64 @@ func GatewayPort() (int, error) {
 		var port int
 		_, err := fmt.Sscanf(value, "%d", &port)
 		if err != nil {
+			logger.Errorf("Failed to parse GATEWAY_PORT: %v Value %s", err.Error(), value)
 			panic(err)
 		}
 		return port, nil
 	}
 	return 0, errors.New("could not determine gateway port")
+}
+
+// RegisterModule registers a module with the gateway.
+func RegisterModule(port int) error {
+	// 从环境变量中读取网关模块端口
+	gatewayPort, err := GatewayPort()
+	if err != nil {
+		return err
+	}
+
+	// 从环境变量中获取通讯密钥
+	value, exists := os.LookupEnv("SECRET_KEY")
+	if !exists {
+		panic("could not determine secret key")
+	}
+
+	var response RegisterResponse
+
+	client := resty.New().SetBaseURL(fmt.Sprintf("http://127.0.0.1:%d", gatewayPort))
+	result, err := client.R().SetHeader("Content-Type", "application/json").SetBody(RegisterServiceRequest{
+		Secret:         value,
+		ProxyPath:      "/api",
+		ServiceURL:     fmt.Sprintf("http://127.0.0.1:%d", port),
+		Repository:     "https://github.com/perfect-panel/server",
+		ServiceName:    "ApiService",
+		ServiceVersion: constant.Version,
+	}).SetResult(&response).Post(RegisterAPI)
+
+	if err != nil {
+		return err
+	}
+
+	if result.IsError() {
+		return errors.New("failed to register module: " + result.Status())
+	}
+
+	if !response.Success {
+		return errors.New("failed to register module: " + response.Message)
+	}
+	logger.Infof("Module registered successfully: %s", response.Message)
+	return nil
+}
+
+// IsGatewayMode checks if the application is running in gateway mode.
+// It returns true if GATEWAY_MODE is set to "true" and GATEWAY_PORT is valid.
+func IsGatewayMode() bool {
+	value, exists := os.LookupEnv("GATEWAY_MODE")
+	if exists && value == "true" {
+		if _, err := GatewayPort(); err == nil {
+			return true
+		}
+	}
+
+	return false
 }
