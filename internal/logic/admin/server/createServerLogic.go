@@ -99,6 +99,10 @@ func (l *CreateServerLogic) CreateServer(req *types.CreateServerRequest) error {
 		} else {
 			data.City = result.City
 			data.Country = result.Country
+			data.Latitude = result.Latitude
+			data.Longitude = result.Longitude
+			data.LatitudeCenter = result.LatitudeCenter
+			data.LongitudeCenter = result.LongitudeCenter
 		}
 	}
 	err = l.svcCtx.NodeModel.InsertServer(l.ctx, &data)

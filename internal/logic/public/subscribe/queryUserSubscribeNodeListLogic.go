@@ -137,17 +137,21 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 				continue
 			}
 			userSubscribeNode := &types.UserSubscribeNodeInfo{
-				Id:        n.Id,
-				Name:      n.Name,
-				Uuid:      userSub.UUID,
-				Protocol:  n.Protocol,
-				Protocols: server.Protocols,
-				Port:      n.Port,
-				Address:   n.Address,
-				Tags:      strings.Split(n.Tags, ","),
-				Country:   server.Country,
-				City:      server.City,
-				CreatedAt: n.CreatedAt.Unix(),
+				Id:              n.Id,
+				Name:            n.Name,
+				Uuid:            userSub.UUID,
+				Protocol:        n.Protocol,
+				Protocols:       server.Protocols,
+				Port:            n.Port,
+				Address:         n.Address,
+				Tags:            strings.Split(n.Tags, ","),
+				Country:         server.Country,
+				City:            server.City,
+				Latitude:        server.Latitude,
+				Longitude:       server.Longitude,
+				LongitudeCenter: server.LongitudeCenter,
+				LatitudeCenter:  server.LatitudeCenter,
+				CreatedAt:       n.CreatedAt.Unix(),
 			}
 			userSubscribeNodes = append(userSubscribeNodes, userSubscribeNode)
 		}

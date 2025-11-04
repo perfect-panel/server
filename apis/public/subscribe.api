@@ -50,6 +50,10 @@ type (
         Tags         []string `json:"tags"`
         Country      string   `json:"country"`
         City         string   `json:"city"`
+        Longitude    string    `json:"longitude"`
+        Latitude     string    `json:"latitude"`
+        LatitudeCenter     string    `json:"latitude_center"`
+        LongitudeCenter    string    `json:"longitude_center"`
         CreatedAt    int64    `json:"created_at"`
     }
 )

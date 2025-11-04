@@ -2630,17 +2630,21 @@ type UserSubscribeLog struct {
 }
 
 type UserSubscribeNodeInfo struct {
-	Id        int64    `json:"id"`
-	Name      string   `json:"name"`
-	Uuid      string   `json:"uuid"`
-	Protocol  string   `json:"protocol"`
-	Protocols string   `json:"protocols"`
-	Port      uint16   `json:"port"`
-	Address   string   `json:"address"`
-	Tags      []string `json:"tags"`
-	Country   string   `json:"country"`
-	City      string   `json:"city"`
-	CreatedAt int64    `json:"created_at"`
+	Id              int64    `json:"id"`
+	Name            string   `json:"name"`
+	Uuid            string   `json:"uuid"`
+	Protocol        string   `json:"protocol"`
+	Protocols       string   `json:"protocols"`
+	Port            uint16   `json:"port"`
+	Address         string   `json:"address"`
+	Tags            []string `json:"tags"`
+	Country         string   `json:"country"`
+	City            string   `json:"city"`
+	Longitude       string   `json:"longitude"`
+	Latitude        string   `json:"latitude"`
+	LatitudeCenter  string   `json:"latitude_center"`
+	LongitudeCenter string   `json:"longitude_center"`
+	CreatedAt       int64    `json:"created_at"`
 }
 
 type UserSubscribeTrafficLog struct {

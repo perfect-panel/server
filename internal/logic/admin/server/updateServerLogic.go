@@ -47,6 +47,10 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 		} else {
 			data.City = result.City
 			data.Country = result.Country
+			data.Latitude = result.Latitude
+			data.Longitude = result.Longitude
+			data.LatitudeCenter = result.LatitudeCenter
+			data.LongitudeCenter = result.LongitudeCenter
 		}
 		// update address
 		data.Address = req.Address

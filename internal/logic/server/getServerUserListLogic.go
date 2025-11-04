@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -32,24 +33,23 @@ func NewGetServerUserListLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *Ge
 }
 
 func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
-	//TODO Cache bug, temporarily disable the use of cache
-	//cacheKey := fmt.Sprintf("%s%d", node.ServerUserListCacheKey, req.ServerId)
-	//cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
-	//if cache != "" {
-	//	etag := tool.GenerateETag([]byte(cache))
-	//	resp = &types.GetServerUserListResponse{}
-	//	//  Check If-None-Match header
-	//	if match := l.ctx.GetHeader("If-None-Match"); match == etag {
-	//		return nil, xerr.StatusNotModified
-	//	}
-	//	l.ctx.Header("ETag", etag)
-	//	err = json.Unmarshal([]byte(cache), resp)
-	//	if err != nil {
-	//		l.Errorw("[ServerUserListCacheKey] json unmarshal error", logger.Field("error", err.Error()))
-	//		return nil, err
-	//	}
-	//	return resp, nil
-	//}
+	cacheKey := fmt.Sprintf("%s%d", node.ServerUserListCacheKey, req.ServerId)
+	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
+	if cache != "" {
+		etag := tool.GenerateETag([]byte(cache))
+		resp = &types.GetServerUserListResponse{}
+		//  Check If-None-Match header
+		if match := l.ctx.GetHeader("If-None-Match"); match == etag {
+			return nil, xerr.StatusNotModified
+		}
+		l.ctx.Header("ETag", etag)
+		err = json.Unmarshal([]byte(cache), resp)
+		if err != nil {
+			l.Errorw("[ServerUserListCacheKey] json unmarshal error", logger.Field("error", err.Error()))
+			return nil, err
+		}
+		return resp, nil
+	}
 	server, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		return nil, err
@@ -121,11 +121,10 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	val, _ := json.Marshal(resp)
 	etag := tool.GenerateETag(val)
 	l.ctx.Header("ETag", etag)
-	//TODO Cache bug, temporarily disable the use of cache
-	//err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), -1).Err()
-	//if err != nil {
-	//	l.Errorw("[ServerUserListCacheKey] redis set error", logger.Field("error", err.Error()))
-	//}
+	err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), -1).Err()
+	if err != nil {
+		l.Errorw("[ServerUserListCacheKey] redis set error", logger.Field("error", err.Error()))
+	}
 	//  Check If-None-Match header
 	if match := l.ctx.GetHeader("If-None-Match"); match == etag {
 		return nil, xerr.StatusNotModified

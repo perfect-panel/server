@@ -64,6 +64,15 @@ func (l *UnbindDeviceLogic) UnbindDevice(req *types.UnbindDeviceRequest) error {
 		if err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete device online record err: %v", err)
 		}
+		var count int64
+		err = tx.Model(user.AuthMethods{}).Where("user_id = ?", deleteDevice.UserId).Count(&count).Error
+		if err != nil {
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count user auth methods err: %v", err)
+		}
+
+		if count < 1 {
+			_ = tx.Where("id = ?", deleteDevice.UserId).Delete(&user.User{}).Error
+		}
 
 		//remove device cache
 		deviceCacheKey := fmt.Sprintf("%v:%v", config.DeviceCacheKeyKey, deleteDevice.Identifier)
