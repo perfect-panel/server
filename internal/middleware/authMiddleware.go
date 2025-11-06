@@ -42,8 +42,11 @@ func AuthMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 		}
 
 		loginType := ""
-		if claims["LoginType"] != nil {
-			loginType = claims["LoginType"].(string)
+		if claims["CtxLoginType"] != nil {
+			loginType = claims["CtxLoginType"].(string)
+		}
+		if claims["identifier"] != nil {
+			ctx = context.WithValue(ctx, constant.CtxKeyIdentifier, claims["identifier"].(string))
 		}
 		// get user id from token
 		userId := int64(claims["UserId"].(float64))
@@ -82,9 +85,10 @@ func AuthMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		ctx = context.WithValue(ctx, constant.LoginType, loginType)
+		ctx = context.WithValue(ctx, constant.CtxLoginType, loginType)
 		ctx = context.WithValue(ctx, constant.CtxKeyUser, userInfo)
 		ctx = context.WithValue(ctx, constant.CtxKeySessionID, sessionId)
+
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
