@@ -106,6 +106,22 @@ type (
     UnbindDeviceRequest {
         Id int64 `json:"id" validate:"required"`
     }
+
+    GetDeviceOnlineStatsResponse {
+        WeeklyStats []WeeklyStat `json:"weekly_stats"`
+        ConnectionRecords ConnectionRecords `json:"connection_records"`
+    }
+
+    WeeklyStat {
+        Day int `json:"day"`
+        DayName string `json:"day_name"`
+        Hours float64 `json:"hours"`
+    }
+    ConnectionRecords {
+        CurrentContinuousDays int64 `json:"current_continuous_days"`
+        HistoryContinuousDays int64 `json:"history_continuous_days"`
+        LongestSingleConnection int64 `json:"longest_single_connection"`
+    }
 )
 
 @server (
@@ -209,5 +225,21 @@ service ppanel {
     @doc "Unbind Device"
     @handler UnbindDevice
     put /unbind_device (UnbindDeviceRequest)
+
+    @doc "Device Online Statistics"
+    @handler DeviceOnlineStatistics
+    get /device_online_statistics returns (GetDeviceOnlineStatsResponse)
 }
 
+
+@server(
+    prefix:     v1/public/user
+    group:      public/user/ws
+    middleware: AuthMiddleware
+)
+
+service ppanel {
+    @doc "Webosocket Device Connect"
+    @handler DeviceWsConnect
+    get /device_ws_connect
+}

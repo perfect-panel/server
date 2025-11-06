@@ -239,6 +239,12 @@ type CommissionLog struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
+type ConnectionRecords struct {
+	CurrentContinuousDays   int64 `json:"current_continuous_days"`
+	HistoryContinuousDays   int64 `json:"history_continuous_days"`
+	LongestSingleConnection int64 `json:"longest_single_connection"`
+}
+
 type Coupon struct {
 	Id         int64   `json:"id"`
 	Name       string  `json:"name"`
@@ -820,6 +826,11 @@ type GetDetailRequest struct {
 type GetDeviceListResponse struct {
 	List  []UserDevice `json:"list"`
 	Total int64        `json:"total"`
+}
+
+type GetDeviceOnlineStatsResponse struct {
+	WeeklyStats       []WeeklyStat      `json:"weekly_stats"`
+	ConnectionRecords ConnectionRecords `json:"connection_records"`
 }
 
 type GetDocumentDetailRequest struct {
@@ -2733,4 +2744,10 @@ type VmessProtocol struct {
 	TLSConfig string `json:"tls_config"`
 	Network   string `json:"network"`
 	Transport string `json:"transport"`
+}
+
+type WeeklyStat struct {
+	Day     int     `json:"day"`
+	DayName string  `json:"day_name"`
+	Hours   float64 `json:"hours"`
 }
