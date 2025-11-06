@@ -138,8 +138,8 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 			// Don't fail register if device binding fails, just log the error
 		}
 	}
-	if l.ctx.Value(constant.LoginType) != nil {
-		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	if l.ctx.Value(constant.CtxLoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.CtxLoginType).(string)
 	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
@@ -149,8 +149,9 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		time.Now().Unix(),
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
+		jwt.WithOption("identifier", req.Identifier),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("LoginType", req.LoginType),
+		jwt.WithOption("CtxLoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))

@@ -110,8 +110,8 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 			// Don't fail register if device binding fails, just log the error
 		}
 	}
-	if l.ctx.Value(constant.LoginType) != nil {
-		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	if l.ctx.Value(constant.CtxLoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.CtxLoginType).(string)
 	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
@@ -122,7 +122,8 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("LoginType", req.LoginType),
+		jwt.WithOption("identifier", req.Identifier),
+		jwt.WithOption("CtxLoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Errorw("[UserLogin] token generate error", logger.Field("error", err.Error()))
