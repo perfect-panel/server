@@ -35,8 +35,11 @@ func (l *DeviceWsConnectLogic) DeviceWsConnect(c *gin.Context) error {
 
 	value := l.ctx.Value(constant.CtxKeyIdentifier)
 	if value == nil || value.(string) == "" {
-		l.Errorf("DeviceWsConnectLogic DeviceWsConnect identifier is empty")
-		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "identifier is empty")
+		value, _ = c.GetQuery("identifier")
+		if value == nil || value.(string) == "" {
+			l.Errorf("DeviceWsConnectLogic DeviceWsConnect identifier is empty")
+			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "identifier is empty")
+		}
 	}
 	identifier := value.(string)
 	_, err := l.svcCtx.UserModel.FindOneDeviceByIdentifier(l.ctx, identifier)
