@@ -148,7 +148,7 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 				conn = conn.Order(fmt.Sprintf("user.id %s", filter.Order))
 			}
 		}
-		return conn.Model(&User{}).Group("user.id").Count(&total).Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error
+		return conn.Model(&User{}).Group("user.id").Count(&total).Limit(size).Offset((page-1)*size).Preload("UserDevices").Preload("AuthMethods", func(db *gorm.DB) *gorm.DB { return db.Order("user_auth_methods.auth_type desc") }).Find(&list).Error
 	})
 	return list, total, err
 }
@@ -225,7 +225,7 @@ func (m *customUserModel) QueryResisterUserTotal(ctx context.Context) (int64, er
 func (m *customUserModel) QueryAdminUsers(ctx context.Context) ([]*User, error) {
 	var data []*User
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&User{}).Preload("AuthMethods").Where("is_admin = ?", true).Find(&data).Error
+		return conn.Model(&User{}).Preload("AuthMethods", func(db *gorm.DB) *gorm.DB { return db.Order("user_auth_methods.auth_type desc") }).Where("is_admin = ?", true).Find(&data).Error
 	})
 	return data, err
 }
