@@ -822,6 +822,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get Subscribe Log
 		publicUserGroupRouter.GET("/subscribe_log", publicUser.GetSubscribeLogHandler(serverCtx))
 
+		// Update User Subscribe Note
+		publicUserGroupRouter.PUT("/subscribe_note", publicUser.UpdateUserSubscribeNoteHandler(serverCtx))
+
 		// Reset User Subscribe Token
 		publicUserGroupRouter.PUT("/subscribe_token", publicUser.ResetUserSubscribeTokenHandler(serverCtx))
 

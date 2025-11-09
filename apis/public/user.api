@@ -104,6 +104,10 @@ type (
 	UnbindDeviceRequest {
 		Id int64 `json:"id" validate:"required"`
 	}
+	UpdateUserSubscribeNoteRequest {
+		UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
+		Note            string `json:"note" validate:"max=500"`
+	}
 )
 
 @server (
@@ -207,5 +211,9 @@ service ppanel {
 	@doc "Unbind Device"
 	@handler UnbindDevice
 	put /unbind_device (UnbindDeviceRequest)
+
+	@doc "Update User Subscribe Note"
+	@handler UpdateUserSubscribeNote
+	put /subscribe_note (UpdateUserSubscribeNoteRequest)
 }
 

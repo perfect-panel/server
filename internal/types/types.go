@@ -2459,6 +2459,11 @@ type UpdateUserPasswordRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type UpdateUserSubscribeNoteRequest struct {
+	UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
+	Note            string `json:"note" validate:"max=500"`
+}
+
 type UpdateUserSubscribeRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 	SubscribeId     int64 `json:"subscribe_id"`
