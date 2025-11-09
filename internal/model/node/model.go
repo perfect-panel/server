@@ -175,7 +175,7 @@ func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64
 func (m *customServerModel) ClearServerAllCache(ctx context.Context) error {
 	var cursor uint64
 	var keys []string
-	prefix := ServerConfigCacheKey + "*"
+	prefix := ServerUserListCacheKey + "*"
 	for {
 		scanKeys, newCursor, err := m.Cache.Scan(ctx, cursor, prefix, 999).Result()
 		if err != nil {
