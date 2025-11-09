@@ -408,6 +408,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Update invite config
 		adminSystemGroupRouter.PUT("/invite_config", adminSystem.UpdateInviteConfigHandler(serverCtx))
 
+		// Get Module Config
+		adminSystemGroupRouter.GET("/module", adminSystem.GetModuleConfigHandler(serverCtx))
+
 		// Get node config
 		adminSystemGroupRouter.GET("/node_config", adminSystem.GetNodeConfigHandler(serverCtx))
 
@@ -821,9 +824,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Reset User Subscribe Token
 		publicUserGroupRouter.PUT("/subscribe_token", publicUser.ResetUserSubscribeTokenHandler(serverCtx))
-
-		// Update User Subscribe Note
-		publicUserGroupRouter.PUT("/subscribe_note", publicUser.UpdateUserSubscribeNoteHandler(serverCtx))
 
 		// Unbind Device
 		publicUserGroupRouter.PUT("/unbind_device", publicUser.UnbindDeviceHandler(serverCtx))

@@ -1221,6 +1221,12 @@ type MobileAuthenticateConfig struct {
 	Whitelist       []string `json:"whitelist"`
 }
 
+type ModuleConfig struct {
+	Secret         string `json:"secret"`          // 通讯密钥
+	ServiceName    string `json:"service_name"`    // 服务名称
+	ServiceVersion string `json:"service_version"` // 服务版本
+}
+
 type Node struct {
 	Id        int64    `json:"id"`
 	Name      string   `json:"name"`
@@ -1802,11 +1808,6 @@ type ResetTrafficOrderResponse struct {
 
 type ResetUserSubscribeTokenRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
-}
-
-type UpdateUserSubscribeNoteRequest struct {
-	UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
-	Note            string `json:"note" validate:"max=500"`
 }
 
 type RevenueStatisticsResponse struct {
@@ -2581,7 +2582,6 @@ type UserSubscribe struct {
 	Upload      int64     `json:"upload"`
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
-	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2601,7 +2601,6 @@ type UserSubscribeDetail struct {
 	Upload      int64     `json:"upload"`
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
-	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2620,7 +2619,6 @@ type UserSubscribeInfo struct {
 	Upload      int64                    `json:"upload"`
 	Token       string                   `json:"token"`
 	Status      uint8                    `json:"status"`
-	Note        string                   `json:"note"`
 	CreatedAt   int64                    `json:"created_at"`
 	UpdatedAt   int64                    `json:"updated_at"`
 	IsTryOut    bool                     `json:"is_try_out"`
