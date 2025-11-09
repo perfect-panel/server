@@ -796,6 +796,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Query User Commission Log
 		publicUserGroupRouter.GET("/commission_log", publicUser.QueryUserCommissionLogHandler(serverCtx))
 
+		// Delete Current User Account
+		publicUserGroupRouter.DELETE("/current_user_account", publicUser.DeleteCurrentUserAccountHandler(serverCtx))
+
 		// Device Online Statistics
 		publicUserGroupRouter.GET("/device_online_statistics", publicUser.DeviceOnlineStatisticsHandler(serverCtx))
 

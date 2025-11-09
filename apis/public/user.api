@@ -122,6 +122,7 @@ type (
         HistoryContinuousDays int64 `json:"history_continuous_days"`
         LongestSingleConnection int64 `json:"longest_single_connection"`
     }
+
 )
 
 @server (
@@ -229,6 +230,10 @@ service ppanel {
     @doc "Device Online Statistics"
     @handler DeviceOnlineStatistics
     get /device_online_statistics returns (GetDeviceOnlineStatsResponse)
+
+    @doc "Delete Current User Account"
+    @handler DeleteCurrentUserAccount
+    delete /current_user_account
 }
 
 
