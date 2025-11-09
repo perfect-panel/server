@@ -75,8 +75,8 @@ func RegisterModule(port int) error {
 		Secret:         value,
 		ProxyPath:      "/api",
 		ServiceURL:     fmt.Sprintf("http://127.0.0.1:%d", port),
-		Repository:     "https://github.com/perfect-panel/server",
-		ServiceName:    "ApiService",
+		Repository:     constant.Repository,
+		ServiceName:    constant.ServiceName,
 		ServiceVersion: constant.Version,
 	}).SetResult(&response).Post(RegisterAPI)
 
