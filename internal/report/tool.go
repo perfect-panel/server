@@ -76,6 +76,7 @@ func RegisterModule(port int) error {
 		ProxyPath:      "/api",
 		ServiceURL:     fmt.Sprintf("http://127.0.0.1:%d", port),
 		Repository:     constant.Repository,
+		HeartbeatURL:   fmt.Sprintf("http://127.0.0.1:%d/v1/common/heartbeat", port),
 		ServiceName:    constant.ServiceName,
 		ServiceVersion: constant.Version,
 	}).SetResult(&response).Post(RegisterAPI)
