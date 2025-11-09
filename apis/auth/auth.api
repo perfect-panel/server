@@ -16,7 +16,7 @@ type (
 		Password   string `json:"password" validate:"required"`
 		IP         string `header:"X-Original-Forwarded-For"`
 		UserAgent  string `header:"User-Agent"`
-        LoginType         string `header:"Login-Type"`
+		LoginType  string `header:"Login-Type"`
 		CfToken    string `json:"cf_token,optional"`
 	}
 	// Check user is exist request
@@ -36,19 +36,19 @@ type (
 		Code       string `json:"code,optional"`
 		IP         string `header:"X-Original-Forwarded-For"`
 		UserAgent  string `header:"User-Agent"`
-        LoginType         string `header:"Login-Type"`
+		LoginType  string `header:"Login-Type"`
 		CfToken    string `json:"cf_token,optional"`
 	}
 	// User login response
 	ResetPasswordRequest {
-        Identifier        string `json:"identifier"`
-		Email     string `json:"email" validate:"required"`
-		Password  string `json:"password" validate:"required"`
-		Code      string `json:"code,optional"`
-		IP        string `header:"X-Original-Forwarded-For"`
-		UserAgent string `header:"User-Agent"`
-        LoginType         string `header:"Login-Type"`
-		CfToken   string `json:"cf_token,optional"`
+		Identifier string `json:"identifier"`
+		Email      string `json:"email" validate:"required"`
+		Password   string `json:"password" validate:"required"`
+		Code       string `json:"code,optional"`
+		IP         string `header:"X-Original-Forwarded-For"`
+		UserAgent  string `header:"User-Agent"`
+		LoginType  string `header:"Login-Type"`
+		CfToken    string `json:"cf_token,optional"`
 	}
 	LoginResponse {
 		Token string `json:"token"`
@@ -73,7 +73,7 @@ type (
 		Password          string `json:"password"`
 		IP                string `header:"X-Original-Forwarded-For"`
 		UserAgent         string `header:"User-Agent"`
-        LoginType         string `header:"Login-Type"`
+		LoginType         string `header:"Login-Type"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	// Check user is exist request
@@ -95,19 +95,19 @@ type (
 		Code              string `json:"code,optional"`
 		IP                string `header:"X-Original-Forwarded-For"`
 		UserAgent         string `header:"User-Agent"`
-        LoginType         string `header:"Login-Type,optional"`
+		LoginType         string `header:"Login-Type,optional"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	// User login response
 	TelephoneResetPasswordRequest {
-        Identifier        string `json:"identifier"`
+		Identifier        string `json:"identifier"`
 		Telephone         string `json:"telephone" validate:"required"`
 		TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 		Password          string `json:"password" validate:"required"`
 		Code              string `json:"code,optional"`
 		IP                string `header:"X-Original-Forwarded-For"`
 		UserAgent         string `header:"User-Agent"`
-        LoginType         string `header:"Login-Type,optional"`
+		LoginType         string `header:"Login-Type,optional"`
 		CfToken           string `json:"cf_token,optional"`
 	}
 	AppleLoginCallbackRequest {
@@ -128,9 +128,9 @@ type (
 )
 
 @server (
-	prefix: v1/auth
-	group:  auth
-    middleware: DeviceMiddleware
+	prefix:     v1/auth
+	group:      auth
+	middleware: DeviceMiddleware
 )
 service ppanel {
 	@doc "User login"

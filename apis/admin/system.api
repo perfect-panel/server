@@ -19,8 +19,13 @@ type (
 		Periods []TimePeriod `json:"periods"`
 	}
 	PreViewNodeMultiplierResponse {
-		CurrentTime string `json:"current_time"`
-		Ratio float32 `json:"ratio"`
+		CurrentTime string  `json:"current_time"`
+		Ratio       float32 `json:"ratio"`
+	}
+	ModuleConfig {
+		Secret         string `json:"secret"` // 通讯密钥
+		ServiceName    string `json:"service_name"` // 服务名称
+		ServiceVersion string `json:"service_version"` // 服务版本
 	}
 )
 
@@ -125,5 +130,9 @@ service ppanel {
 	@doc "PreView Node Multiplier"
 	@handler PreViewNodeMultiplier
 	get /node_multiplier/preview returns (PreViewNodeMultiplierResponse)
+
+	@doc "Get Module Config"
+	@handler GetModuleConfig
+	get /module returns (ModuleConfig)
 }
 

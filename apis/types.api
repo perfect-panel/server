@@ -115,7 +115,7 @@ type (
 	AuthConfig {
 		Mobile   MobileAuthenticateConfig `json:"mobile"`
 		Email    EmailAuthticateConfig    `json:"email"`
-        Device   DeviceAuthticateConfig   `json:"device"`
+		Device   DeviceAuthticateConfig   `json:"device"`
 		Register PubilcRegisterConfig     `json:"register"`
 	}
 	PubilcRegisterConfig {
@@ -135,14 +135,12 @@ type (
 		EnableDomainSuffix bool   `json:"enable_domain_suffix"`
 		DomainSuffixList   string `json:"domain_suffix_list"`
 	}
-
-    DeviceAuthticateConfig {
-        Enable            bool   `json:"enable"`
-        ShowAds           bool   `json:"show_ads"`
-        EnableSecurity    bool   `json:"enable_security"`
-        OnlyRealDevice    bool   `json:"only_real_device"`
-    }
-
+	DeviceAuthticateConfig {
+		Enable         bool `json:"enable"`
+		ShowAds        bool `json:"show_ads"`
+		EnableSecurity bool `json:"enable_security"`
+		OnlyRealDevice bool `json:"only_real_device"`
+	}
 	RegisterConfig {
 		StopRegister            bool   `json:"stop_register"`
 		EnableTrial             bool   `json:"enable_trial"`
@@ -673,7 +671,6 @@ type (
 		List  []SubscribeGroup `json:"list"`
 		Total int64            `json:"total"`
 	}
-
 	GetUserSubscribeTrafficLogsRequest {
 		Page        int   `form:"page"`
 		Size        int   `form:"size"`

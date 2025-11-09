@@ -97,15 +97,13 @@ type (
 		Email string `json:"email" validate:"required"`
 		Code  string `json:"code" validate:"required"`
 	}
-
-    GetDeviceListResponse {
-        List  []UserDevice `json:"list"`
-        Total int64        `json:"total"`
-    }
-
-    UnbindDeviceRequest {
-        Id int64 `json:"id" validate:"required"`
-    }
+	GetDeviceListResponse {
+		List  []UserDevice `json:"list"`
+		Total int64        `json:"total"`
+	}
+	UnbindDeviceRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
 )
 
 @server (
@@ -202,12 +200,12 @@ service ppanel {
 	@handler UpdateBindEmail
 	put /bind_email (UpdateBindEmailRequest)
 
-    @doc "Get Device List"
-    @handler GetDeviceList
-    get /devices returns (GetDeviceListResponse)
+	@doc "Get Device List"
+	@handler GetDeviceList
+	get /devices returns (GetDeviceListResponse)
 
-    @doc "Unbind Device"
-    @handler UnbindDevice
-    put /unbind_device (UnbindDeviceRequest)
+	@doc "Unbind Device"
+	@handler UnbindDevice
+	put /unbind_device (UnbindDeviceRequest)
 }
 
