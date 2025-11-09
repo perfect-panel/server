@@ -87,6 +87,11 @@ type (
 		Total int64             `json:"total"`
 		List  []SubscribeClient `json:"list"`
 	}
+	HeartbeatResponse {
+		Status    bool   `json:"status"`
+		Message   string `json:"message,omitempty"`
+		Timestamp int64  `json:"timestamp,omitempty"`
+	}
 )
 
 @server (
@@ -130,5 +135,9 @@ service ppanel {
 	@doc "Get Client"
 	@handler GetClient
 	get /client returns (GetSubscribeClientResponse)
+
+	@doc "Heartbeat"
+	@handler Heartbeat
+	get /heartbeat returns (HeartbeatResponse)
 }
 

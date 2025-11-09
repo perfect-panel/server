@@ -1158,6 +1158,12 @@ type HasMigrateSeverNodeResponse struct {
 	HasMigrate bool `json:"has_migrate"`
 }
 
+type HeartbeatResponse struct {
+	Status    bool   `json:"status"`
+	Message   string `json:"message,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
 type Hysteria2 struct {
 	Port           int            `json:"port" validate:"required"`
 	HopPorts       string         `json:"hop_ports" validate:"required"`

@@ -638,6 +638,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get Client
 		commonGroupRouter.GET("/client", common.GetClientHandler(serverCtx))
 
+		// Heartbeat
+		commonGroupRouter.GET("/heartbeat", common.HeartbeatHandler(serverCtx))
+
 		// Get verification code
 		commonGroupRouter.POST("/send_code", common.SendEmailCodeHandler(serverCtx))
 
