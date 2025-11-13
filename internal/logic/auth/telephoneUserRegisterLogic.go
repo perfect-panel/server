@@ -102,7 +102,9 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InviteCodeError), "invite code is invalid")
 		}
 	}
-
+	if !registerIpLimit(l.svcCtx, l.ctx, req.IP, "mobile", phoneNumber) {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.RegisterIPLimit), "register ip limit: %v", req.IP)
+	}
 	// Generate password
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo := &user.User{

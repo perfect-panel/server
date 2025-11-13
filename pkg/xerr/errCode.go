@@ -27,6 +27,7 @@ const (
 	TelegramNotBound    uint32 = 20007
 	UserNotBindOauth    uint32 = 20008
 	InviteCodeError     uint32 = 20009
+	RegisterIPLimit     uint32 = 20010
 )
 
 // Node error

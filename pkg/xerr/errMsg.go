@@ -33,6 +33,7 @@ func init() {
 		TelegramNotBound:    "Telegram not bound ",
 		UserNotBindOauth:    "User not bind oauth method",
 		InviteCodeError:     "Invite code error",
+		RegisterIPLimit:     "Too many registrations",
 
 		// Node error
 		NodeExist:         "Node already exists",

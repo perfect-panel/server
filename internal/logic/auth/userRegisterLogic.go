@@ -86,6 +86,11 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	} else if err == nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "user email exist: %v", req.Email)
 	}
+
+	if !registerIpLimit(l.svcCtx, l.ctx, req.IP, "email", req.Email) {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.RegisterIPLimit), "register ip limit: %v", req.IP)
+	}
+
 	// Generate password
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo := &user.User{

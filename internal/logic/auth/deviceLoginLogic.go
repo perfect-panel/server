@@ -71,6 +71,9 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 	deviceInfo, err := l.svcCtx.UserModel.FindOneDeviceByIdentifier(l.ctx, req.Identifier)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if !registerIpLimit(l.svcCtx, l.ctx, req.IP, "device", req.Identifier) {
+				return nil, errors.Wrapf(xerr.NewErrCode(xerr.RegisterIPLimit), "register ip limit: %v", req.IP)
+			}
 			// Device not found, create new user and device
 			userInfo, err = l.registerUserAndDevice(req)
 			if err != nil {
