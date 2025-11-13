@@ -42,22 +42,37 @@ func (l *DeleteCurrentUserAccountLogic) DeleteCurrentUserAccount() (err error) {
 	}
 
 	err = l.svcCtx.UserModel.Transaction(l.ctx, func(tx *gorm.DB) error {
+		//delete user devices
 		if len(userInfo.UserDevices) > 0 {
-			if err = tx.Model(&user.Device{}).Delete("user_id = ?", userInfo.Id).Error; err != nil {
-				return err
-			}
-		}
-		if len(userInfo.AuthMethods) > 0 {
-			if err = tx.Model(&user.AuthMethods{}).Delete("user_id = ?", userInfo.Id).Error; err != nil {
-				return err
+			for _, device := range userInfo.UserDevices {
+				if err = l.svcCtx.UserModel.DeleteDevice(l.ctx, device.Id, tx); err != nil {
+					return err
+				}
 			}
 		}
 
-		if err = tx.Model(&user.Subscribe{}).Delete("user_id = ?", userInfo.Id).Error; err != nil {
+		// delete user auth methods
+		if len(userInfo.AuthMethods) > 0 {
+			for _, authMethod := range userInfo.AuthMethods {
+				if err = l.svcCtx.UserModel.DeleteUserAuthMethods(l.ctx, userInfo.Id, authMethod.AuthType); err != nil {
+					return err
+				}
+			}
+		}
+
+		// delete user subscribes
+		var subscribes []*user.SubscribeDetails
+		subscribes, err = l.svcCtx.UserModel.QueryUserSubscribe(l.ctx, userInfo.Id)
+		if err != nil {
 			return err
 		}
-
-		return tx.Model(userInfo).Delete("id = ?", userInfo.Id).Error
+		for _, subscribe := range subscribes {
+			if err = l.svcCtx.UserModel.DeleteSubscribe(l.ctx, subscribe.Token, tx); err != nil {
+				return err
+			}
+		}
+		// delete user account
+		return l.svcCtx.UserModel.BatchDeleteUser(l.ctx, []int64{userInfo.Id}, tx)
 	})
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "find user auth methods failed: %v", err.Error())
