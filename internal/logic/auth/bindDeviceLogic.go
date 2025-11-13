@@ -148,8 +148,8 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 
 	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Check if old user has other auth methods besides device
-		var authMethods []user.AuthMethods
-		if err := db.Where("user_id = ?", oldUserId).Find(&authMethods).Error; err != nil {
+		var count int64
+		if err := db.Where("user_id = ? and  auth_identifier != ?", oldUserId, deviceInfo.Identifier).Count(&count).Error; err != nil {
 			l.Errorw("failed to query auth methods for old user",
 				logger.Field("old_user_id", oldUserId),
 				logger.Field("error", err.Error()),
@@ -157,32 +157,22 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query auth methods failed: %v", err)
 		}
 
-		// Count non-device auth methods
-		nonDeviceAuthCount := 0
-		for _, auth := range authMethods {
-			if auth.AuthType != "device" {
-				nonDeviceAuthCount++
-			}
-		}
-
 		// Only disable old user if they have no other auth methods
-		if nonDeviceAuthCount == 0 {
-			falseVal := false
-			if err := db.Model(&user.User{}).Where("id = ?", oldUserId).Update("enable", &falseVal).Error; err != nil {
+		if count == 0 {
+			if err := db.Model(&user.User{}).Where("id = ?", oldUserId).Delete(&user.User{}).Error; err != nil {
 				l.Errorw("failed to disable old user",
 					logger.Field("old_user_id", oldUserId),
 					logger.Field("error", err.Error()),
 				)
 				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "disable old user failed: %v", err)
 			}
-
 			l.Infow("disabled old user (no other auth methods)",
 				logger.Field("old_user_id", oldUserId),
 			)
 		} else {
 			l.Infow("old user has other auth methods, not disabling",
 				logger.Field("old_user_id", oldUserId),
-				logger.Field("non_device_auth_count", nonDeviceAuthCount),
+				logger.Field("non_device_auth_count", count),
 			)
 		}
 
