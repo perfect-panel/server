@@ -49,7 +49,7 @@ func initServer(svc *svc.ServiceContext) *gin.Engine {
 	}
 	r.Use(sessions.Sessions("ppanel", sessionStore))
 	// use cors middleware
-	r.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, middleware.PanDomainMiddleware(svc), gin.Recovery())
+	r.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, gin.Recovery())
 
 	// register handlers
 	handler.RegisterHandlers(r, svc)
