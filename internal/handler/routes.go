@@ -385,6 +385,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get subscribe list
 		adminSubscribeGroupRouter.GET("/list", adminSubscribe.GetSubscribeListHandler(serverCtx))
 
+		// Reset all subscribe tokens
+		adminSubscribeGroupRouter.POST("/reset_all_token", adminSubscribe.ResetAllSubscribeTokenHandler(serverCtx))
+
 		// Subscribe sort
 		adminSubscribeGroupRouter.POST("/sort", adminSubscribe.SubscribeSortHandler(serverCtx))
 	}

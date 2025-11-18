@@ -1772,6 +1772,10 @@ type RenewalOrderResponse struct {
 	OrderNo string `json:"order_no"`
 }
 
+type ResetAllSubscribeTokenResponse struct {
+	Success bool `json:"success"`
+}
+
 type ResetPasswordRequest struct {
 	Identifier string `json:"identifier"`
 	Email      string `json:"email" validate:"required"`
