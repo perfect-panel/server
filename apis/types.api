@@ -207,7 +207,7 @@ type (
 	}
 	SubscribeDiscount {
 		Quantity int64 `json:"quantity"`
-		Discount int64 `json:"discount"`
+		Discount float64 `json:"discount"`
 	}
 	Subscribe {
 		Id             int64               `json:"id"`

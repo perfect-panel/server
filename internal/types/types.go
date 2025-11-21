@@ -2076,8 +2076,8 @@ type SubscribeConfig struct {
 }
 
 type SubscribeDiscount struct {
-	Quantity int64 `json:"quantity"`
-	Discount int64 `json:"discount"`
+	Quantity int64   `json:"quantity"`
+	Discount float64 `json:"discount"`
 }
 
 type SubscribeGroup struct {
