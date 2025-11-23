@@ -17,6 +17,14 @@ type (
 	VersionResponse {
 		Version string `json:"version"`
 	}
+	QueryIPLocationRequest {
+		IP string `form:"ip" validate:"required"`
+	}
+	QueryIPLocationResponse {
+		Country string `json:"country"`
+		Region  string `json:"region,omitempty"`
+		City    string `json:"city"`
+	}
 )
 
 @server (
@@ -36,5 +44,9 @@ service ppanel {
 	@doc "Get Version"
 	@handler GetVersion
 	get /version returns (VersionResponse)
+
+	@doc "Query IP Location"
+	@handler QueryIPLocation
+	get /ip/location (QueryIPLocationRequest) returns (QueryIPLocationResponse)
 }
 

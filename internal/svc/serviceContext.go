@@ -37,6 +37,7 @@ type ServiceContext struct {
 	Config       config.Config
 	Queue        *asynq.Client
 	ExchangeRate float64
+	GeoIP        *IPLocation
 
 	//NodeCache   *cache.NodeCacheClient
 	AuthModel   auth.Model
@@ -68,9 +69,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	db, err := orm.ConnectMysql(orm.Mysql{
 		Config: c.MySQL,
 	})
+
 	if err != nil {
 		panic(err.Error())
 	}
+
+	// IP location initialize
+	geoIP, err := NewIPLocation("./cache/GeoLite2-City.mmdb")
+	if err != nil {
+		panic(err.Error())
+	}
+
 	rds := redis.NewClient(&redis.Options{
 		Addr:     c.Redis.Host,
 		Password: c.Redis.Pass,
@@ -89,6 +98,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:       c,
 		Queue:        NewAsynqClient(c),
 		ExchangeRate: 1.0,
+		GeoIP:        geoIP,
 		//NodeCache:   cache.NewNodeCacheClient(rds),
 		AuthLimiter: authLimiter,
 		AdsModel:    ads.NewModel(db, rds),

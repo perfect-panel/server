@@ -1571,6 +1571,16 @@ type QueryDocumentListResponse struct {
 	List  []Document `json:"list"`
 }
 
+type QueryIPLocationRequest struct {
+	IP string `form:"ip" validate:"required"`
+}
+
+type QueryIPLocationResponse struct {
+	Country string `json:"country"`
+	Region  string `json:"regio,omitempty"`
+	City    string `json:"city"`
+}
+
 type QueryNodeTagResponse struct {
 	Tags []string `json:"tags"`
 }
@@ -2598,6 +2608,7 @@ type UserSubscribe struct {
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
 	Short       string    `json:"short"`
+	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2617,6 +2628,7 @@ type UserSubscribeDetail struct {
 	Upload      int64     `json:"upload"`
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
+	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2635,6 +2647,7 @@ type UserSubscribeInfo struct {
 	Upload      int64                    `json:"upload"`
 	Token       string                   `json:"token"`
 	Status      uint8                    `json:"status"`
+	Note        string                   `json:"note"`
 	CreatedAt   int64                    `json:"created_at"`
 	UpdatedAt   int64                    `json:"updated_at"`
 	IsTryOut    bool                     `json:"is_try_out"`

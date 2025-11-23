@@ -60,6 +60,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/goccy/go-json v0.10.4
 	github.com/golang-migrate/migrate/v4 v4.18.2
+	github.com/oschwald/geoip2-golang v1.13.0
 	github.com/spaolacci/murmur3 v1.1.0
 	google.golang.org/grpc v1.64.1
 	google.golang.org/protobuf v1.36.3
@@ -117,6 +118,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/openzipkin/zipkin-go v0.4.2 // indirect
+	github.com/oschwald/maxminddb-golang v1.13.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
