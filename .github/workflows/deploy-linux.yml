@@ -3,16 +3,12 @@ name: Build and Deploy Linux Binary
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - '**'
-      - '!.github/workflows/**'
-      - '.github/workflows/deploy-linux.yml'
   workflow_dispatch:
     inputs:
       mode:
         description: 'Operation mode'
         required: true
-        default: 'build'
+        default: 'build-only'
         type: choice
         options:
           - build-only
@@ -32,11 +28,6 @@ permissions:
 
 env:
   BINARY_NAME: ppanel-server
-  CONFIG_PATH: /app/etc/ppanel.yaml
-  DEPLOY_PATH: /opt/ppanel
-  SERVICE_NAME: ppanel-server
-  BACKUP_PATH: /opt/ppanel/backups
-  LOG_PATH: /opt/ppanel/logs
 
 jobs:
   build:
@@ -66,7 +57,7 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             VERSION=${GITHUB_REF#refs/tags/}
           elif [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION=${{ github.event.inputs.version }}
+            VERSION="${{ github.event.inputs.version }}"
           else
             VERSION=$(git describe --tags --always --dirty)
           fi
@@ -150,9 +141,9 @@ jobs:
           WorkingDirectory=$DEPLOY_PATH
           ExecStart=$DEPLOY_PATH/ppanel-server run --config $CONFIG_PATH
           Restart=always
-          RestartSec=5
-          StandardOutput=journal
-          StandardError=journal
+            RestartSec=5
+            StandardOutput=journal
+            StandardError=journal
 
           [Install]
           WantedBy=multi-user.target
@@ -213,7 +204,7 @@ jobs:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: build
-    if: (github.event.inputs.mode == 'deploy-staging' || github.event.inputs.mode == 'build-and-deploy') && env.STAGING_HOST != ''
+    if: (github.event.inputs.mode == 'deploy-staging' || github.event.inputs.mode == 'build-and-deploy') && secrets.STAGING_HOST != ''
 
     steps:
       - name: Download build artifacts
@@ -309,8 +300,8 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [build, deploy-staging]
-    if: (github.event.inputs.mode == 'deploy-production' || github.event.inputs.mode == 'build-and-deploy' || github.event_name == 'release') && env.PRODUCTION_HOST != ''
+    needs: build
+    if: (github.event.inputs.mode == 'deploy-production' || github.event.inputs.mode == 'build-and-deploy' || github.event_name == 'release') && secrets.PRODUCTION_HOST != ''
 
     steps:
       - name: Download build artifacts
@@ -415,7 +406,7 @@ jobs:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: build
-    if: (secrets.DOCKER_USERNAME && secrets.DOCKER_PASSWORD) && (github.event_name == 'release' || github.event.inputs.mode == 'build-and-deploy')
+    if: secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' && (github.event_name == 'release' || github.event.inputs.mode == 'build-and-deploy')
 
     steps:
       - name: Checkout repository
