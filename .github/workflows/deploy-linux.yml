@@ -1,20 +1,10 @@
-name: Build and Deploy Linux Binary
+name: Build Linux Binary
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
     inputs:
-      mode:
-        description: 'Operation mode'
-        required: true
-        default: 'build-only'
-        type: choice
-        options:
-          - build-only
-          - deploy-staging
-          - deploy-production
-          - build-and-deploy
       version:
         description: 'Version to build (leave empty for auto)'
         required: false
@@ -24,10 +14,6 @@ on:
 
 permissions:
   contents: write
-  packages: write
-
-env:
-  BINARY_NAME: ppanel-server
 
 jobs:
   build:
@@ -37,7 +23,6 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       binary_name: ${{ steps.build.outputs.binary_name }}
-      checksum: ${{ steps.checksum.outputs.checksum }}
 
     steps:
       - name: Checkout repository
@@ -73,7 +58,7 @@ jobs:
           GOOS: linux
           GOARCH: amd64
         run: |
-          BINARY_NAME_WITH_VERSION="${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64"
+          BINARY_NAME_WITH_VERSION="ppanel-server-${{ env.VERSION }}-linux-amd64"
           echo "binary_name=$BINARY_NAME_WITH_VERSION" >> $GITHUB_OUTPUT
 
           go build \
@@ -85,88 +70,17 @@ jobs:
             ./ppanel.go
 
       - name: Generate checksum
-        id: checksum
         run: |
-          CHECKSUM=$(sha256sum "${{ steps.build.outputs.binary_name }}" | awk '{print $1}')
-          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
-          echo "$CHECKSUM  ${{ steps.build.outputs.binary_name }}" > checksum.txt
+          sha256sum "${{ steps.build.outputs.binary_name }}" > checksum.txt
+          echo "Checksum: $(cat checksum.txt)"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-binary
+          name: ppanel-server-linux-amd64
           path: |
             ${{ steps.build.outputs.binary_name }}
             checksum.txt
-          retention-days: 30
-
-      - name: Create deployment package
-        run: |
-          mkdir -p deploy-package
-          cp "${{ steps.build.outputs.binary_name }}" deploy-package/ppanel-server
-          cp checksum.txt deploy-package/
-          cp -r etc deploy-package/ 2>/dev/null || echo "etc directory not found, skipping"
-
-          # Create deployment script
-          cat > deploy-package/deploy.sh << 'EOF'
-          #!/bin/bash
-          set -e
-
-          BINARY_NAME="ppanel-server"
-          DEPLOY_PATH="/opt/ppanel"
-          CONFIG_PATH="/app/etc/ppanel.yaml"
-          SERVICE_NAME="ppanel-server"
-
-          # Create directories
-          sudo mkdir -p $DEPLOY_PATH /app/etc /opt/ppanel/logs
-
-          # Install binary
-          sudo cp $BINARY_NAME $DEPLOY_PATH/ppanel-server
-          sudo chmod +x $DEPLOY_PATH/ppanel-server
-
-          # Copy config if needed
-          if [ -d "etc" ] && [ ! -f "/app/etc/ppanel.yaml" ]; then
-            sudo cp -r etc/* /app/etc/
-          fi
-
-          # Create systemd service
-          sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << 'SERVICE_EOF'
-          [Unit]
-          Description=PPanel Server
-          After=network.target
-
-          [Service]
-          Type=simple
-          User=root
-          WorkingDirectory=$DEPLOY_PATH
-          ExecStart=$DEPLOY_PATH/ppanel-server run --config $CONFIG_PATH
-          Restart=always
-            RestartSec=5
-            StandardOutput=journal
-            StandardError=journal
-
-          [Install]
-          WantedBy=multi-user.target
-          SERVICE_EOF
-
-          # Reload and start service
-          sudo systemctl daemon-reload
-          sudo systemctl enable $SERVICE_NAME
-          sudo systemctl restart $SERVICE_NAME
-
-          echo "✅ Deployment completed!"
-          echo "📊 Service status: sudo systemctl status $SERVICE_NAME"
-          echo "📝 Logs: sudo journalctl -u $SERVICE_NAME -f"
-          EOF
-
-          chmod +x deploy-package/deploy.sh
-          tar -czf "${{ steps.build.outputs.binary_name }}-deploy.tar.gz" deploy-package/
-
-      - name: Upload deployment package
-        uses: actions/upload-artifact@v4
-        with:
-          name: deploy-package
-          path: "${{ steps.build.outputs.binary_name }}-deploy.tar.gz"
           retention-days: 30
 
       - name: Upload to GitHub Release (if release)
@@ -184,254 +98,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Binary:** ${{ steps.build.outputs.binary_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Checksum:** \`${{ steps.checksum.outputs.checksum }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Size:** $(du -h ${{ steps.build.outputs.binary_name }} | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "**Checksum:** $(cat checksum.txt)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
-          echo "- **Binary only**: Actions → Artifacts → \`linux-binary\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deploy package**: Actions → Artifacts → \`deploy-package\`" >> $GITHUB_STEP_SUMMARY
+          echo "Go to Actions → Artifacts → \`ppanel-server-linux-amd64\` to download" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🚀 Next Steps" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event.inputs.mode }}" = "build-only" ] || [ "${{ github.event_name }}" = "push" ]; then
-            echo "1. Download the binary from Artifacts" >> $GITHUB_STEP_SUMMARY
-            echo "2. Deploy manually to your server" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "1. Configure server secrets in repository settings" >> $GITHUB_STEP_SUMMARY
-            echo "2. The deployment will start automatically" >> $GITHUB_STEP_SUMMARY
-          fi
-
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: build
-    if: (github.event.inputs.mode == 'deploy-staging' || github.event.inputs.mode == 'build-and-deploy') && secrets.STAGING_HOST != ''
-
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-binary
-
-      - name: Validate staging configuration
-        run: |
-          echo "✅ Checking staging configuration..."
-          if [ -z "${{ secrets.STAGING_HOST }}" ]; then
-            echo "❌ STAGING_HOST is not configured"
-            echo "Please set STAGING_HOST in repository secrets"
-            exit 1
-          fi
-          if [ -z "${{ secrets.STAGING_USER }}" ]; then
-            echo "❌ STAGING_USER is not configured"
-            exit 1
-          fi
-          if [ -z "${{ secrets.STAGING_SSH_KEY }}" ]; then
-            echo "❌ STAGING_SSH_KEY is not configured"
-            exit 1
-          fi
-          echo "✅ Staging configuration validated"
-
-      - name: Deploy to staging server
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          BINARY_NAME: ${{ needs.build.outputs.binary_name }}
-          VERSION: ${{ needs.build.outputs.version }}
-          CHECKSUM: ${{ needs.build.outputs.checksum }}
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          port: ${{ secrets.STAGING_PORT || 22 }}
-          timeout: 300s
-          script: |
-            set -e
-            BINARY="${BINARY_NAME}"
-            DEPLOY_PATH="/opt/ppanel"
-            SERVICE_NAME="ppanel-server"
-
-            echo "🚀 Deploying $BINARY to staging..."
-
-            # Create directories
-            sudo mkdir -p $DEPLOY_PATH /app/etc /opt/ppanel/{backups,logs}
-
-            # Backup current binary
-            if [ -f "$DEPLOY_PATH/ppanel-server" ]; then
-              sudo cp "$DEPLOY_PATH/ppanel-server" "/opt/ppanel/backups/ppanel-server-$(date +%Y%m%d_%H%M%S)"
-            fi
-
-            # Install new binary
-            chmod +x $BINARY
-            sudo mv $BINARY $DEPLOY_PATH/ppanel-server
-
-            # Create systemd service
-            sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << 'EOF'
-            [Unit]
-            Description=PPanel Server
-            After=network.target
-
-            [Service]
-            Type=simple
-            User=root
-            WorkingDirectory=$DEPLOY_PATH
-            ExecStart=$DEPLOY_PATH/ppanel-server run --config /app/etc/ppanel.yaml
-            Restart=always
-            RestartSec=5
-            StandardOutput=journal
-            StandardError=journal
-
-            [Install]
-            WantedBy=multi-user.target
-            EOF
-
-            # Restart service
-            sudo systemctl daemon-reload
-            sudo systemctl enable $SERVICE_NAME
-            sudo systemctl restart $SERVICE_NAME
-
-            # Check status
-            sleep 5
-            if sudo systemctl is-active --quiet $SERVICE_NAME; then
-              echo "✅ Staging deployment successful!"
-            else
-              echo "❌ Service failed to start"
-              sudo journalctl -u $SERVICE_NAME --no-pager -n 20
-              exit 1
-            fi
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: build
-    if: (github.event.inputs.mode == 'deploy-production' || github.event.inputs.mode == 'build-and-deploy' || github.event_name == 'release') && secrets.PRODUCTION_HOST != ''
-
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-binary
-
-      - name: Validate production configuration
-        run: |
-          echo "✅ Checking production configuration..."
-          if [ -z "${{ secrets.PRODUCTION_HOST }}" ]; then
-            echo "❌ PRODUCTION_HOST is not configured"
-            echo "Please set PRODUCTION_HOST in repository secrets"
-            exit 1
-          fi
-          if [ -z "${{ secrets.PRODUCTION_USER }}" ]; then
-            echo "❌ PRODUCTION_USER is not configured"
-            exit 1
-          fi
-          if [ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]; then
-            echo "❌ PRODUCTION_SSH_KEY is not configured"
-            exit 1
-          fi
-          echo "✅ Production configuration validated"
-
-      - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          BINARY_NAME: ${{ needs.build.outputs.binary_name }}
-          VERSION: ${{ needs.build.outputs.version }}
-          CHECKSUM: ${{ needs.build.outputs.checksum }}
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          port: ${{ secrets.PRODUCTION_PORT || 22 }}
-          timeout: 300s
-          script: |
-            set -e
-            BINARY="${BINARY_NAME}"
-            DEPLOY_PATH="/opt/ppanel"
-            SERVICE_NAME="ppanel-server"
-
-            echo "🚀 Deploying $BINARY to production..."
-
-            # Create directories
-            sudo mkdir -p $DEPLOY_PATH /app/etc /opt/ppanel/{backups,logs}
-
-            # Backup current binary
-            if [ -f "$DEPLOY_PATH/ppanel-server" ]; then
-              sudo cp "$DEPLOY_PATH/ppanel-server" "/opt/ppanel/backups/ppanel-server-$(date +%Y%m%d_%H%M%S)"
-            fi
-
-            # Install new binary
-            chmod +x $BINARY
-            sudo mv $BINARY $DEPLOY_PATH/ppanel-server
-
-            # Create/update systemd service
-            sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << 'EOF'
-            [Unit]
-            Description=PPanel Server
-            After=network.target
-
-            [Service]
-            Type=simple
-            User=root
-            WorkingDirectory=$DEPLOY_PATH
-            ExecStart=$DEPLOY_PATH/ppanel-server run --config /app/etc/ppanel.yaml
-            Restart=always
-            RestartSec=5
-            StandardOutput=journal
-            StandardError=journal
-
-            [Install]
-            WantedBy=multi-user.target
-            EOF
-
-            # Restart service
-            sudo systemctl daemon-reload
-            sudo systemctl enable $SERVICE_NAME
-            sudo systemctl restart $SERVICE_NAME
-
-            # Wait for service to be ready
-            sleep 10
-            if sudo systemctl is-active --quiet $SERVICE_NAME; then
-              echo "✅ Production deployment successful!"
-              echo "📊 Service status:"
-              sudo systemctl status $SERVICE_NAME --no-pager
-            else
-              echo "❌ Production deployment failed!"
-              echo "🔄 Attempting rollback..."
-              LATEST_BACKUP=$(ls -t /opt/ppanel/backups/ppanel-server-* 2>/dev/null | head -1)
-              if [ -n "$LATEST_BACKUP" ]; then
-                sudo cp "$LATEST_BACKUP" "$DEPLOY_PATH/ppanel-server"
-                sudo systemctl restart $SERVICE_NAME
-                echo "✅ Rollback completed"
-              fi
-              exit 1
-            fi
-
-  docker:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: build
-    if: secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' && (github.event_name == 'release' || github.event.inputs.mode == 'build-and-deploy')
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/ppanel-server:${{ needs.build.outputs.version }}
-            ${{ secrets.DOCKER_USERNAME }}/ppanel-server:latest
-          build-args: |
-            VERSION=${{ needs.build.outputs.version }}
-          labels: |
-            org.opencontainers.image.version=${{ needs.build.outputs.version }}
-            org.opencontainers.image.revision=${{ github.sha }}
+          echo "### 🚀 Usage" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the binary" >> $GITHUB_STEP_SUMMARY
+          echo "2. Extract from tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "3. Run: chmod +x ppanel-server-* && ./ppanel-server-* run --config etc/ppanel.yaml" >> $GITHUB_STEP_SUMMARY
