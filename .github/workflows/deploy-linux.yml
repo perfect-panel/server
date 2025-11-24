@@ -3,7 +3,6 @@ name: Build Linux Binary
 on:
   push:
     branches: [ main, master ]
-  push:
     tags:
       - 'v*'
   workflow_dispatch:
@@ -48,6 +47,8 @@ jobs:
         id: version
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_type }}" = "tag" ]; then
             VERSION=${GITHUB_REF#refs/tags/}
           elif [ -n "${{ github.event.inputs.version }}" ]; then
             VERSION="${{ github.event.inputs.version }}"
@@ -103,7 +104,7 @@ jobs:
               --title "PPanel Server ${{ env.VERSION }}" \
               --notes "Release ${{ env.VERSION }}" \
               --latest
-          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_type }}" = "tag" ]; then
+          elif [ "${{ github.event_name }}" = "push" ] && startsWith(github.ref, 'refs/tags/'); then
             echo "Creating release for tag ${{ env.VERSION }}"
             gh release create ${{ env.VERSION }} \
               --title "PPanel Server ${{ env.VERSION }}" \
