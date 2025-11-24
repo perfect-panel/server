@@ -93,7 +93,7 @@ jobs:
           retention-days: 30
 
       - name: Create and Upload to GitHub Release
-        if: github.event_name == 'release' || github.event.inputs.create_release == 'true' || startsWith(github.ref, 'refs/tags/')
+        if: github.event_name == 'release' || github.event.inputs.create_release == 'true' || (github.event_name == 'push' && github.ref_type == 'tag')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
