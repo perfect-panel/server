@@ -493,6 +493,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	adminToolGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
 	{
+		// Query IP Location
+		adminToolGroupRouter.GET("/ip/location", adminTool.QueryIPLocationHandler(serverCtx))
+
 		// Get System Log
 		adminToolGroupRouter.GET("/log", adminTool.GetSystemLogHandler(serverCtx))
 
@@ -821,6 +824,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Update User Password
 		publicUserGroupRouter.PUT("/password", publicUser.UpdateUserPasswordHandler(serverCtx))
+
+		// Update User Rules
+		publicUserGroupRouter.PUT("/rules", publicUser.UpdateUserRulesHandler(serverCtx))
 
 		// Query User Subscribe
 		publicUserGroupRouter.GET("/subscribe", publicUser.QueryUserSubscribeHandler(serverCtx))

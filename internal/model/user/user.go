@@ -25,6 +25,7 @@ type User struct {
 	EnableTradeNotify     *bool         `gorm:"default:false;not null;comment:Enable Trade Notifications"`
 	AuthMethods           []AuthMethods `gorm:"foreignKey:UserId;references:Id"`
 	UserDevices           []Device      `gorm:"foreignKey:UserId;references:Id"`
+	Rules                 string        `gorm:"type:TEXT;comment:User Rules"`
 	CreatedAt             time.Time     `gorm:"<-:create;comment:Creation Time"`
 	UpdatedAt             time.Time     `gorm:"comment:Update Time"`
 }

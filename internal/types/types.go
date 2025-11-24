@@ -1577,7 +1577,7 @@ type QueryIPLocationRequest struct {
 
 type QueryIPLocationResponse struct {
 	Country string `json:"country"`
-	Region  string `json:"regio,omitempty"`
+	Region  string `json:"region,omitempty"`
 	City    string `json:"city"`
 }
 
@@ -2479,6 +2479,10 @@ type UpdateUserPasswordRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type UpdateUserRulesRequest struct {
+	Rules []string `json:"rules" validate:"required"`
+}
+
 type UpdateUserSubscribeNoteRequest struct {
 	UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
 	Note            string `json:"note" validate:"max=500"`
@@ -2517,6 +2521,7 @@ type User struct {
 	EnableTradeNotify     bool             `json:"enable_trade_notify"`
 	AuthMethods           []UserAuthMethod `json:"auth_methods"`
 	UserDevices           []UserDevice     `json:"user_devices"`
+	Rules                 []string         `json:"rules"`
 	CreatedAt             int64            `json:"created_at"`
 	UpdatedAt             int64            `json:"updated_at"`
 	DeletedAt             int64            `json:"deleted_at,omitempty"`
@@ -2608,7 +2613,6 @@ type UserSubscribe struct {
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
 	Short       string    `json:"short"`
-	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2628,7 +2632,6 @@ type UserSubscribeDetail struct {
 	Upload      int64     `json:"upload"`
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
-	Note        string    `json:"note"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2647,7 +2650,6 @@ type UserSubscribeInfo struct {
 	Upload      int64                    `json:"upload"`
 	Token       string                   `json:"token"`
 	Status      uint8                    `json:"status"`
-	Note        string                   `json:"note"`
 	CreatedAt   int64                    `json:"created_at"`
 	UpdatedAt   int64                    `json:"updated_at"`
 	IsTryOut    bool                     `json:"is_try_out"`

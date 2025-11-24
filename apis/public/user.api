@@ -108,6 +108,9 @@ type (
 		UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
 		Note            string `json:"note" validate:"max=500"`
 	}
+	UpdateUserRulesRequest {
+		Rules []string `json:"rules" validate:"required"`
+	}
 )
 
 @server (
@@ -215,5 +218,9 @@ service ppanel {
 	@doc "Update User Subscribe Note"
 	@handler UpdateUserSubscribeNote
 	put /subscribe_note (UpdateUserSubscribeNoteRequest)
+
+	@doc "Update User Rules"
+	@handler UpdateUserRules
+	put /rules (UpdateUserRulesRequest)
 }
 
