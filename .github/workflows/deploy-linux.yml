@@ -1,0 +1,459 @@
+name: Deploy Linux Binary
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - '**'
+      - '!.github/workflows/**'
+      - '.github/workflows/deploy-linux.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - testing
+      version:
+        description: 'Version to deploy (leave empty for latest)'
+        required: false
+        type: string
+      force_deploy:
+        description: 'Force deployment even if same version'
+        required: false
+        default: false
+        type: boolean
+  release:
+    types: [ published ]
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BINARY_NAME: ppanel-server
+  CONFIG_PATH: /app/etc/ppanel.yaml
+  DEPLOY_PATH: /opt/ppanel
+  SERVICE_NAME: ppanel-server
+  BACKUP_PATH: /opt/ppanel/backups
+  LOG_PATH: /opt/ppanel/logs
+
+jobs:
+  build:
+    name: Build Linux Binary
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      binary_name: ${{ steps.build.outputs.binary_name }}
+      checksum: ${{ steps.checksum.outputs.checksum }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.3'
+          cache: true
+
+      - name: Get version information
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          else
+            VERSION=$(git describe --tags --always --dirty)
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_ENV
+          echo "GIT_COMMIT=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      - name: Build binary
+        id: build
+        env:
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          BINARY_NAME_WITH_VERSION="${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64"
+          echo "binary_name=$BINARY_NAME_WITH_VERSION" >> $GITHUB_OUTPUT
+
+          go build \
+            -ldflags "-s -w \
+              -X 'github.com/perfect-panel/server/pkg/constant.Version=${{ env.VERSION }}' \
+              -X 'github.com/perfect-panel/server/pkg/constant.BuildTime=${{ env.BUILD_TIME }}' \
+              -X 'github.com/perfect-panel/server/pkg/constant.GitCommit=${{ env.GIT_COMMIT }}'" \
+            -o "$BINARY_NAME_WITH_VERSION" \
+            ./ppanel.go
+
+      - name: Generate checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(sha256sum "${{ steps.build.outputs.binary_name }}" | awk '{print $1}')
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "$CHECKSUM  ${{ steps.build.outputs.binary_name }}" > checksum.txt
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: |
+            ${{ steps.build.outputs.binary_name }}
+            checksum.txt
+          retention-days: 7
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: binary
+
+      - name: Deploy to staging server
+        id: deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          BINARY_NAME: ${{ needs.build.outputs.binary_name }}
+          VERSION: ${{ needs.build.outputs.version }}
+          CHECKSUM: ${{ needs.build.outputs.checksum }}
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          CONFIG_PATH: ${{ env.CONFIG_PATH }}
+          BACKUP_PATH: ${{ env.BACKUP_PATH }}
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          timeout: 300s
+          script: |
+            set -e
+
+            # Create necessary directories
+            sudo mkdir -p $DEPLOY_PATH $BACKUP_PATH $LOG_PATH
+            sudo chown $USER:$USER $DEPLOY_PATH $BACKUP_PATH $LOG_PATH
+
+            # Move binary to server
+            chmod +x $BINARY_NAME
+            mv $BINARY_NAME $DEPLOY_PATH/
+
+            # Create symlink for easy access
+            ln -sf $DEPLOY_PATH/$BINARY_NAME $DEPLOY_PATH/ppanel-server
+
+            # Backup current running binary if exists
+            if [ -f "$DEPLOY_PATH/ppanel-server-running" ]; then
+              cp "$DEPLOY_PATH/ppanel-server-running" "$BACKUP_PATH/ppanel-server-$(date +%Y%m%d_%H%M%S)"
+            fi
+
+            # Update running binary
+            ln -sf $DEPLOY_PATH/$BINARY_NAME $DEPLOY_PATH/ppanel-server-running
+
+            # Verify binary
+            echo "Verifying binary checksum..."
+            echo "$CHECKSUM  $DEPLOY_PATH/$BINARY_NAME" | sha256sum -c -
+            $DEPLOY_PATH/ppanel-server --version
+
+            # Create/Update systemd service
+            sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << 'EOF'
+            [Unit]
+            Description=PPanel Server
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=root
+            WorkingDirectory=$DEPLOY_PATH
+            ExecStart=$DEPLOY_PATH/ppanel-server-running run --config $CONFIG_PATH
+            Restart=always
+            RestartSec=5
+            StandardOutput=journal
+            StandardError=journal
+            SyslogIdentifier=$SERVICE_NAME
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            # Reload systemd and restart service
+            sudo systemctl daemon-reload
+            sudo systemctl enable $SERVICE_NAME
+            sudo systemctl restart $SERVICE_NAME
+
+            # Wait for service to be ready
+            sleep 5
+            if sudo systemctl is-active --quiet $SERVICE_NAME; then
+              echo "Service started successfully"
+              echo "Service status:"
+              sudo systemctl status $SERVICE_NAME --no-pager
+            else
+              echo "Service failed to start"
+              sudo journalctl -u $SERVICE_NAME --no-pager -n 20
+              exit 1
+            fi
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f ${{ secrets.STAGING_URL }}/health || {
+            echo "Health check failed"
+            exit 1
+          }
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: binary
+
+      - name: Deploy to production server
+        id: deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          BINARY_NAME: ${{ needs.build.outputs.binary_name }}
+          VERSION: ${{ needs.build.outputs.version }}
+          CHECKSUM: ${{ needs.build.outputs.checksum }}
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          CONFIG_PATH: ${{ env.CONFIG_PATH }}
+          BACKUP_PATH: ${{ env.BACKUP_PATH }}
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_PORT || 22 }}
+          timeout: 300s
+          script: |
+            set -e
+
+            # Check if service is currently healthy
+            if systemctl is-active --quiet $SERVICE_NAME; then
+              echo "Current service is running, preparing for zero-downtime deployment..."
+
+              # Download new binary
+              BINARY_NEW="$BINARY_NAME.new"
+              mv $BINARY_NAME $BINARY_NEW
+              chmod +x $BINARY_NEW
+
+              # Verify new binary
+              echo "Verifying new binary checksum..."
+              echo "$CHECKSUM  $BINARY_NEW" | sha256sum -c -
+              ./$BINARY_NEW --version
+
+              # Test new binary configuration
+              ./$BINARY_NEW run --config $CONFIG_PATH --check || {
+                echo "Configuration check failed"
+                exit 1
+              }
+
+              # Create necessary directories
+              sudo mkdir -p $DEPLOY_PATH $BACKUP_PATH $LOG_PATH
+              sudo chown $USER:$USER $DEPLOY_PATH $BACKUP_PATH $LOG_PATH
+
+              # Move to deployment directory
+              mv $BINARY_NEW $DEPLOY_PATH/
+
+              # Create symlink for easy access
+              ln -sf $DEPLOY_PATH/$BINARY_NAME $DEPLOY_PATH/ppanel-server
+
+              # Backup current running binary
+              if [ -f "$DEPLOY_PATH/ppanel-server-running" ]; then
+                cp "$DEPLOY_PATH/ppanel-server-running" "$BACKUP_PATH/ppanel-server-$(date +%Y%m%d_%H%M%S)"
+              fi
+
+              # Atomic update of running binary
+              ln -sf $DEPLOY_PATH/$BINARY_NAME $DEPLOY_PATH/ppanel-server-running.new
+              mv -Tf $DEPLOY_PATH/ppanel-server-running.new $DEPLOY_PATH/ppanel-server-running
+
+            else
+              echo "Service is not running, performing direct deployment..."
+              mv $BINARY_NAME $DEPLOY_PATH/
+              chmod +x $DEPLOY_PATH/$BINARY_NAME
+              ln -sf $DEPLOY_PATH/$BINARY_NAME $DEPLOY_PATH/ppanel-server-running
+            fi
+
+            # Create/Update systemd service
+            sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << 'EOF'
+            [Unit]
+            Description=PPanel Server
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=root
+            WorkingDirectory=$DEPLOY_PATH
+            ExecStart=$DEPLOY_PATH/ppanel-server-running run --config $CONFIG_PATH
+            Restart=always
+            RestartSec=5
+            StandardOutput=journal
+            StandardError=journal
+            SyslogIdentifier=$SERVICE_NAME
+            # Limit resources
+            LimitNOFILE=65536
+            MemoryLimit=512M
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            # Reload systemd and restart service
+            sudo systemctl daemon-reload
+            sudo systemctl enable $SERVICE_NAME
+            sudo systemctl restart $SERVICE_NAME
+
+            # Wait for service to be ready
+            sleep 10
+
+            # Check service status
+            if sudo systemctl is-active --quiet $SERVICE_NAME; then
+              echo "✅ Service started successfully"
+              echo "📊 Service status:"
+              sudo systemctl status $SERVICE_NAME --no-pager -l
+              echo "📝 Recent logs:"
+              sudo journalctl -u $SERVICE_NAME --no-pager -n 10
+            else
+              echo "❌ Service failed to start"
+              echo "📝 Error logs:"
+              sudo journalctl -u $SERVICE_NAME --no-pager -n 50
+
+              # Attempt rollback
+              echo "🔄 Attempting rollback..."
+              LATEST_BACKUP=$(ls -t $BACKUP_PATH/ppanel-server-* 2>/dev/null | head -1)
+              if [ -n "$LATEST_BACKUP" ]; then
+                cp "$LATEST_BACKUP" "$DEPLOY_PATH/ppanel-server-running"
+                sudo systemctl restart $SERVICE_NAME
+                echo "Rollback completed"
+              fi
+              exit 1
+            fi
+
+      - name: Health check
+        run: |
+          echo "Waiting for service to be fully ready..."
+          for i in {1..30}; do
+            if curl -f ${{ secrets.PRODUCTION_URL }}/health; then
+              echo "✅ Health check passed"
+              break
+            fi
+            echo "Attempt $i: Service not ready, waiting 10 seconds..."
+            sleep 10
+          done
+
+      - name: Deployment notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "🎉 Production deployment completed successfully!"
+            echo "Version: ${{ needs.build.outputs.version }}"
+            echo "Deployed to: ${{ secrets.PRODUCTION_URL }}"
+          else
+            echo "❌ Production deployment failed!"
+            echo "Please check the logs and rollback if necessary"
+          fi
+
+  rollback:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: failure() && github.event_name == 'workflow_dispatch'
+    environment: production
+
+    steps:
+      - name: Rollback to previous version
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          BACKUP_PATH: ${{ env.BACKUP_PATH }}
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_PORT || 22 }}
+          script: |
+            set -e
+
+            echo "🔄 Rolling back to previous version..."
+
+            # Find latest backup
+            LATEST_BACKUP=$(ls -t $BACKUP_PATH/ppanel-server-* 2>/dev/null | head -1)
+
+            if [ -z "$LATEST_BACKUP" ]; then
+              echo "❌ No backup found for rollback"
+              exit 1
+            fi
+
+            echo "📦 Rolling back to: $(basename $LATEST_BACKUP)"
+
+            # Restore from backup
+            cp "$LATEST_BACKUP" "$DEPLOY_PATH/ppanel-server-running"
+
+            # Restart service
+            sudo systemctl restart $SERVICE_NAME
+
+            # Wait and check
+            sleep 10
+            if sudo systemctl is-active --quiet $SERVICE_NAME; then
+              echo "✅ Rollback completed successfully"
+              sudo systemctl status $SERVICE_NAME --no-pager
+            else
+              echo "❌ Rollback failed"
+              sudo journalctl -u $SERVICE_NAME --no-pager -n 20
+              exit 1
+            fi
+
+  cleanup:
+    name: Cleanup Old Artifacts
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always() && needs.deploy-production.result == 'success'
+
+    steps:
+      - name: Cleanup old binaries and backups
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          BACKUP_PATH: ${{ env.BACKUP_PATH }}
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            echo "🧹 Cleaning up old artifacts..."
+
+            # Keep only last 5 binaries in deployment directory
+            cd $DEPLOY_PATH
+            ls -t ppanel-server-*-linux-amd64 | tail -n +6 | xargs -r rm
+
+            # Keep only last 10 backups
+            cd $BACKUP_PATH
+            ls -t ppanel-server-* | tail -n +11 | xargs -r rm
+
+            echo "✅ Cleanup completed"

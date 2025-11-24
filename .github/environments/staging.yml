@@ -1,0 +1,23 @@
+# Staging Environment Configuration for GitHub Actions
+# This file defines staging-specific deployment settings
+
+environment:
+  name: staging
+  url: https://staging-api.ppanel.example.com
+  protection_rules:
+    - type: wait_timer
+      minutes: 2
+  variables:
+    ENVIRONMENT: staging
+    LOG_LEVEL: debug
+    DEPLOY_TIMEOUT: 180
+
+# Environment-specific secrets required:
+# STAGING_HOST - Staging server hostname/IP
+# STAGING_USER - SSH username for staging server
+# STAGING_SSH_KEY - SSH private key for staging server
+# STAGING_PORT - SSH port (default: 22)
+# STAGING_URL - Application URL for health checks
+# DATABASE_PASSWORD - Staging database password
+# REDIS_PASSWORD - Staging Redis password
+# JWT_SECRET - JWT secret key for staging
