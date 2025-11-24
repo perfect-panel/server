@@ -9,6 +9,11 @@ on:
         description: 'Version to build (leave empty for auto)'
         required: false
         type: string
+      create_release:
+        description: 'Create GitHub Release'
+        required: false
+        default: false
+        type: boolean
   release:
     types: [ published ]
 
@@ -83,11 +88,20 @@ jobs:
             checksum.txt
           retention-days: 30
 
-      - name: Upload to GitHub Release (if release)
-        if: github.event_name == 'release'
+      - name: Create and Upload to GitHub Release
+        if: github.event_name == 'release' || github.event.inputs.create_release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ "${{ github.event.inputs.create_release }}" = "true" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Creating release for ${{ env.VERSION }}"
+            gh release create ${{ env.VERSION }} \
+              --title "PPanel Server ${{ env.VERSION }}" \
+              --notes "Release ${{ env.VERSION }}" \
+              --latest
+          fi
+
+          echo "Uploading binaries to release ${{ env.VERSION }}"
           gh release upload ${{ env.VERSION }} \
             ${{ steps.build.outputs.binary_name }} \
             checksum.txt
