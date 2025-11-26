@@ -111,6 +111,28 @@ type (
 	UpdateUserRulesRequest {
 		Rules []string `json:"rules" validate:"required"`
 	}
+	CommissionWithdrawRequest {
+		Amount  int64  `json:"amount"`
+		Content string `json:"content"`
+	}
+	WithdrawalLog {
+		Id        int64  `json:"id"`
+		UserId    int64  `json:"user_id"`
+		Amount    int64  `json:"amount"`
+		Content   string `json:"content"`
+		Status    uint8  `json:"status"`
+		Reason    string `json:"reason,omitempty"`
+		CreatedAt int64  `json:"created_at"`
+		UpdatedAt int64  `json:"updated_at"`
+	}
+	QueryWithdrawalLogListRequest {
+		Page int `form:"page"`
+		Size int `form:"size"`
+	}
+	QueryWithdrawalLogListResponse {
+		List  []WithdrawalLog `json:"list"`
+		Total int64           `json:"total"`
+	}
 )
 
 @server (
@@ -222,5 +244,13 @@ service ppanel {
 	@doc "Update User Rules"
 	@handler UpdateUserRules
 	put /rules (UpdateUserRulesRequest)
+
+	@doc "Commission Withdraw"
+	@handler CommissionWithdraw
+	post /commission_withdraw (CommissionWithdrawRequest) returns (WithdrawalLog)
+
+	@doc "Query Withdrawal Log"
+	@handler QueryWithdrawalLog
+	get /withdrawal_log (QueryWithdrawalLogListRequest) returns (QueryWithdrawalLogListResponse)
 }
 

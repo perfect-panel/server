@@ -102,3 +102,18 @@ type DeviceOnlineRecord struct {
 func (DeviceOnlineRecord) TableName() string {
 	return "user_device_online_record"
 }
+
+type Withdrawal struct {
+	Id        int64     `gorm:"primaryKey"`
+	UserId    int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
+	Amount    int64     `gorm:"not null;comment:Withdrawal Amount"`
+	Content   string    `gorm:"type:text;comment:Withdrawal Content"`
+	Status    uint8     `gorm:"type:tinyint(1);default:0;comment:Withdrawal Status: 0: Pending 1: Approved 2: Rejected"`
+	Reason    string    `gorm:"type:varchar(500);default:'';comment:Rejection Reason"`
+	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
+	UpdatedAt time.Time `gorm:"comment:Update Time"`
+}
+
+func (*Withdrawal) TableName() string {
+	return "user_withdrawal"
+}

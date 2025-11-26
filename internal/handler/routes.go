@@ -807,6 +807,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Query User Commission Log
 		publicUserGroupRouter.GET("/commission_log", publicUser.QueryUserCommissionLogHandler(serverCtx))
 
+		// Commission Withdraw
+		publicUserGroupRouter.POST("/commission_withdraw", publicUser.CommissionWithdrawHandler(serverCtx))
+
 		// Get Device List
 		publicUserGroupRouter.GET("/devices", publicUser.GetDeviceListHandler(serverCtx))
 
@@ -857,6 +860,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Verify Email
 		publicUserGroupRouter.POST("/verify_email", publicUser.VerifyEmailHandler(serverCtx))
+
+		// Query Withdrawal Log
+		publicUserGroupRouter.GET("/withdrawal_log", publicUser.QueryWithdrawalLogHandler(serverCtx))
 	}
 
 	serverGroupRouter := router.Group("/v1/server")

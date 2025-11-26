@@ -239,6 +239,11 @@ type CommissionLog struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
+type CommissionWithdrawRequest struct {
+	Amount  int64  `json:"amount"`
+	Content string `json:"content"`
+}
+
 type Coupon struct {
 	Id         int64   `json:"id"`
 	Name       string  `json:"name"`
@@ -1723,6 +1728,16 @@ type QueryUserSubscribeNodeListResponse struct {
 	List []UserSubscribeInfo `json:"list"`
 }
 
+type QueryWithdrawalLogListRequest struct {
+	Page int `form:"page"`
+	Size int `form:"size"`
+}
+
+type QueryWithdrawalLogListResponse struct {
+	List  []WithdrawalLog `json:"list"`
+	Total int64           `json:"total"`
+}
+
 type QuotaTask struct {
 	Id           int64   `json:"id"`
 	Subscribers  []int64 `json:"subscribers"`
@@ -2765,4 +2780,15 @@ type VmessProtocol struct {
 	TLSConfig string `json:"tls_config"`
 	Network   string `json:"network"`
 	Transport string `json:"transport"`
+}
+
+type WithdrawalLog struct {
+	Id        int64  `json:"id"`
+	UserId    int64  `json:"user_id"`
+	Amount    int64  `json:"amount"`
+	Content   string `json:"content"`
+	Status    uint8  `json:"status"`
+	Reason    string `json:"reason,omitempty"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
 }
