@@ -33,23 +33,24 @@ const (
 	TypeTrafficStat       Type = 42 // Daily traffic statistics log
 )
 const (
-	ResetSubscribeTypeAuto    uint16 = 231 // Auto reset
-	ResetSubscribeTypeAdvance uint16 = 232 // Advance reset
-	ResetSubscribeTypePaid    uint16 = 233 // Paid reset
-	ResetSubscribeTypeQuota   uint16 = 234 // Quota reset
-	BalanceTypeRecharge       uint16 = 321 // Recharge
-	BalanceTypeWithdraw       uint16 = 322 // Withdraw
-	BalanceTypePayment        uint16 = 323 // Payment
-	BalanceTypeRefund         uint16 = 324 // Refund
-	BalanceTypeAdjust         uint16 = 326 // Admin Adjust
-	BalanceTypeReward         uint16 = 325 // Reward
-	CommissionTypePurchase    uint16 = 331 // Purchase
-	CommissionTypeRenewal     uint16 = 332 // Renewal
-	CommissionTypeRefund      uint16 = 333 // Refund
-	commissionTypeWithdraw    uint16 = 334 // withdraw
-	CommissionTypeAdjust      uint16 = 335 // Admin Adjust
-	GiftTypeIncrease          uint16 = 341 // Increase
-	GiftTypeReduce            uint16 = 342 // Reduce
+	ResetSubscribeTypeAuto       uint16 = 231 // Auto reset
+	ResetSubscribeTypeAdvance    uint16 = 232 // Advance reset
+	ResetSubscribeTypePaid       uint16 = 233 // Paid reset
+	ResetSubscribeTypeQuota      uint16 = 234 // Quota reset
+	BalanceTypeRecharge          uint16 = 321 // Recharge
+	BalanceTypeWithdraw          uint16 = 322 // Withdraw
+	BalanceTypePayment           uint16 = 323 // Payment
+	BalanceTypeRefund            uint16 = 324 // Refund
+	BalanceTypeAdjust            uint16 = 326 // Admin Adjust
+	BalanceTypeReward            uint16 = 325 // Reward
+	CommissionTypePurchase       uint16 = 331 // Purchase
+	CommissionTypeRenewal        uint16 = 332 // Renewal
+	CommissionTypeRefund         uint16 = 333 // Refund
+	CommissionTypeWithdraw       uint16 = 334 // withdraw
+	CommissionTypeAdjust         uint16 = 335 // Admin Adjust
+	CommissionTypeConvertBalance uint16 = 336 // Convert to Balance
+	GiftTypeIncrease             uint16 = 341 // Increase
+	GiftTypeReduce               uint16 = 342 // Reduce
 )
 
 // Uint8 converts Type to uint8.

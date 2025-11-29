@@ -18,15 +18,16 @@ const (
 
 // User error
 const (
-	UserExist           uint32 = 20001
-	UserNotExist        uint32 = 20002
-	UserPasswordError   uint32 = 20003
-	UserDisabled        uint32 = 20004
-	InsufficientBalance uint32 = 20005
-	StopRegister        uint32 = 20006
-	TelegramNotBound    uint32 = 20007
-	UserNotBindOauth    uint32 = 20008
-	InviteCodeError     uint32 = 20009
+	UserExist               uint32 = 20001
+	UserNotExist            uint32 = 20002
+	UserPasswordError       uint32 = 20003
+	UserDisabled            uint32 = 20004
+	InsufficientBalance     uint32 = 20005
+	StopRegister            uint32 = 20006
+	TelegramNotBound        uint32 = 20007
+	UserNotBindOauth        uint32 = 20008
+	InviteCodeError         uint32 = 20009
+	UserCommissionNotEnough uint32 = 20010
 )
 
 // Node error
