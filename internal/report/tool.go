@@ -59,6 +59,7 @@ func RegisterModule(port int) error {
 	// 从环境变量中读取网关模块端口
 	gatewayPort, err := GatewayPort()
 	if err != nil {
+		logger.Errorf("Failed to determine GATEWAY_PORT: %v", err)
 		return err
 	}
 
@@ -82,6 +83,7 @@ func RegisterModule(port int) error {
 	}).SetResult(&response).Post(RegisterAPI)
 
 	if err != nil {
+		logger.Errorf("Failed to register service: %v", err)
 		return err
 	}
 
@@ -89,7 +91,8 @@ func RegisterModule(port int) error {
 		return errors.New("failed to register module: " + result.Status())
 	}
 
-	if !response.Success {
+	if !response.Data.Success {
+		logger.Infof("Result: %v", result.String())
 		return errors.New("failed to register module: " + response.Message)
 	}
 	logger.Infof("Module registered successfully: %s", response.Message)

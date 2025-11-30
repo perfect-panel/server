@@ -1,11 +1,5 @@
 package report
 
-// RegisterServiceResponse  模块注册请求参数
-type RegisterServiceResponse struct {
-	Success bool   `json:"success"` // 注册是否成功
-	Message string `json:"message"` // 返回信息
-}
-
 type RegisterServiceRequest struct {
 	Secret         string `json:"secret"`          // 通讯密钥
 	ProxyPath      string `json:"proxy_path"`      // 代理路径

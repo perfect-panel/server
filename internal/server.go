@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/perfect-panel/server/internal/report"
@@ -86,7 +87,7 @@ func (m *Service) Start() {
 		err = report.RegisterModule(port)
 		if err != nil {
 			logger.Errorf("register module error: %s", err.Error())
-			panic(err)
+			os.Exit(1)
 		}
 		logger.Infof("module registered on port %d", port)
 	}
