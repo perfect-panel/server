@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/pkg/constant"
 
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
@@ -275,16 +276,29 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 		return "", err
 	}
 
+	// gateway mod
+
+	isGatewayMod := report.IsGatewayMode()
+
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if config.Domain != "" {
-		notifyUrl = config.Domain + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = config.Domain
+		if isGatewayMod {
+			notifyUrl += "/api/"
+		}
+		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
-		notifyUrl = "https://" + host + "/v1/notify/" + config.Platform + "/" + config.Token
+
+		notifyUrl = "https://" + host
+		if isGatewayMod {
+			notifyUrl += "/api"
+		}
+		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
 	}
 
 	// Create payment URL for user redirection
@@ -317,18 +331,29 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 		return "", err
 	}
 
+	// gateway mod
+	isGatewayMod := report.IsGatewayMode()
+
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if config.Domain != "" {
-		notifyUrl = config.Domain + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = config.Domain
+		if isGatewayMod {
+			notifyUrl += "/api/"
+		}
+		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
-		notifyUrl = "https://" + host + "/v1/notify/" + config.Platform + "/" + config.Token
-	}
 
+		notifyUrl = "https://" + host
+		if isGatewayMod {
+			notifyUrl += "/api"
+		}
+		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+	}
 	// Create payment URL for user redirection
 	url := client.CreatePayUrl(epay.Order{
 		Name:      l.svcCtx.Config.Site.SiteName,

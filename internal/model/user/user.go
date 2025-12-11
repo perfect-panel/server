@@ -25,6 +25,7 @@ type User struct {
 	EnableTradeNotify     *bool         `gorm:"default:false;not null;comment:Enable Trade Notifications"`
 	AuthMethods           []AuthMethods `gorm:"foreignKey:UserId;references:Id"`
 	UserDevices           []Device      `gorm:"foreignKey:UserId;references:Id"`
+	Rules                 string        `gorm:"type:TEXT;comment:User Rules"`
 	CreatedAt             time.Time     `gorm:"<-:create;comment:Creation Time"`
 	UpdatedAt             time.Time     `gorm:"comment:Update Time"`
 }
@@ -48,6 +49,7 @@ type Subscribe struct {
 	Token       string     `gorm:"index:idx_token;unique;type:varchar(255);default:'';comment:Token"`
 	UUID        string     `gorm:"type:varchar(255);unique;index:idx_uuid;default:'';comment:UUID"`
 	Status      uint8      `gorm:"type:tinyint(1);default:0;comment:Subscription Status: 0: Pending 1: Active 2: Finished 3: Expired 4: Deducted"`
+	Note        string     `gorm:"type:varchar(500);default:'';comment:User note for subscription"`
 	CreatedAt   time.Time  `gorm:"<-:create;comment:Creation Time"`
 	UpdatedAt   time.Time  `gorm:"comment:Update Time"`
 }
@@ -99,4 +101,19 @@ type DeviceOnlineRecord struct {
 
 func (DeviceOnlineRecord) TableName() string {
 	return "user_device_online_record"
+}
+
+type Withdrawal struct {
+	Id        int64     `gorm:"primaryKey"`
+	UserId    int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
+	Amount    int64     `gorm:"not null;comment:Withdrawal Amount"`
+	Content   string    `gorm:"type:text;comment:Withdrawal Content"`
+	Status    uint8     `gorm:"type:tinyint(1);default:0;comment:Withdrawal Status: 0: Pending 1: Approved 2: Rejected"`
+	Reason    string    `gorm:"type:varchar(500);default:'';comment:Rejection Reason"`
+	CreatedAt time.Time `gorm:"<-:create;comment:Creation Time"`
+	UpdatedAt time.Time `gorm:"comment:Update Time"`
+}
+
+func (*Withdrawal) TableName() string {
+	return "user_withdrawal"
 }

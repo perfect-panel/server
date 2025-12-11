@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/pkg/logger"
 	"gorm.io/driver/mysql"
 
@@ -35,10 +36,30 @@ func Config(path string) (chan bool, *http.Server) {
 	configPath = path
 	// Create a new Gin instance
 	r := gin.Default()
+	// get server port
+	port := 8080
+	host := "127.0.0.1"
 
+	// check gateway mode
+	if report.IsGatewayMode() {
+		// get free port
+		freePort, err := report.ModulePort()
+		if err != nil {
+			logger.Errorf("get module port error: %s", err.Error())
+			panic(err)
+		}
+		port = freePort
+		// register module
+		err = report.RegisterModule(port)
+		if err != nil {
+			logger.Errorf("register module error: %s", err.Error())
+			panic(err)
+		}
+		logger.Infof("module registered on port %d", port)
+	}
 	// Create a new HTTP server
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf("%s:%d", host, port),
 		Handler: r,
 	}
 	// Load templates

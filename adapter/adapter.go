@@ -127,12 +127,12 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 					HopPorts:                protocol.HopPorts,
 					HopInterval:             protocol.HopInterval,
 					ObfsPassword:            protocol.ObfsPassword,
+					UpMbps:                  protocol.UpMbps,
+					DownMbps:                protocol.DownMbps,
 					DisableSNI:              protocol.DisableSNI,
 					ReduceRtt:               protocol.ReduceRtt,
 					UDPRelayMode:            protocol.UDPRelayMode,
 					CongestionController:    protocol.CongestionController,
-					UpMbps:                  protocol.UpMbps,
-					DownMbps:                protocol.DownMbps,
 					PaddingScheme:           protocol.PaddingScheme,
 					Multiplex:               protocol.Multiplex,
 					XhttpMode:               protocol.XhttpMode,
@@ -145,6 +145,10 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 					EncryptionPrivateKey:    protocol.EncryptionPrivateKey,
 					EncryptionClientPadding: protocol.EncryptionClientPadding,
 					EncryptionPassword:      protocol.EncryptionPassword,
+					Ratio:                   protocol.Ratio,
+					CertMode:                protocol.CertMode,
+					CertDNSProvider:         protocol.CertDNSProvider,
+					CertDNSEnv:              protocol.CertDNSEnv,
 				})
 			}
 		}

@@ -14,11 +14,9 @@ type (
 	QuerySubscribeListRequest {
 		Language string `form:"language"`
 	}
-
-    QueryUserSubscribeNodeListResponse {
-        List  []UserSubscribeInfo `json:"list"`
-    }
-
+	QueryUserSubscribeNodeListResponse {
+		List []UserSubscribeInfo `json:"list"`
+	}
     UserSubscribeInfo {
         Id          int64     `json:"id"`
         UserId      int64     `json:"user_id"`

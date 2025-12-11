@@ -386,6 +386,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get subscribe list
 		adminSubscribeGroupRouter.GET("/list", adminSubscribe.GetSubscribeListHandler(serverCtx))
 
+		// Reset all subscribe tokens
+		adminSubscribeGroupRouter.POST("/reset_all_token", adminSubscribe.ResetAllSubscribeTokenHandler(serverCtx))
+
 		// Subscribe sort
 		adminSubscribeGroupRouter.POST("/sort", adminSubscribe.SubscribeSortHandler(serverCtx))
 	}
@@ -408,6 +411,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Update invite config
 		adminSystemGroupRouter.PUT("/invite_config", adminSystem.UpdateInviteConfigHandler(serverCtx))
+
+		// Get Module Config
+		adminSystemGroupRouter.GET("/module", adminSystem.GetModuleConfigHandler(serverCtx))
 
 		// Get node config
 		adminSystemGroupRouter.GET("/node_config", adminSystem.GetNodeConfigHandler(serverCtx))
@@ -488,6 +494,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 	adminToolGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
 	{
+		// Query IP Location
+		adminToolGroupRouter.GET("/ip/location", adminTool.QueryIPLocationHandler(serverCtx))
+
 		// Get System Log
 		adminToolGroupRouter.GET("/log", adminTool.GetSystemLogHandler(serverCtx))
 
@@ -635,6 +644,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get Client
 		commonGroupRouter.GET("/client", common.GetClientHandler(serverCtx))
+
+		// Heartbeat
+		commonGroupRouter.GET("/heartbeat", common.HeartbeatHandler(serverCtx))
 
 		// Get verification code
 		commonGroupRouter.POST("/send_code", common.SendEmailCodeHandler(serverCtx))
@@ -796,6 +808,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Query User Commission Log
 		publicUserGroupRouter.GET("/commission_log", publicUser.QueryUserCommissionLogHandler(serverCtx))
 
+		// Commission Withdraw
+		publicUserGroupRouter.POST("/commission_withdraw", publicUser.CommissionWithdrawHandler(serverCtx))
+
 		// Delete Current User Account
 		publicUserGroupRouter.DELETE("/current_user_account", publicUser.DeleteCurrentUserAccountHandler(serverCtx))
 
@@ -820,11 +835,17 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Update User Password
 		publicUserGroupRouter.PUT("/password", publicUser.UpdateUserPasswordHandler(serverCtx))
 
+		// Update User Rules
+		publicUserGroupRouter.PUT("/rules", publicUser.UpdateUserRulesHandler(serverCtx))
+
 		// Query User Subscribe
 		publicUserGroupRouter.GET("/subscribe", publicUser.QueryUserSubscribeHandler(serverCtx))
 
 		// Get Subscribe Log
 		publicUserGroupRouter.GET("/subscribe_log", publicUser.GetSubscribeLogHandler(serverCtx))
+
+		// Update User Subscribe Note
+		publicUserGroupRouter.PUT("/subscribe_note", publicUser.UpdateUserSubscribeNoteHandler(serverCtx))
 
 		// Reset User Subscribe Token
 		publicUserGroupRouter.PUT("/subscribe_token", publicUser.ResetUserSubscribeTokenHandler(serverCtx))
@@ -846,6 +867,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Verify Email
 		publicUserGroupRouter.POST("/verify_email", publicUser.VerifyEmailHandler(serverCtx))
+
+		// Query Withdrawal Log
+		publicUserGroupRouter.GET("/withdrawal_log", publicUser.QueryWithdrawalLogHandler(serverCtx))
 	}
 
 	publicUserWsGroupRouter := router.Group("/v1/public/user")

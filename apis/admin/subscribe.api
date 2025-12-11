@@ -102,6 +102,9 @@ type (
 	BatchDeleteSubscribeRequest {
 		Ids []int64 `json:"ids" validate:"required"`
 	}
+	ResetAllSubscribeTokenResponse {
+		Success bool `json:"success"`
+	}
 )
 
 @server (
@@ -157,5 +160,9 @@ service ppanel {
 	@doc "Subscribe sort"
 	@handler SubscribeSort
 	post /sort (SubscribeSortRequest)
+
+	@doc "Reset all subscribe tokens"
+	@handler ResetAllSubscribeToken
+	post /reset_all_token returns (ResetAllSubscribeTokenResponse)
 }
 

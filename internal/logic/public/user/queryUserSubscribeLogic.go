@@ -60,6 +60,8 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *types.QueryUserSub
 			}
 		}
 
+		short, _ := tool.FixedUniqueString(item.Token, 8, "")
+		sub.Short = short
 		sub.ResetTime = calculateNextResetTime(&sub)
 		resp.List = append(resp.List, sub)
 	}

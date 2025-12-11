@@ -10,7 +10,6 @@ import (
 // Get Client
 func GetClientHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-
 		l := common.NewGetClientLogic(c.Request.Context(), svcCtx)
 		resp, err := l.GetClient()
 		result.HttpResult(c, resp, err)

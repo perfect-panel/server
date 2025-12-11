@@ -87,12 +87,17 @@ type (
 		Total int64             `json:"total"`
 		List  []SubscribeClient `json:"list"`
 	}
+	HeartbeatResponse {
+		Status    bool   `json:"status"`
+		Message   string `json:"message,omitempty"`
+		Timestamp int64  `json:"timestamp,omitempty"`
+	}
 )
 
 @server (
-	prefix: v1/common
-	group:  common
-    middleware: DeviceMiddleware
+	prefix:     v1/common
+	group:      common
+	middleware: DeviceMiddleware
 )
 service ppanel {
 	@doc "Get global config"
@@ -130,5 +135,9 @@ service ppanel {
 	@doc "Get Client"
 	@handler GetClient
 	get /client returns (GetSubscribeClientResponse)
+
+	@doc "Heartbeat"
+	@handler Heartbeat
+	get /heartbeat returns (HeartbeatResponse)
 }
 

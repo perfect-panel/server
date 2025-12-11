@@ -23,6 +23,22 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 		ua := c.GetHeader("User-Agent")
 		req.UA = c.Request.Header.Get("User-Agent")
 		req.Flag = c.Query("flag")
+		if svcCtx.Config.Subscribe.PanDomain {
+			domain := c.Request.Host
+			domainArr := strings.Split(domain, ".")
+			short, err := tool.FixedUniqueString(req.Token, 8, "")
+			if err != nil {
+				logger.Errorf("[SubscribeHandler] Generate short token failed: %v", err)
+				c.String(http.StatusInternalServerError, "Internal Server")
+				c.Abort()
+				return
+			}
+			if short != domainArr[0] {
+				c.String(http.StatusForbidden, "Access denied")
+				c.Abort()
+				return
+			}
+		}
 
 		if svcCtx.Config.Subscribe.UserAgentLimit {
 			if ua == "" {

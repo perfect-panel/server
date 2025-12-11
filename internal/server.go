@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/pkg/proc"
@@ -48,7 +50,7 @@ func initServer(svc *svc.ServiceContext) *gin.Engine {
 	}
 	r.Use(sessions.Sessions("ppanel", sessionStore))
 	// use cors middleware
-	r.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, middleware.PanDomainMiddleware(svc), gin.Recovery())
+	r.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, gin.Recovery())
 
 	// register handlers
 	handler.RegisterHandlers(r, svc)
@@ -65,9 +67,32 @@ func (m *Service) Start() {
 	if m.svc == nil {
 		panic("config file path is nil")
 	}
+
 	// init service
 	r := initServer(m.svc)
-	serverAddr := fmt.Sprintf("%v:%d", m.svc.Config.Host, m.svc.Config.Port)
+	// get server port
+	port := m.svc.Config.Port
+	host := m.svc.Config.Host
+	// check gateway mode
+	if report.IsGatewayMode() {
+		// get free port
+		freePort, err := report.ModulePort()
+		if err != nil {
+			logger.Errorf("get module port error: %s", err.Error())
+			panic(err)
+		}
+		port = freePort
+		host = "127.0.0.1"
+		// register module
+		err = report.RegisterModule(port)
+		if err != nil {
+			logger.Errorf("register module error: %s", err.Error())
+			os.Exit(1)
+		}
+		logger.Infof("module registered on port %d", port)
+	}
+
+	serverAddr := fmt.Sprintf("%v:%d", host, port)
 	m.server = &http.Server{
 		Addr:    serverAddr,
 		Handler: r,

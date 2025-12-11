@@ -239,6 +239,11 @@ type CommissionLog struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
+type CommissionWithdrawRequest struct {
+	Amount  int64  `json:"amount"`
+	Content string `json:"content"`
+}
+
 type ConnectionRecords struct {
 	CurrentContinuousDays   int64 `json:"current_continuous_days"`
 	HistoryContinuousDays   int64 `json:"history_continuous_days"`
@@ -1169,6 +1174,12 @@ type HasMigrateSeverNodeResponse struct {
 	HasMigrate bool `json:"has_migrate"`
 }
 
+type HeartbeatResponse struct {
+	Status    bool   `json:"status"`
+	Message   string `json:"message,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
 type Hysteria2 struct {
 	Port           int            `json:"port" validate:"required"`
 	HopPorts       string         `json:"hop_ports" validate:"required"`
@@ -1230,6 +1241,12 @@ type MobileAuthenticateConfig struct {
 	Enable          bool     `json:"enable"`
 	EnableWhitelist bool     `json:"enable_whitelist"`
 	Whitelist       []string `json:"whitelist"`
+}
+
+type ModuleConfig struct {
+	Secret         string `json:"secret"`          // 通讯密钥
+	ServiceName    string `json:"service_name"`    // 服务名称
+	ServiceVersion string `json:"service_version"` // 服务版本
 }
 
 type Node struct {
@@ -1551,7 +1568,7 @@ type PurchaseOrderResponse struct {
 
 type QueryAnnouncementRequest struct {
 	Page   int   `form:"page"`
-	Size   int   `form:"size,default=15"`
+	Size   int   `form:"size"`
 	Pinned *bool `form:"pinned"`
 	Popup  *bool `form:"popup"`
 }
@@ -1568,6 +1585,16 @@ type QueryDocumentDetailRequest struct {
 type QueryDocumentListResponse struct {
 	Total int64      `json:"total"`
 	List  []Document `json:"list"`
+}
+
+type QueryIPLocationRequest struct {
+	IP string `form:"ip" validate:"required"`
+}
+
+type QueryIPLocationResponse struct {
+	Country string `json:"country"`
+	Region  string `json:"region,omitempty"`
+	City    string `json:"city"`
 }
 
 type QueryNodeTagResponse struct {
@@ -1712,6 +1739,16 @@ type QueryUserSubscribeNodeListResponse struct {
 	List []UserSubscribeInfo `json:"list"`
 }
 
+type QueryWithdrawalLogListRequest struct {
+	Page int `form:"page"`
+	Size int `form:"size"`
+}
+
+type QueryWithdrawalLogListResponse struct {
+	List  []WithdrawalLog `json:"list"`
+	Total int64           `json:"total"`
+}
+
 type QuotaTask struct {
 	Id           int64   `json:"id"`
 	Subscribers  []int64 `json:"subscribers"`
@@ -1769,6 +1806,10 @@ type RenewalOrderRequest struct {
 
 type RenewalOrderResponse struct {
 	OrderNo string `json:"order_no"`
+}
+
+type ResetAllSubscribeTokenResponse struct {
+	Success bool `json:"success"`
 }
 
 type ResetPasswordRequest struct {
@@ -2464,6 +2505,15 @@ type UpdateUserPasswordRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type UpdateUserRulesRequest struct {
+	Rules []string `json:"rules" validate:"required"`
+}
+
+type UpdateUserSubscribeNoteRequest struct {
+	UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
+	Note            string `json:"note" validate:"max=500"`
+}
+
 type UpdateUserSubscribeRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 	SubscribeId     int64 `json:"subscribe_id"`
@@ -2497,6 +2547,7 @@ type User struct {
 	EnableTradeNotify     bool             `json:"enable_trade_notify"`
 	AuthMethods           []UserAuthMethod `json:"auth_methods"`
 	UserDevices           []UserDevice     `json:"user_devices"`
+	Rules                 []string         `json:"rules"`
 	CreatedAt             int64            `json:"created_at"`
 	UpdatedAt             int64            `json:"updated_at"`
 	DeletedAt             int64            `json:"deleted_at,omitempty"`
@@ -2587,6 +2638,7 @@ type UserSubscribe struct {
 	Upload      int64     `json:"upload"`
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
+	Short       string    `json:"short"`
 	CreatedAt   int64     `json:"created_at"`
 	UpdatedAt   int64     `json:"updated_at"`
 }
@@ -2750,4 +2802,15 @@ type WeeklyStat struct {
 	Day     int     `json:"day"`
 	DayName string  `json:"day_name"`
 	Hours   float64 `json:"hours"`
+}
+
+type WithdrawalLog struct {
+	Id        int64  `json:"id"`
+	UserId    int64  `json:"user_id"`
+	Amount    int64  `json:"amount"`
+	Content   string `json:"content"`
+	Status    uint8  `json:"status"`
+	Reason    string `json:"reason,omitempty"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
 }
