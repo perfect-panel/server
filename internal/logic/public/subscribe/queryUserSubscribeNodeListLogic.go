@@ -77,12 +77,8 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *ty
 		}
 
 		if l.svcCtx.Config.Register.EnableTrial && l.svcCtx.Config.Register.TrialSubscribe == userSubscribe.SubscribeId {
-			defaultTime, _ := time.Parse(time.DateOnly, "1971-01-01")
-			if userSubscribe.ExpireTime.After(defaultTime) && userSubscribe.ExpireTime.Before(tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, userSubscribe.CreatedAt.Add(3*time.Second))) {
-				userSubscribeInfo.IsTryOut = true
-			}
+			userSubscribeInfo.IsTryOut = true
 		}
-
 		resp.List = append(resp.List, userSubscribeInfo)
 	}
 
