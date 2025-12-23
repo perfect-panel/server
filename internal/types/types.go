@@ -1557,7 +1557,7 @@ type PurchaseOrderResponse struct {
 
 type QueryAnnouncementRequest struct {
 	Page   int   `form:"page"`
-	Size   int   `form:"size,default=15"`
+	Size   int   `form:"size"`
 	Pinned *bool `form:"pinned"`
 	Popup  *bool `form:"popup"`
 }
