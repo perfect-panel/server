@@ -1043,6 +1043,7 @@ type GetUserListRequest struct {
 	Size            int    `form:"size"`
 	Search          string `form:"search,omitempty"`
 	UserId          *int64 `form:"user_id,omitempty"`
+	Unscoped        bool   `form:"unscoped,omitempty"`
 	SubscribeId     *int64 `form:"subscribe_id,omitempty"`
 	UserSubscribeId *int64 `form:"user_subscribe_id,omitempty"`
 }
