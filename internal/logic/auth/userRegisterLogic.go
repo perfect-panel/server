@@ -79,13 +79,16 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		}
 	}
 	// Check if the user exists
-	_, err = l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
+	u, err := l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("FindOneByEmail Error", logger.Field("error", err))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
-	} else if err == nil {
+	} else if err == nil && !u.DeletedAt.Valid {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "user email exist: %v", req.Email)
+	} else if err == nil && u.DeletedAt.Valid {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user email deleted: %v", req.Email)
 	}
+
 	// Generate password
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo := &user.User{
