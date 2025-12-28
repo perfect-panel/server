@@ -51,7 +51,7 @@ func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPush
 	if err != nil {
 		l.Errorw("[ServerPushUserTraffic] Push traffic task error", logger.Field("error", err.Error()), logger.Field("task", t))
 	} else {
-		l.Infow("[ServerPushUserTraffic] Push traffic task success", logger.Field("task", t), logger.Field("info", info))
+		l.Infow("[ServerPushUserTraffic] Push traffic task success", logger.Field("task", t.Type()), logger.Field("info", string(info.Payload)))
 	}
 
 	// Update server last reported time
