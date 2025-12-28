@@ -32,15 +32,15 @@ func (l *GormLogger) LogMode(logger.LogLevel) logger.Interface {
 }
 
 func (l *GormLogger) Info(ctx context.Context, str string, args ...interface{}) {
-	WithContext(ctx).WithCallerSkip(6).Infof("%s Info: %s", TAG, str, args)
+	WithContext(ctx).WithCallerSkip(2).Infof("%s Info: %s", TAG, str, args)
 }
 
 func (l *GormLogger) Warn(ctx context.Context, str string, args ...interface{}) {
-	WithContext(ctx).WithCallerSkip(6).Infof("%s Warn: %s", TAG, str, args)
+	WithContext(ctx).WithCallerSkip(2).Infof("%s Warn: %s", TAG, str, args)
 }
 
 func (l *GormLogger) Error(ctx context.Context, str string, args ...interface{}) {
-	WithContext(ctx).WithCallerSkip(6).Errorf("%s Error: %s", TAG, str, args)
+	WithContext(ctx).WithCallerSkip(2).Errorf("%s Error: %s", TAG, str, args)
 }
 
 func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {

@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
