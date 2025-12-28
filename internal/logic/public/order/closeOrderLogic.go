@@ -51,6 +51,16 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 		)
 		return nil
 	}
+
+	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, orderInfo.SubscribeId)
+	if err != nil {
+		l.Errorw("[CloseOrder] Find subscribe info failed",
+			logger.Field("error", err.Error()),
+			logger.Field("subscribeId", orderInfo.SubscribeId),
+		)
+		return nil
+	}
+
 	err = l.svcCtx.DB.Transaction(func(tx *gorm.DB) error {
 		// update order status
 		err := tx.Model(&order.Order{}).Where("order_no = ?", req.OrderNo).Update("status", 3).Error
@@ -124,9 +134,21 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 			// update user cache
 			return l.svcCtx.UserModel.UpdateUserCache(l.ctx, userInfo)
 		}
+		if sub.Inventory != -1 {
+			sub.Inventory++
+			if e := l.svcCtx.SubscribeModel.Update(l.ctx, sub, tx); e != nil {
+				l.Errorw("[CloseOrder] Restore subscribe inventory failed",
+					logger.Field("error", e.Error()),
+					logger.Field("subscribeId", sub.Id),
+				)
+				return e
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
+		logger.Errorf("[CloseOrder] Transaction failed: %v", err.Error())
 		return err
 	}
 	return nil

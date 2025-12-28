@@ -81,6 +81,12 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	if !*sub.Sell {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "subscribe not sell")
 	}
+
+	// check subscribe plan inventory
+	if sub.Inventory == 0 {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeOutOfStock), "subscribe out of stock")
+	}
+
 	// check subscribe plan limit
 	if sub.Quota > 0 {
 		var count int64
@@ -221,10 +227,23 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 				return e
 			}
 		}
+
+		if sub.Inventory != -1 {
+			// decrease subscribe plan stock
+			sub.Inventory -= 1
+			// update subscribe plan stock
+			if err = l.svcCtx.SubscribeModel.Update(l.ctx, sub, db); err != nil {
+				l.Errorw("[Purchase] Database update error", logger.Field("error", err.Error()), logger.Field("subscribe", sub))
+				return err
+			}
+		}
+
 		// insert order
 		return db.WithContext(l.ctx).Model(&order.Order{}).Create(&orderInfo).Error
 	})
 	if err != nil {
+		l.Errorw("[Purchase] Database insert error", logger.Field("error", err.Error()), logger.Field("orderInfo", orderInfo))
+
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert order error: %v", err.Error())
 	}
 	// Deferred task

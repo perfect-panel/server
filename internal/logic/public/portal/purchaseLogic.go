@@ -55,6 +55,12 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 		l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
+
+	// check subscribe plan stock
+	if sub.Inventory == 0 {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeOutOfStock), "subscribe out of stock")
+	}
+
 	// check subscribe plan status
 	if !*sub.Sell {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "subscribe not sell")
@@ -149,6 +155,16 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 			return err
 		}
 		l.Infow("[Purchase] Guest order", logger.Field("order_no", orderInfo.OrderNo), logger.Field("identifier", req.Identifier))
+
+		// Decrease subscribe plan stock
+		if sub.Inventory != -1 {
+			sub.Inventory--
+			if e := l.svcCtx.SubscribeModel.Update(l.ctx, sub, tx); e != nil {
+				l.Errorw("[Purchase] Database update error", logger.Field("error", e.Error()), logger.Field("subscribe_id", sub.Id))
+				return e
+			}
+		}
+
 		// save guest order
 		if err = l.svcCtx.OrderModel.Insert(l.ctx, orderInfo, tx); err != nil {
 			return err
