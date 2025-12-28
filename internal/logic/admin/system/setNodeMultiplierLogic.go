@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -32,9 +33,12 @@ func (l *SetNodeMultiplierLogic) SetNodeMultiplier(req *types.SetNodeMultiplierR
 		l.Logger.Error("Marshal Node Multiplier Config Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Marshal Node Multiplier Config Error: %s", err.Error())
 	}
-	if err := l.svcCtx.SystemModel.UpdateNodeMultiplierConfig(l.ctx, string(data)); err != nil {
+	if err = l.svcCtx.SystemModel.UpdateNodeMultiplierConfig(l.ctx, string(data)); err != nil {
 		l.Logger.Error("Update Node Multiplier Config Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Update Node Multiplier Config Error: %s", err.Error())
 	}
+	// update Node Multiplier
+	initialize.Node(l.svcCtx)
+
 	return nil
 }
