@@ -184,6 +184,12 @@ type (
 	GetUserSubscribeByIdRequest {
 		Id int64 `form:"id" validate:"required"`
 	}
+	StopUserSubscribeRequest {
+		UserSubscribeId int64 `json:"user_subscribe_id"`
+	}
+	ResetUserSubscribeTrafficRequest {
+		UserSubscribeId int64 `json:"user_subscribe_id"`
+	}
 )
 
 @server (
@@ -292,5 +298,17 @@ service ppanel {
 	@doc "Get user login logs"
 	@handler GetUserLoginLogs
 	get /login/logs (GetUserLoginLogsRequest) returns (GetUserLoginLogsResponse)
+
+	@doc "Reset user subscribe token"
+	@handler ResetUserSubscribeToken
+	post /subscribe/reset/token (ResetUserSubscribeTokenRequest)
+
+	@doc "Stop user subscribe"
+	@handler StopUserSubscribe
+	post /subscribe/stop (StopUserSubscribeRequest)
+
+	@doc "Reset user subscribe traffic"
+	@handler ResetUserSubscribeTraffic
+	post /subscribe/reset/traffic (ResetUserSubscribeTrafficRequest)
 }
 

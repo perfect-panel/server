@@ -1846,6 +1846,10 @@ type ResetUserSubscribeTokenRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
+type ResetUserSubscribeTrafficRequest struct {
+	UserSubscribeId int64 `json:"user_subscribe_id"`
+}
+
 type RevenueStatisticsResponse struct {
 	Today   OrdersStatistics `json:"today"`
 	Monthly OrdersStatistics `json:"monthly"`
@@ -2037,6 +2041,10 @@ type SortItem struct {
 
 type StopBatchSendEmailTaskRequest struct {
 	Id int64 `json:"id"`
+}
+
+type StopUserSubscribeRequest struct {
+	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
 type StripePayment struct {

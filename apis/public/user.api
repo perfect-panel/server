@@ -66,9 +66,7 @@ type (
 	UnbindOAuthRequest {
 		Method string `json:"method"`
 	}
-	ResetUserSubscribeTokenRequest {
-		UserSubscribeId int64 `json:"user_subscribe_id"`
-	}
+
 	GetLoginLogRequest {
 		Page int `form:"page"`
 		Size int `form:"size"`

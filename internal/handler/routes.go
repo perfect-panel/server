@@ -576,6 +576,15 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get user subcribe reset traffic logs
 		adminUserGroupRouter.GET("/subscribe/reset/logs", adminUser.GetUserSubscribeResetTrafficLogsHandler(serverCtx))
 
+		// Reset user subscribe token
+		adminUserGroupRouter.POST("/subscribe/reset/token", adminUser.ResetUserSubscribeTokenHandler(serverCtx))
+
+		// Reset user subscribe traffic
+		adminUserGroupRouter.POST("/subscribe/reset/traffic", adminUser.ResetUserSubscribeTrafficHandler(serverCtx))
+
+		// Stop user subscribe
+		adminUserGroupRouter.POST("/subscribe/stop", adminUser.StopUserSubscribeHandler(serverCtx))
+
 		// Get user subcribe traffic logs
 		adminUserGroupRouter.GET("/subscribe/traffic_logs", adminUser.GetUserSubscribeTrafficLogsHandler(serverCtx))
 	}

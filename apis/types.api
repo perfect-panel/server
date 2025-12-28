@@ -844,5 +844,9 @@ type (
 		CertDNSProvider         string  `json:"cert_dns_provider,omitempty"` // DNS provider for certificate
 		CertDNSEnv              string  `json:"cert_dns_env,omitempty"` // Environment for DNS provider
 	}
+	// reset user subscribe token
+	ResetUserSubscribeTokenRequest {
+		UserSubscribeId int64 `json:"user_subscribe_id"`
+	}
 )
 
