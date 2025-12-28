@@ -204,8 +204,8 @@ type (
 		CurrencySymbol string `json:"currency_symbol"`
 	}
 	SubscribeDiscount {
-		Quantity int64 `json:"quantity"`
-		Discount int64 `json:"discount"`
+		Quantity int64   `json:"quantity"`
+		Discount float64 `json:"discount"`
 	}
 	Subscribe {
 		Id                int64               `json:"id"`
