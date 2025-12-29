@@ -583,7 +583,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		adminUserGroupRouter.POST("/subscribe/reset/traffic", adminUser.ResetUserSubscribeTrafficHandler(serverCtx))
 
 		// Stop user subscribe
-		adminUserGroupRouter.POST("/subscribe/stop", adminUser.StopUserSubscribeHandler(serverCtx))
+		adminUserGroupRouter.POST("/subscribe/toggle", adminUser.ToggleUserSubscribeStatusHandler(serverCtx))
 
 		// Get user subcribe traffic logs
 		adminUserGroupRouter.GET("/subscribe/traffic_logs", adminUser.GetUserSubscribeTrafficLogsHandler(serverCtx))

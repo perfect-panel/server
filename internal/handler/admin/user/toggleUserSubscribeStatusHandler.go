@@ -9,9 +9,9 @@ import (
 )
 
 // Stop user subscribe
-func StopUserSubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
+func ToggleUserSubscribeStatusHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		var req types.StopUserSubscribeRequest
+		var req types.ToggleUserSubscribeStatusRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
@@ -19,8 +19,8 @@ func StopUserSubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 			return
 		}
 
-		l := user.NewStopUserSubscribeLogic(c.Request.Context(), svcCtx)
-		err := l.StopUserSubscribe(&req)
+		l := user.NewToggleUserSubscribeStatusLogic(c.Request.Context(), svcCtx)
+		err := l.ToggleUserSubscribeStatus(&req)
 		result.HttpResult(c, nil, err)
 	}
 }

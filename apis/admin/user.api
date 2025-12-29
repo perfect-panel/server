@@ -184,7 +184,7 @@ type (
 	GetUserSubscribeByIdRequest {
 		Id int64 `form:"id" validate:"required"`
 	}
-	StopUserSubscribeRequest {
+	ToggleUserSubscribeStatusRequest {
 		UserSubscribeId int64 `json:"user_subscribe_id"`
 	}
 	ResetUserSubscribeTrafficRequest {
@@ -304,8 +304,8 @@ service ppanel {
 	post /subscribe/reset/token (ResetUserSubscribeTokenRequest)
 
 	@doc "Stop user subscribe"
-	@handler StopUserSubscribe
-	post /subscribe/stop (StopUserSubscribeRequest)
+	@handler ToggleUserSubscribeStatus
+	post /subscribe/toggle (ToggleUserSubscribeStatusRequest)
 
 	@doc "Reset user subscribe traffic"
 	@handler ResetUserSubscribeTraffic

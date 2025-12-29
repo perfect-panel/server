@@ -2044,10 +2044,6 @@ type StopBatchSendEmailTaskRequest struct {
 	Id int64 `json:"id"`
 }
 
-type StopUserSubscribeRequest struct {
-	UserSubscribeId int64 `json:"user_subscribe_id"`
-}
-
 type StripePayment struct {
 	Method         string `json:"method"`
 	ClientSecret   string `json:"client_secret"`
@@ -2237,6 +2233,10 @@ type TimePeriod struct {
 type ToggleNodeStatusRequest struct {
 	Id     int64 `json:"id"`
 	Enable *bool `json:"enable"`
+}
+
+type ToggleUserSubscribeStatusRequest struct {
+	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
 type TosConfig struct {
