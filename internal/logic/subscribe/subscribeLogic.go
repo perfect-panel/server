@@ -209,13 +209,16 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, erro
 	}
 
 	nodeIds := tool.StringToInt64Slice(subDetails.Nodes)
-	tags := strings.Split(subDetails.NodeTags, ",")
+	tags := tool.RemoveStringElement(strings.Split(subDetails.NodeTags, ","), "")
 
-	l.Debugf("[Generate Subscribe]nodes: %v, NodeTags: %v", nodeIds, tags)
-
+	l.Debugf("[Generate Subscribe]nodes: %v, NodeTags: %v", len(nodeIds), len(tags))
+	if len(nodeIds) == 0 && len(tags) == 0 {
+		logger.Infow("[Generate Subscribe]no subscribe nodes")
+		return []*node.Node{}, nil
+	}
 	enable := true
-
-	_, nodes, err := l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
+	var nodes []*node.Node
+	_, nodes, err = l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
 		Page:    1,
 		Size:    1000,
 		NodeId:  nodeIds,
