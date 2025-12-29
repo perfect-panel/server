@@ -15,7 +15,7 @@ type Subscribe struct {
 	UnitTime          string    `gorm:"type:varchar(255);not null;default:'';comment:Unit Time"`
 	Discount          string    `gorm:"type:text;comment:Discount"`
 	Replacement       int64     `gorm:"type:int;not null;default:0;comment:Replacement"`
-	Inventory         int64     `gorm:"type:int;not null;default:0;comment:Inventory"`
+	Inventory         int64     `gorm:"type:int;not null;default:-1;comment:Inventory"`
 	Traffic           int64     `gorm:"type:int;not null;default:0;comment:Traffic"`
 	SpeedLimit        int64     `gorm:"type:int;not null;default:0;comment:Speed Limit"`
 	DeviceLimit       int64     `gorm:"type:int;not null;default:0;comment:Device Limit"`
