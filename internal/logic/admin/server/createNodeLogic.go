@@ -31,6 +31,7 @@ func (l *CreateNodeLogic) CreateNode(req *types.CreateNodeRequest) error {
 	data := node.Node{
 		Name:     req.Name,
 		Tags:     tool.StringSliceToString(req.Tags),
+		Enabled:  req.Enabled,
 		Port:     req.Port,
 		Address:  req.Address,
 		ServerId: req.ServerId,
