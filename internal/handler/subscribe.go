@@ -23,6 +23,10 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 		ua := c.GetHeader("User-Agent")
 		req.UA = c.Request.Header.Get("User-Agent")
 		req.Flag = c.Query("flag")
+		req.Type = c.Query("type")
+		// 获取所有查询参数
+		req.Params = getQueryMap(c.Request)
+
 		if svcCtx.Config.Subscribe.PanDomain {
 			domain := c.Request.Host
 			domainArr := strings.Split(domain, ".")
@@ -93,4 +97,15 @@ func RegisterSubscribeHandlers(router *gin.Engine, serverCtx *svc.ServiceContext
 		path = "/v1/subscribe/config"
 	}
 	router.GET(path, SubscribeHandler(serverCtx))
+}
+
+// GetQueryMap 将 http.Request 的查询参数转换为 map[string]string
+func getQueryMap(r *http.Request) map[string]string {
+	result := make(map[string]string)
+	for k, v := range r.URL.Query() {
+		if len(v) > 0 {
+			result[k] = v[0]
+		}
+	}
+	return result
 }

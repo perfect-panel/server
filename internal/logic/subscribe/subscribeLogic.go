@@ -108,6 +108,7 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 			Traffic:      userSubscribe.Traffic,
 			SubscribeURL: l.getSubscribeV2URL(req.Token),
 		}),
+		adapter.WithParams(req.Params),
 	)
 
 	// Get client config

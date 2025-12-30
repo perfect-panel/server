@@ -93,12 +93,13 @@ type User struct {
 }
 
 type Client struct {
-	SiteName       string  // Name of the site
-	SubscribeName  string  // Name of the subscription
-	ClientTemplate string  // Template for the entire client configuration
-	OutputFormat   string  // json, yaml, etc.
-	Proxies        []Proxy // List of proxy configurations
-	UserInfo       User    // User information
+	SiteName       string            // Name of the site
+	SubscribeName  string            // Name of the subscription
+	ClientTemplate string            // Template for the entire client configuration
+	OutputFormat   string            // json, yaml, etc.
+	Proxies        []Proxy           // List of proxy configurations
+	UserInfo       User              // User information
+	Params         map[string]string // Additional parameters
 }
 
 func (c *Client) Build() ([]byte, error) {
@@ -119,6 +120,7 @@ func (c *Client) Build() ([]byte, error) {
 		"OutputFormat":  c.OutputFormat,
 		"Proxies":       proxies,
 		"UserInfo":      c.UserInfo,
+		"Params":        c.Params,
 	})
 	if err != nil {
 		return nil, err
