@@ -37,7 +37,8 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 				c.Abort()
 				return
 			}
-			if short != domainArr[0] {
+			if strings.ToLower(short) != strings.ToLower(domainArr[0]) {
+				logger.Debugf("[SubscribeHandler] Generate short token failed, short: %s, domain: %s", short, domainArr[0])
 				c.String(http.StatusForbidden, "Access denied")
 				c.Abort()
 				return
