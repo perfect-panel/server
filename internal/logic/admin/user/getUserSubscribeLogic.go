@@ -41,6 +41,7 @@ func (l *GetUserSubscribeLogic) GetUserSubscribe(req *types.GetUserSubscribeList
 	for _, item := range data {
 		var sub types.UserSubscribe
 		tool.DeepCopy(&sub, item)
+		sub.Short, _ = tool.FixedUniqueString(item.Token, 8, "")
 		resp.List = append(resp.List, sub)
 	}
 	return
