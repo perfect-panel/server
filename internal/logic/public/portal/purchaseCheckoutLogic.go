@@ -9,6 +9,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/exchangeRate"
 
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
 
@@ -21,12 +22,10 @@ import (
 	"github.com/perfect-panel/server/internal/model/payment"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/exchangeRate"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment/alipay"
 	"github.com/perfect-panel/server/pkg/payment/epay"
 	"github.com/perfect-panel/server/pkg/payment/stripe"
-	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -261,6 +260,7 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 // epayPayment processes EPay payment by generating a payment URL for redirect
 // It handles currency conversion and creates a payment URL for external payment processing
 func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order.Order, returnUrl string) (string, error) {
+	var err error
 	// Parse EPay configuration from payment settings
 	epayConfig := &payment.EPayConfig{}
 	if err := epayConfig.Unmarshal([]byte(config.Config)); err != nil {
@@ -269,15 +269,18 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 	}
 	// Initialize EPay client with merchant credentials
 	client := epay.NewClient(epayConfig.Pid, epayConfig.Url, epayConfig.Key, epayConfig.Type)
-
-	// Convert order amount to CNY using current exchange rate
-	amount, err := l.queryExchangeRate("CNY", info.Amount)
-	if err != nil {
-		return "", err
+	var amount float64
+	if l.svcCtx.Config.Currency.Unit != "CNY" {
+		// Convert order amount to CNY using current exchange rate
+		amount, err = l.queryExchangeRate("CNY", info.Amount)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		amount = float64(info.Amount) / float64(100)
 	}
 
 	// gateway mod
-
 	isGatewayMod := report.IsGatewayMode()
 
 	// Build notification URL for payment status callbacks
@@ -293,7 +296,6 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
-
 		notifyUrl = "https://" + host
 		if isGatewayMod {
 			notifyUrl += "/api"
@@ -316,6 +318,7 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 // CryptoSaaSPayment processes CryptoSaaSPayment payment by generating a payment URL for redirect
 // It handles currency conversion and creates a payment URL for external payment processing
 func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info *order.Order, returnUrl string) (string, error) {
+	var err error
 	// Parse EPay configuration from payment settings
 	epayConfig := &payment.CryptoSaaSConfig{}
 	if err := epayConfig.Unmarshal([]byte(config.Config)); err != nil {
@@ -325,10 +328,16 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 	// Initialize EPay client with merchant credentials
 	client := epay.NewClient(epayConfig.AccountID, epayConfig.Endpoint, epayConfig.SecretKey, epayConfig.Type)
 
-	// Convert order amount to CNY using current exchange rate
-	amount, err := l.queryExchangeRate("CNY", info.Amount)
-	if err != nil {
-		return "", err
+	var amount float64
+
+	if l.svcCtx.Config.Currency.Unit != "CNY" {
+		// Convert order amount to CNY using current exchange rate
+		amount, err = l.queryExchangeRate("CNY", info.Amount)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		amount = float64(info.Amount) / float64(100)
 	}
 
 	// gateway mod
@@ -377,35 +386,18 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 		return amount, nil
 	}
 
-	// Retrieve system currency configuration
-	currency, err := l.svcCtx.SystemModel.GetCurrencyConfig(l.ctx)
-	if err != nil {
-		l.Errorw("[PurchaseCheckout] GetCurrencyConfig error", logger.Field("error", err.Error()))
-		return 0, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetCurrencyConfig error: %s", err.Error())
-	}
-
-	// Parse currency configuration
-	configs := struct {
-		CurrencyUnit   string
-		CurrencySymbol string
-		AccessKey      string
-	}{}
-	tool.SystemConfigSliceReflectToStruct(currency, &configs)
-
 	// Skip conversion if no exchange rate API key configured
-	if configs.AccessKey == "" {
+	if l.svcCtx.Config.Currency.AccessKey == "" {
 		return amount, nil
 	}
 
 	// Convert currency if system currency differs from target currency
-	if configs.CurrencyUnit != to {
-		result, err := exchangeRate.GetExchangeRete(configs.CurrencyUnit, to, configs.AccessKey, 1)
-		if err != nil {
-			return 0, err
-		}
-		amount = result * amount
+	result, err := exchangeRate.GetExchangeRete(l.svcCtx.Config.Currency.Unit, to, l.svcCtx.Config.Currency.AccessKey, 1)
+	if err != nil {
+		return 0, err
 	}
-	return amount, nil
+	l.svcCtx.ExchangeRate = result
+	return result * amount, nil
 }
 
 // balancePayment processes balance payment with gift amount priority logic

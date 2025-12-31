@@ -29,6 +29,7 @@ type Config struct {
 	Invite        InviteConfig    `yaml:"Invite"`
 	Telegram      Telegram        `yaml:"Telegram"`
 	Log           Log             `yaml:"Log"`
+	Currency      Currency        `yaml:"Currency"`
 	Administrator struct {
 		Email    string `yaml:"Email" default:"admin@ppanel.dev"`
 		Password string `yaml:"Password" default:"password"`
@@ -240,4 +241,10 @@ type NodeDBConfig struct {
 	DNS                    string
 	Block                  string
 	Outbound               string
+}
+
+type Currency struct {
+	Unit      string `yaml:"Unit" default:"CNY"`
+	Symbol    string `yaml:"Symbol" default:"USD"`
+	AccessKey string `yaml:"AccessKey" default:""`
 }
