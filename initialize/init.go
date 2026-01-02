@@ -15,6 +15,7 @@ func StartInitSystemConfig(svc *svc.ServiceContext) {
 	Subscribe(svc)
 	Register(svc)
 	Mobile(svc)
+	Currency(svc)
 	if !svc.Config.Debug {
 		Telegram(svc)
 	}

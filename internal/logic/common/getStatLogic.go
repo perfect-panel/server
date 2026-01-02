@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/server"
+	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -57,13 +57,13 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 		u = 1
 	}
 	var n int64
-	err = l.svcCtx.DB.Model(&server.Server{}).Where("enable = 1").Count(&n).Error
+	err = l.svcCtx.DB.Model(&node.Node{}).Where("enabled = 1").Count(&n).Error
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get server count failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get server count failed: %v", err.Error())
 	}
 	var nodeaddr []string
-	err = l.svcCtx.DB.Model(&server.Server{}).Where("enable = 1").Pluck("server_addr", &nodeaddr).Error
+	err = l.svcCtx.DB.Model(&node.Server{}).Pluck("address", &nodeaddr).Error
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get server_addr failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get server_addr failed: %v", err.Error())
@@ -111,9 +111,23 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 	}
 	protocolDict := make(map[string]void)
 	var protocol []string
-	l.svcCtx.DB.Model(&server.Server{}).Where("enable = true").Pluck("protocol", &protocol)
+	err = l.svcCtx.DB.Model(&node.Node{}).Where("enabled = true").Pluck("protocol", &protocol).Error
+	if err != nil {
+		l.Logger.Error("[GetStatLogic] get protocol failed: ", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get protocol failed: %v", err.Error())
+	}
+
 	for _, p := range protocol {
-		protocolDict[p] = v
+		var protocols []node.Protocol
+		err = json.Unmarshal([]byte(p), &protocols)
+		if err != nil {
+			continue
+		}
+		for _, proto := range protocols {
+			if _, exists := protocolDict[proto.Type]; !exists {
+				protocolDict[proto.Type] = v
+			}
+		}
 	}
 	protocol = nil
 	for p := range protocolDict {

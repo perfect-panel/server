@@ -19,6 +19,7 @@ type (
 		Size            int    `form:"size"`
 		Search          string `form:"search,omitempty"`
 		UserId          *int64 `form:"user_id,omitempty"`
+		Unscoped        bool   `form:"unscoped,omitempty"`
 		SubscribeId     *int64 `form:"subscribe_id,omitempty"`
 		UserSubscribeId *int64 `form:"user_subscribe_id,omitempty"`
 	}
@@ -183,6 +184,12 @@ type (
 	GetUserSubscribeByIdRequest {
 		Id int64 `form:"id" validate:"required"`
 	}
+	ToggleUserSubscribeStatusRequest {
+		UserSubscribeId int64 `json:"user_subscribe_id"`
+	}
+	ResetUserSubscribeTrafficRequest {
+		UserSubscribeId int64 `json:"user_subscribe_id"`
+	}
 )
 
 @server (
@@ -291,5 +298,17 @@ service ppanel {
 	@doc "Get user login logs"
 	@handler GetUserLoginLogs
 	get /login/logs (GetUserLoginLogsRequest) returns (GetUserLoginLogsResponse)
+
+	@doc "Reset user subscribe token"
+	@handler ResetUserSubscribeToken
+	post /subscribe/reset/token (ResetUserSubscribeTokenRequest)
+
+	@doc "Stop user subscribe"
+	@handler ToggleUserSubscribeStatus
+	post /subscribe/toggle (ToggleUserSubscribeStatusRequest)
+
+	@doc "Reset user subscribe traffic"
+	@handler ResetUserSubscribeTraffic
+	post /subscribe/reset/traffic (ResetUserSubscribeTrafficRequest)
 }
 

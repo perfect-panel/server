@@ -56,6 +56,7 @@ func init() {
 		SubscribeIsUsedError:            "Subscribe is used",
 		SingleSubscribeModeExceedsLimit: "Single subscribe mode exceeds limit",
 		SubscribeQuotaLimit:             "Subscribe quota limit",
+		SubscribeOutOfStock:             "Subscribe out of stock",
 
 		// auth error
 		VerifyCodeError: "Verify code error",

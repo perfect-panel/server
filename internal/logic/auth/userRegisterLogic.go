@@ -79,12 +79,14 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		}
 	}
 	// Check if the user exists
-	_, err = l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
+	u, err := l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("FindOneByEmail Error", logger.Field("error", err))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
-	} else if err == nil {
+	} else if err == nil && !u.DeletedAt.Valid {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "user email exist: %v", req.Email)
+	} else if err == nil && u.DeletedAt.Valid {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user email deleted: %v", req.Email)
 	}
 
 	if !registerIpLimit(l.svcCtx, l.ctx, req.IP, "email", req.Email) {
@@ -154,9 +156,8 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		time.Now().Unix(),
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
-		jwt.WithOption("identifier", req.Identifier),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("CtxLoginType", req.LoginType),
+		jwt.WithOption("LoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))
@@ -237,12 +238,5 @@ func (l *UserRegisterLogic) activeTrial(uid int64) error {
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
-	err = l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
-	if err != nil {
-		return err
-	}
-	if clearErr := l.svcCtx.NodeModel.ClearServerAllCache(l.ctx); clearErr != nil {
-		l.Errorf("ClearServerAllCache error: %v", clearErr.Error())
-	}
-	return err
+	return l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
 }

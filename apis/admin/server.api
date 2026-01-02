@@ -189,14 +189,6 @@ service ppanel {
 	@handler ToggleNodeStatus
 	post /node/status/toggle (ToggleNodeStatusRequest)
 
-	@doc "Check if there is any server or node to migrate"
-	@handler HasMigrateSeverNode
-	get /migrate/has returns (HasMigrateSeverNodeResponse)
-
-	@doc "Migrate server and node data to new database"
-	@handler MigrateServerNode
-	post /migrate/run returns (MigrateServerNodeResponse)
-
 	@doc "Reset server sort"
 	@handler ResetSortWithServer
 	post /server/sort (ResetSortRequest)

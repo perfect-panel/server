@@ -394,26 +394,27 @@ type CreateSubscribeGroupRequest struct {
 }
 
 type CreateSubscribeRequest struct {
-	Name           string              `json:"name" validate:"required"`
-	Language       string              `json:"language"`
-	Description    string              `json:"description"`
-	UnitPrice      int64               `json:"unit_price"`
-	UnitTime       string              `json:"unit_time"`
-	Discount       []SubscribeDiscount `json:"discount"`
-	Replacement    int64               `json:"replacement"`
-	Inventory      int64               `json:"inventory"`
-	Traffic        int64               `json:"traffic"`
-	SpeedLimit     int64               `json:"speed_limit"`
-	DeviceLimit    int64               `json:"device_limit"`
-	Quota          int64               `json:"quota"`
-	Nodes          []int64             `json:"nodes"`
-	NodeTags       []string            `json:"node_tags"`
-	Show           *bool               `json:"show"`
-	Sell           *bool               `json:"sell"`
-	DeductionRatio int64               `json:"deduction_ratio"`
-	AllowDeduction *bool               `json:"allow_deduction"`
-	ResetCycle     int64               `json:"reset_cycle"`
-	RenewalReset   *bool               `json:"renewal_reset"`
+	Name              string              `json:"name" validate:"required"`
+	Language          string              `json:"language"`
+	Description       string              `json:"description"`
+	UnitPrice         int64               `json:"unit_price"`
+	UnitTime          string              `json:"unit_time"`
+	Discount          []SubscribeDiscount `json:"discount"`
+	Replacement       int64               `json:"replacement"`
+	Inventory         int64               `json:"inventory"`
+	Traffic           int64               `json:"traffic"`
+	SpeedLimit        int64               `json:"speed_limit"`
+	DeviceLimit       int64               `json:"device_limit"`
+	Quota             int64               `json:"quota"`
+	Nodes             []int64             `json:"nodes"`
+	NodeTags          []string            `json:"node_tags"`
+	Show              *bool               `json:"show"`
+	Sell              *bool               `json:"sell"`
+	DeductionRatio    int64               `json:"deduction_ratio"`
+	AllowDeduction    *bool               `json:"allow_deduction"`
+	ResetCycle        int64               `json:"reset_cycle"`
+	RenewalReset      *bool               `json:"renewal_reset"`
+	ShowOriginalPrice bool                `json:"show_original_price"`
 }
 
 type CreateTicketFollowRequest struct {
@@ -1054,6 +1055,7 @@ type GetUserListRequest struct {
 	Size            int    `form:"size"`
 	Search          string `form:"search,omitempty"`
 	UserId          *int64 `form:"user_id,omitempty"`
+	Unscoped        bool   `form:"unscoped,omitempty"`
 	SubscribeId     *int64 `form:"subscribe_id,omitempty"`
 	UserSubscribeId *int64 `form:"user_subscribe_id,omitempty"`
 }
@@ -1568,7 +1570,7 @@ type PurchaseOrderResponse struct {
 
 type QueryAnnouncementRequest struct {
 	Page   int   `form:"page"`
-	Size   int   `form:"size"`
+	Size   int   `form:"size,default=15"`
 	Pinned *bool `form:"pinned"`
 	Popup  *bool `form:"popup"`
 }
@@ -1856,6 +1858,10 @@ type ResetUserSubscribeTokenRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
+type ResetUserSubscribeTrafficRequest struct {
+	UserSubscribeId int64 `json:"user_subscribe_id"`
+}
+
 type RevenueStatisticsResponse struct {
 	Today   OrdersStatistics `json:"today"`
 	Monthly OrdersStatistics `json:"monthly"`
@@ -2056,30 +2062,31 @@ type StripePayment struct {
 }
 
 type Subscribe struct {
-	Id             int64               `json:"id"`
-	Name           string              `json:"name"`
-	Language       string              `json:"language"`
-	Description    string              `json:"description"`
-	UnitPrice      int64               `json:"unit_price"`
-	UnitTime       string              `json:"unit_time"`
-	Discount       []SubscribeDiscount `json:"discount"`
-	Replacement    int64               `json:"replacement"`
-	Inventory      int64               `json:"inventory"`
-	Traffic        int64               `json:"traffic"`
-	SpeedLimit     int64               `json:"speed_limit"`
-	DeviceLimit    int64               `json:"device_limit"`
-	Quota          int64               `json:"quota"`
-	Nodes          []int64             `json:"nodes"`
-	NodeTags       []string            `json:"node_tags"`
-	Show           bool                `json:"show"`
-	Sell           bool                `json:"sell"`
-	Sort           int64               `json:"sort"`
-	DeductionRatio int64               `json:"deduction_ratio"`
-	AllowDeduction bool                `json:"allow_deduction"`
-	ResetCycle     int64               `json:"reset_cycle"`
-	RenewalReset   bool                `json:"renewal_reset"`
-	CreatedAt      int64               `json:"created_at"`
-	UpdatedAt      int64               `json:"updated_at"`
+	Id                int64               `json:"id"`
+	Name              string              `json:"name"`
+	Language          string              `json:"language"`
+	Description       string              `json:"description"`
+	UnitPrice         int64               `json:"unit_price"`
+	UnitTime          string              `json:"unit_time"`
+	Discount          []SubscribeDiscount `json:"discount"`
+	Replacement       int64               `json:"replacement"`
+	Inventory         int64               `json:"inventory"`
+	Traffic           int64               `json:"traffic"`
+	SpeedLimit        int64               `json:"speed_limit"`
+	DeviceLimit       int64               `json:"device_limit"`
+	Quota             int64               `json:"quota"`
+	Nodes             []int64             `json:"nodes"`
+	NodeTags          []string            `json:"node_tags"`
+	Show              bool                `json:"show"`
+	Sell              bool                `json:"sell"`
+	Sort              int64               `json:"sort"`
+	DeductionRatio    int64               `json:"deduction_ratio"`
+	AllowDeduction    bool                `json:"allow_deduction"`
+	ResetCycle        int64               `json:"reset_cycle"`
+	RenewalReset      bool                `json:"renewal_reset"`
+	ShowOriginalPrice bool                `json:"show_original_price"`
+	CreatedAt         int64               `json:"created_at"`
+	UpdatedAt         int64               `json:"updated_at"`
 }
 
 type SubscribeApplication struct {
@@ -2237,6 +2244,10 @@ type TimePeriod struct {
 type ToggleNodeStatusRequest struct {
 	Id     int64 `json:"id"`
 	Enable *bool `json:"enable"`
+}
+
+type ToggleUserSubscribeStatusRequest struct {
+	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
 type TosConfig struct {
@@ -2435,28 +2446,29 @@ type UpdateSubscribeGroupRequest struct {
 }
 
 type UpdateSubscribeRequest struct {
-	Id             int64               `json:"id" validate:"required"`
-	Name           string              `json:"name" validate:"required"`
-	Language       string              `json:"language"`
-	Description    string              `json:"description"`
-	UnitPrice      int64               `json:"unit_price"`
-	UnitTime       string              `json:"unit_time"`
-	Discount       []SubscribeDiscount `json:"discount"`
-	Replacement    int64               `json:"replacement"`
-	Inventory      int64               `json:"inventory"`
-	Traffic        int64               `json:"traffic"`
-	SpeedLimit     int64               `json:"speed_limit"`
-	DeviceLimit    int64               `json:"device_limit"`
-	Quota          int64               `json:"quota"`
-	Nodes          []int64             `json:"nodes"`
-	NodeTags       []string            `json:"node_tags"`
-	Show           *bool               `json:"show"`
-	Sell           *bool               `json:"sell"`
-	Sort           int64               `json:"sort"`
-	DeductionRatio int64               `json:"deduction_ratio"`
-	AllowDeduction *bool               `json:"allow_deduction"`
-	ResetCycle     int64               `json:"reset_cycle"`
-	RenewalReset   *bool               `json:"renewal_reset"`
+	Id                int64               `json:"id" validate:"required"`
+	Name              string              `json:"name" validate:"required"`
+	Language          string              `json:"language"`
+	Description       string              `json:"description"`
+	UnitPrice         int64               `json:"unit_price"`
+	UnitTime          string              `json:"unit_time"`
+	Discount          []SubscribeDiscount `json:"discount"`
+	Replacement       int64               `json:"replacement"`
+	Inventory         int64               `json:"inventory"`
+	Traffic           int64               `json:"traffic"`
+	SpeedLimit        int64               `json:"speed_limit"`
+	DeviceLimit       int64               `json:"device_limit"`
+	Quota             int64               `json:"quota"`
+	Nodes             []int64             `json:"nodes"`
+	NodeTags          []string            `json:"node_tags"`
+	Show              *bool               `json:"show"`
+	Sell              *bool               `json:"sell"`
+	Sort              int64               `json:"sort"`
+	DeductionRatio    int64               `json:"deduction_ratio"`
+	AllowDeduction    *bool               `json:"allow_deduction"`
+	ResetCycle        int64               `json:"reset_cycle"`
+	RenewalReset      *bool               `json:"renewal_reset"`
+	ShowOriginalPrice bool                `json:"show_original_price"`
 }
 
 type UpdateTicketStatusRequest struct {
@@ -2551,7 +2563,6 @@ type User struct {
 	CreatedAt             int64            `json:"created_at"`
 	UpdatedAt             int64            `json:"updated_at"`
 	DeletedAt             int64            `json:"deleted_at,omitempty"`
-	IsDel                 bool             `json:"is_del,omitempty"`
 }
 
 type UserAffiliate struct {

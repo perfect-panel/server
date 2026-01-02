@@ -97,7 +97,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Redis:        rds,
 		Config:       c,
 		Queue:        NewAsynqClient(c),
-		ExchangeRate: 1.0,
+		ExchangeRate: 0,
 		GeoIP:        geoIP,
 		//NodeCache:   cache.NewNodeCacheClient(rds),
 		AuthLimiter: authLimiter,

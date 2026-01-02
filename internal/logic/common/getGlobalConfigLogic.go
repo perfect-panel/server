@@ -51,6 +51,8 @@ func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigRes
 	tool.SystemConfigSliceReflectToStruct(currencyCfg, &resp.Currency)
 	tool.SystemConfigSliceReflectToStruct(verifyCodeCfg, &resp.VerifyCode)
 
+	resp.Subscribe.SubscribePath = "/sub" + l.svcCtx.Config.Subscribe.SubscribePath
+
 	resp.Verify = types.VeifyConfig{
 		TurnstileSiteKey:          l.svcCtx.Config.Verify.TurnstileSiteKey,
 		EnableLoginVerify:         l.svcCtx.Config.Verify.LoginVerify,

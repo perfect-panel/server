@@ -8,15 +8,23 @@ import (
 )
 
 type Adapter struct {
-	SiteName       string       // 站点名称
-	Servers        []*node.Node // 服务器列表
-	UserInfo       User         // 用户信息
-	ClientTemplate string       // 客户端配置模板
-	OutputFormat   string       // 输出格式，默认是 base64
-	SubscribeName  string       // 订阅名称
+	Type           string            // 协议类型
+	SiteName       string            // 站点名称
+	Servers        []*node.Node      // 服务器列表
+	UserInfo       User              // 用户信息
+	ClientTemplate string            // 客户端配置模板
+	OutputFormat   string            // 输出格式，默认是 base64
+	SubscribeName  string            // 订阅名称
+	Params         map[string]string // 其他参数
 }
 
 type Option func(*Adapter)
+
+func WithParams(params map[string]string) Option {
+	return func(opts *Adapter) {
+		opts.Params = params
+	}
+}
 
 // WithServers 设置服务器列表
 func WithServers(servers []*node.Node) Option {
@@ -101,55 +109,58 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 		}
 		for _, protocol := range protocols {
 			if protocol.Type == item.Protocol {
-				proxies = append(proxies, Proxy{
-					Sort:                    item.Sort,
-					Name:                    item.Name,
-					Server:                  item.Address,
-					Port:                    item.Port,
-					Type:                    item.Protocol,
-					Tags:                    strings.Split(item.Tags, ","),
-					Security:                protocol.Security,
-					SNI:                     protocol.SNI,
-					AllowInsecure:           protocol.AllowInsecure,
-					Fingerprint:             protocol.Fingerprint,
-					RealityServerAddr:       protocol.RealityServerAddr,
-					RealityServerPort:       protocol.RealityServerPort,
-					RealityPrivateKey:       protocol.RealityPrivateKey,
-					RealityPublicKey:        protocol.RealityPublicKey,
-					RealityShortId:          protocol.RealityShortId,
-					Transport:               protocol.Transport,
-					Host:                    protocol.Host,
-					Path:                    protocol.Path,
-					ServiceName:             protocol.ServiceName,
-					Method:                  protocol.Cipher,
-					ServerKey:               protocol.ServerKey,
-					Flow:                    protocol.Flow,
-					HopPorts:                protocol.HopPorts,
-					HopInterval:             protocol.HopInterval,
-					ObfsPassword:            protocol.ObfsPassword,
-					UpMbps:                  protocol.UpMbps,
-					DownMbps:                protocol.DownMbps,
-					DisableSNI:              protocol.DisableSNI,
-					ReduceRtt:               protocol.ReduceRtt,
-					UDPRelayMode:            protocol.UDPRelayMode,
-					CongestionController:    protocol.CongestionController,
-					PaddingScheme:           protocol.PaddingScheme,
-					Multiplex:               protocol.Multiplex,
-					XhttpMode:               protocol.XhttpMode,
-					XhttpExtra:              protocol.XhttpExtra,
-					Encryption:              protocol.Encryption,
-					EncryptionMode:          protocol.EncryptionMode,
-					EncryptionRtt:           protocol.EncryptionRtt,
-					EncryptionTicket:        protocol.EncryptionTicket,
-					EncryptionServerPadding: protocol.EncryptionServerPadding,
-					EncryptionPrivateKey:    protocol.EncryptionPrivateKey,
-					EncryptionClientPadding: protocol.EncryptionClientPadding,
-					EncryptionPassword:      protocol.EncryptionPassword,
-					Ratio:                   protocol.Ratio,
-					CertMode:                protocol.CertMode,
-					CertDNSProvider:         protocol.CertDNSProvider,
-					CertDNSEnv:              protocol.CertDNSEnv,
-				})
+				proxies = append(
+					proxies,
+					Proxy{
+						Sort:                    item.Sort,
+						Name:                    item.Name,
+						Server:                  item.Address,
+						Port:                    item.Port,
+						Type:                    item.Protocol,
+						Tags:                    strings.Split(item.Tags, ","),
+						Security:                protocol.Security,
+						SNI:                     protocol.SNI,
+						AllowInsecure:           protocol.AllowInsecure,
+						Fingerprint:             protocol.Fingerprint,
+						RealityServerAddr:       protocol.RealityServerAddr,
+						RealityServerPort:       protocol.RealityServerPort,
+						RealityPrivateKey:       protocol.RealityPrivateKey,
+						RealityPublicKey:        protocol.RealityPublicKey,
+						RealityShortId:          protocol.RealityShortId,
+						Transport:               protocol.Transport,
+						Host:                    protocol.Host,
+						Path:                    protocol.Path,
+						ServiceName:             protocol.ServiceName,
+						Method:                  protocol.Cipher,
+						ServerKey:               protocol.ServerKey,
+						Flow:                    protocol.Flow,
+						HopPorts:                protocol.HopPorts,
+						HopInterval:             protocol.HopInterval,
+						ObfsPassword:            protocol.ObfsPassword,
+						UpMbps:                  protocol.UpMbps,
+						DownMbps:                protocol.DownMbps,
+						DisableSNI:              protocol.DisableSNI,
+						ReduceRtt:               protocol.ReduceRtt,
+						UDPRelayMode:            protocol.UDPRelayMode,
+						CongestionController:    protocol.CongestionController,
+						PaddingScheme:           protocol.PaddingScheme,
+						Multiplex:               protocol.Multiplex,
+						XhttpMode:               protocol.XhttpMode,
+						XhttpExtra:              protocol.XhttpExtra,
+						Encryption:              protocol.Encryption,
+						EncryptionMode:          protocol.EncryptionMode,
+						EncryptionRtt:           protocol.EncryptionRtt,
+						EncryptionTicket:        protocol.EncryptionTicket,
+						EncryptionServerPadding: protocol.EncryptionServerPadding,
+						EncryptionPrivateKey:    protocol.EncryptionPrivateKey,
+						EncryptionClientPadding: protocol.EncryptionClientPadding,
+						EncryptionPassword:      protocol.EncryptionPassword,
+						Ratio:                   protocol.Ratio,
+						CertMode:                protocol.CertMode,
+						CertDNSProvider:         protocol.CertDNSProvider,
+						CertDNSEnv:              protocol.CertDNSEnv,
+					},
+				)
 			}
 		}
 	}

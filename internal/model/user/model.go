@@ -62,6 +62,7 @@ type UserFilterParams struct {
 	SubscribeId     *int64
 	UserSubscribeId *int64
 	Order           string // Order by id, e.g., "desc"
+	Unscoped        bool   // Whether to include soft-deleted records
 }
 
 type customUserLogicModel interface {
@@ -147,6 +148,9 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 			}
 			if filter.Order != "" {
 				conn = conn.Order(fmt.Sprintf("user.id %s", filter.Order))
+			}
+			if filter.Unscoped {
+				conn = conn.Unscoped()
 			}
 		}
 		return conn.Model(&User{}).Group("user.id").Count(&total).Limit(size).Offset((page-1)*size).Preload("UserDevices").Preload("AuthMethods", func(db *gorm.DB) *gorm.DB { return db.Order("user_auth_methods.auth_type desc") }).Find(&list).Error

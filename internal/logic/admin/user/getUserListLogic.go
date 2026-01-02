@@ -30,6 +30,7 @@ func (l *GetUserListLogic) GetUserList(req *types.GetUserListRequest) (*types.Ge
 	list, total, err := l.svcCtx.UserModel.QueryPageList(l.ctx, req.Page, req.Size, &user.UserFilterParams{
 		UserId:          req.UserId,
 		Search:          req.Search,
+		Unscoped:        req.Unscoped,
 		SubscribeId:     req.SubscribeId,
 		UserSubscribeId: req.UserSubscribeId,
 		Order:           "DESC",

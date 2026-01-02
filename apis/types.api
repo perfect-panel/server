@@ -32,7 +32,6 @@ type (
 		CreatedAt             int64            `json:"created_at"`
 		UpdatedAt             int64            `json:"updated_at"`
 		DeletedAt             int64            `json:"deleted_at,omitempty"`
-		IsDel                 bool             `json:"is_del,omitempty"`
 	}
 	Follow {
 		Id        int64  `json:"id"`
@@ -136,12 +135,14 @@ type (
 		EnableDomainSuffix bool   `json:"enable_domain_suffix"`
 		DomainSuffixList   string `json:"domain_suffix_list"`
 	}
-	DeviceAuthticateConfig {
-		Enable         bool `json:"enable"`
-		ShowAds        bool `json:"show_ads"`
-		EnableSecurity bool `json:"enable_security"`
-		OnlyRealDevice bool `json:"only_real_device"`
-	}
+
+    DeviceAuthticateConfig {
+        Enable            bool   `json:"enable"`
+        ShowAds           bool   `json:"show_ads"`
+        EnableSecurity    bool   `json:"enable_security"`
+        OnlyRealDevice    bool   `json:"only_real_device"`
+    }
+
 	RegisterConfig {
 		StopRegister            bool   `json:"stop_register"`
 		EnableTrial             bool   `json:"enable_trial"`
@@ -209,30 +210,31 @@ type (
 		Discount float64 `json:"discount"`
 	}
 	Subscribe {
-		Id             int64               `json:"id"`
-		Name           string              `json:"name"`
-		Language       string              `json:"language"`
-		Description    string              `json:"description"`
-		UnitPrice      int64               `json:"unit_price"`
-		UnitTime       string              `json:"unit_time"`
-		Discount       []SubscribeDiscount `json:"discount"`
-		Replacement    int64               `json:"replacement"`
-		Inventory      int64               `json:"inventory"`
-		Traffic        int64               `json:"traffic"`
-		SpeedLimit     int64               `json:"speed_limit"`
-		DeviceLimit    int64               `json:"device_limit"`
-		Quota          int64               `json:"quota"`
-		Nodes          []int64             `json:"nodes"`
-		NodeTags       []string            `json:"node_tags"`
-		Show           bool                `json:"show"`
-		Sell           bool                `json:"sell"`
-		Sort           int64               `json:"sort"`
-		DeductionRatio int64               `json:"deduction_ratio"`
-		AllowDeduction bool                `json:"allow_deduction"`
-		ResetCycle     int64               `json:"reset_cycle"`
-		RenewalReset   bool                `json:"renewal_reset"`
-		CreatedAt      int64               `json:"created_at"`
-		UpdatedAt      int64               `json:"updated_at"`
+		Id                int64               `json:"id"`
+		Name              string              `json:"name"`
+		Language          string              `json:"language"`
+		Description       string              `json:"description"`
+		UnitPrice         int64               `json:"unit_price"`
+		UnitTime          string              `json:"unit_time"`
+		Discount          []SubscribeDiscount `json:"discount"`
+		Replacement       int64               `json:"replacement"`
+		Inventory         int64               `json:"inventory"`
+		Traffic           int64               `json:"traffic"`
+		SpeedLimit        int64               `json:"speed_limit"`
+		DeviceLimit       int64               `json:"device_limit"`
+		Quota             int64               `json:"quota"`
+		Nodes             []int64             `json:"nodes"`
+		NodeTags          []string            `json:"node_tags"`
+		Show              bool                `json:"show"`
+		Sell              bool                `json:"sell"`
+		Sort              int64               `json:"sort"`
+		DeductionRatio    int64               `json:"deduction_ratio"`
+		AllowDeduction    bool                `json:"allow_deduction"`
+		ResetCycle        int64               `json:"reset_cycle"`
+		RenewalReset      bool                `json:"renewal_reset"`
+		ShowOriginalPrice bool                `json:"show_original_price"`
+		CreatedAt         int64               `json:"created_at"`
+		UpdatedAt         int64               `json:"updated_at"`
 	}
 	SubscribeGroup {
 		Id          int64  `json:"id"`
@@ -656,7 +658,7 @@ type (
 	// public announcement
 	QueryAnnouncementRequest {
 		Page   int   `form:"page"`
-		Size   int   `form:"size"`
+		Size   int   `form:"size,default=15"`
 		Pinned *bool `form:"pinned"`
 		Popup  *bool `form:"popup"`
 	}
@@ -673,6 +675,7 @@ type (
 		List  []SubscribeGroup `json:"list"`
 		Total int64            `json:"total"`
 	}
+
 	GetUserSubscribeTrafficLogsRequest {
 		Page        int   `form:"page"`
 		Size        int   `form:"size"`
@@ -844,6 +847,10 @@ type (
 		CertMode                string  `json:"cert_mode,omitempty"` // Certificate mode, `none`｜`http`｜`dns`｜`self`
 		CertDNSProvider         string  `json:"cert_dns_provider,omitempty"` // DNS provider for certificate
 		CertDNSEnv              string  `json:"cert_dns_env,omitempty"` // Environment for DNS provider
+	}
+	// reset user subscribe token
+	ResetUserSubscribeTokenRequest {
+		UserSubscribeId int64 `json:"user_subscribe_id"`
 	}
 )
 

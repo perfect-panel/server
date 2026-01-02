@@ -66,9 +66,7 @@ type (
 	UnbindOAuthRequest {
 		Method string `json:"method"`
 	}
-	ResetUserSubscribeTokenRequest {
-		UserSubscribeId int64 `json:"user_subscribe_id"`
-	}
+
 	GetLoginLogRequest {
 		Page int `form:"page"`
 		Size int `form:"size"`
@@ -282,15 +280,3 @@ service ppanel {
     get /withdrawal_log (QueryWithdrawalLogListRequest) returns (QueryWithdrawalLogListResponse)
 }
 
-
-@server(
-    prefix:     v1/public/user
-    group:      public/user/ws
-    middleware: AuthMiddleware
-)
-
-service ppanel {
-    @doc "Webosocket Device Connect"
-    @handler DeviceWsConnect
-    get /device_ws_connect
-}

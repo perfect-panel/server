@@ -68,6 +68,10 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 
 	userInfo, err = l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
 
+	if userInfo.DeletedAt.Valid {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email deleted: %v", req.Email)
+	}
+
 	if err != nil {
 		if errors.As(err, &gorm.ErrRecordNotFound) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)

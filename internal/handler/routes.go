@@ -33,7 +33,6 @@ import (
 	publicSubscribe "github.com/perfect-panel/server/internal/handler/public/subscribe"
 	publicTicket "github.com/perfect-panel/server/internal/handler/public/ticket"
 	publicUser "github.com/perfect-panel/server/internal/handler/public/user"
-	publicUserWs "github.com/perfect-panel/server/internal/handler/public/user/ws"
 	server "github.com/perfect-panel/server/internal/handler/server"
 	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
@@ -312,12 +311,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Filter Server List
 		adminServerGroupRouter.GET("/list", adminServer.FilterServerListHandler(serverCtx))
 
-		// Check if there is any server or node to migrate
-		adminServerGroupRouter.GET("/migrate/has", adminServer.HasMigrateSeverNodeHandler(serverCtx))
-
-		// Migrate server and node data to new database
-		adminServerGroupRouter.POST("/migrate/run", adminServer.MigrateServerNodeHandler(serverCtx))
-
 		// Create Node
 		adminServerGroupRouter.POST("/node/create", adminServer.CreateNodeHandler(serverCtx))
 
@@ -582,6 +575,15 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get user subcribe reset traffic logs
 		adminUserGroupRouter.GET("/subscribe/reset/logs", adminUser.GetUserSubscribeResetTrafficLogsHandler(serverCtx))
+
+		// Reset user subscribe token
+		adminUserGroupRouter.POST("/subscribe/reset/token", adminUser.ResetUserSubscribeTokenHandler(serverCtx))
+
+		// Reset user subscribe traffic
+		adminUserGroupRouter.POST("/subscribe/reset/traffic", adminUser.ResetUserSubscribeTrafficHandler(serverCtx))
+
+		// Stop user subscribe
+		adminUserGroupRouter.POST("/subscribe/toggle", adminUser.ToggleUserSubscribeStatusHandler(serverCtx))
 
 		// Get user subcribe traffic logs
 		adminUserGroupRouter.GET("/subscribe/traffic_logs", adminUser.GetUserSubscribeTrafficLogsHandler(serverCtx))
@@ -870,14 +872,6 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Query Withdrawal Log
 		publicUserGroupRouter.GET("/withdrawal_log", publicUser.QueryWithdrawalLogHandler(serverCtx))
-	}
-
-	publicUserWsGroupRouter := router.Group("/v1/public/user")
-	publicUserWsGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
-
-	{
-		// Webosocket Device Connect
-		publicUserWsGroupRouter.GET("/device_ws_connect", publicUserWs.DeviceWsConnectHandler(serverCtx))
 	}
 
 	serverGroupRouter := router.Group("/v1/server")

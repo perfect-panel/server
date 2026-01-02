@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/client"
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/report"
 
 	"github.com/perfect-panel/server/internal/model/user"
 
@@ -106,9 +107,12 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 			Download:     userSubscribe.Download,
 			Upload:       userSubscribe.Upload,
 			Traffic:      userSubscribe.Traffic,
-			SubscribeURL: l.getSubscribeV2URL(req.Token),
+			SubscribeURL: l.getSubscribeV2URL(),
 		}),
+		adapter.WithParams(req.Params),
 	)
+
+	logger.Debugf("[SubscribeLogic] Building client config for user %d with URI %s", userSubscribe.UserId, l.getSubscribeV2URL())
 
 	// Get client config
 	adapterClient, err := a.Client()
@@ -143,17 +147,20 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 	return
 }
 
-func (l *SubscribeLogic) getSubscribeV2URL(token string) string {
-	if l.svc.Config.Subscribe.PanDomain {
-		return fmt.Sprintf("https://%s", l.ctx.Request.Host)
-	}
+func (l *SubscribeLogic) getSubscribeV2URL() string {
 
+	uri := l.ctx.Request.RequestURI
+	// is gateway mode, add /sub prefix
+	if report.IsGatewayMode() {
+		uri = "/sub" + uri
+	}
+	// use custom domain if configured
 	if l.svc.Config.Subscribe.SubscribeDomain != "" {
 		domains := strings.Split(l.svc.Config.Subscribe.SubscribeDomain, "\n")
-		return fmt.Sprintf("https://%s%s?token=%s", domains[0], l.svc.Config.Subscribe.SubscribePath, token)
+		return fmt.Sprintf("https://%s%s", domains[0], uri)
 	}
-
-	return fmt.Sprintf("https://%s%s?token=%s&", l.ctx.Request.Host, l.svc.Config.Subscribe.SubscribePath, token)
+	// use current request host
+	return fmt.Sprintf("https://%s%s", l.ctx.Request.Host, uri)
 }
 
 func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
@@ -209,13 +216,16 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, erro
 	}
 
 	nodeIds := tool.StringToInt64Slice(subDetails.Nodes)
-	tags := strings.Split(subDetails.NodeTags, ",")
+	tags := tool.RemoveStringElement(strings.Split(subDetails.NodeTags, ","), "")
 
-	l.Debugf("[Generate Subscribe]nodes: %v, NodeTags: %v", nodeIds, tags)
-
+	l.Debugf("[Generate Subscribe]nodes: %v, NodeTags: %v", len(nodeIds), len(tags))
+	if len(nodeIds) == 0 && len(tags) == 0 {
+		logger.Infow("[Generate Subscribe]no subscribe nodes")
+		return []*node.Node{}, nil
+	}
 	enable := true
-
-	_, nodes, err := l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
+	var nodes []*node.Node
+	_, nodes, err = l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
 		Page:    1,
 		Size:    1000,
 		NodeId:  nodeIds,

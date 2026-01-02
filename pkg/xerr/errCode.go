@@ -71,6 +71,7 @@ const (
 	SubscribeIsUsedError            uint32 = 60004
 	SingleSubscribeModeExceedsLimit uint32 = 60005
 	SubscribeQuotaLimit             uint32 = 60006
+	SubscribeOutOfStock             uint32 = 60007
 )
 
 // Auth error

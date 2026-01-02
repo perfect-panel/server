@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -206,6 +207,86 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 
 		//如果没有其他认证方式，禁用旧用户账号
 		if count < 1 {
+			//检查设备下是否有套餐，有套餐。就检查即将绑定过去的所有账户是否有套餐，如果有，那么检查两个套餐是否一致。如果一致就将即将删除的用户套餐，时间叠加到我绑定过去的用户套餐上面（如果套餐已过期就忽略）。新绑定设备的账户上套餐不一致或者不存在直接将套餐换绑即可
+			var oldUserSubscribes []user.Subscribe
+			err = tx.Where("user_id = ? AND status IN ?", oldUserId, []int64{0, 1}).Find(&oldUserSubscribes).Error
+			if err != nil {
+				l.Errorw("failed to query old user subscribes",
+					logger.Field("old_user_id", oldUserId),
+					logger.Field("error", err.Error()),
+				)
+				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query old user subscribes failed: %v", err)
+			}
+
+			if len(oldUserSubscribes) > 0 {
+				l.Infow("processing old user subscribes",
+					logger.Field("old_user_id", oldUserId),
+					logger.Field("new_user_id", newUserId),
+					logger.Field("subscribe_count", len(oldUserSubscribes)),
+				)
+
+				for _, oldSub := range oldUserSubscribes {
+					// 检查新用户是否有相同套餐ID的订阅
+					var newUserSub user.Subscribe
+					err = tx.Where("user_id = ? AND subscribe_id = ? AND status IN ?", newUserId, oldSub.SubscribeId, []int64{0, 1}).First(&newUserSub).Error
+
+					if err != nil {
+						// 新用户没有该套餐，直接换绑
+						oldSub.UserId = newUserId
+						if err := tx.Save(&oldSub).Error; err != nil {
+							l.Errorw("failed to rebind subscribe to new user",
+								logger.Field("subscribe_id", oldSub.Id),
+								logger.Field("old_user_id", oldUserId),
+								logger.Field("new_user_id", newUserId),
+								logger.Field("error", err.Error()),
+							)
+							return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "rebind subscribe failed: %v", err)
+						}
+						l.Infow("rebind subscribe to new user",
+							logger.Field("subscribe_id", oldSub.Id),
+							logger.Field("new_user_id", newUserId),
+						)
+					} else {
+						// 新用户已有该套餐，检查旧套餐是否过期
+						now := time.Now()
+						if oldSub.ExpireTime.After(now) {
+							// 旧套餐未过期，叠加剩余时间
+							remainingDuration := oldSub.ExpireTime.Sub(now)
+							if newUserSub.ExpireTime.After(now) {
+								// 新套餐未过期，叠加时间
+								newUserSub.ExpireTime = newUserSub.ExpireTime.Add(remainingDuration)
+							} else {
+								newUserSub.ExpireTime = time.Now().Add(remainingDuration)
+							}
+							if err := tx.Save(&newUserSub).Error; err != nil {
+								l.Errorw("failed to update subscribe expire time",
+									logger.Field("subscribe_id", newUserSub.Id),
+									logger.Field("error", err.Error()),
+								)
+								return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update subscribe expire time failed: %v", err)
+							}
+							l.Infow("merged subscribe time",
+								logger.Field("subscribe_id", newUserSub.Id),
+								logger.Field("new_expire_time", newUserSub.ExpireTime),
+							)
+						} else {
+							l.Infow("old subscribe expired, skip merge",
+								logger.Field("subscribe_id", oldSub.Id),
+								logger.Field("expire_time", oldSub.ExpireTime),
+							)
+						}
+						// 删除旧用户的套餐
+						if err := tx.Delete(&oldSub).Error; err != nil {
+							l.Errorw("failed to delete old subscribe",
+								logger.Field("subscribe_id", oldSub.Id),
+								logger.Field("error", err.Error()),
+							)
+							return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete old subscribe failed: %v", err)
+						}
+					}
+				}
+			}
+
 			if err := tx.Model(&user.User{}).Where("id = ?", oldUserId).Delete(&user.User{}).Error; err != nil {
 				l.Errorw("failed to disable old user",
 					logger.Field("old_user_id", oldUserId),

@@ -79,6 +79,7 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 
 	now := time.Now()
 	realTimeMultiplier := l.svc.NodeMultiplierManager.GetMultiplier(now)
+	logger.Debugf("[TrafficStatisticsLogic] Current time traffic multiplier: %.2f", realTimeMultiplier)
 	for _, log := range payload.Logs {
 		// query user Subscribe Info
 		sub, err := l.svc.UserModel.FindOneSubscribe(ctx, log.SID)
