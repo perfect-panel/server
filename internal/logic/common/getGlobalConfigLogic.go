@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -51,7 +52,9 @@ func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigRes
 	tool.SystemConfigSliceReflectToStruct(currencyCfg, &resp.Currency)
 	tool.SystemConfigSliceReflectToStruct(verifyCodeCfg, &resp.VerifyCode)
 
-	resp.Subscribe.SubscribePath = "/sub" + l.svcCtx.Config.Subscribe.SubscribePath
+	if report.IsGatewayMode() {
+		resp.Subscribe.SubscribePath = "/sub" + l.svcCtx.Config.Subscribe.SubscribePath
+	}
 
 	resp.Verify = types.VeifyConfig{
 		TurnstileSiteKey:          l.svcCtx.Config.Verify.TurnstileSiteKey,
