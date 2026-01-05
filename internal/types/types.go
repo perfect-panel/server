@@ -146,6 +146,10 @@ type BatchDeleteDocumentRequest struct {
 	Ids []int64 `json:"ids" validate:"required"`
 }
 
+type BatchDeleteRedemptionCodeRequest struct {
+	Ids []int64 `json:"ids" validate:"required"`
+}
+
 type BatchDeleteSubscribeGroupRequest struct {
 	Ids []int64 `json:"ids" validate:"required"`
 }
@@ -367,6 +371,14 @@ type CreateQuotaTaskRequest struct {
 	GiftValue    uint64  `json:"gift_value"`
 }
 
+type CreateRedemptionCodeRequest struct {
+	TotalCount    int64  `json:"total_count" validate:"required"`
+	SubscribePlan int64  `json:"subscribe_plan" validate:"required"`
+	UnitTime      string `json:"unit_time" validate:"required,oneof=day month quarter half_year year"`
+	Quantity      int64  `json:"quantity" validate:"required"`
+	BatchCount    int64  `json:"batch_count" validate:"required,min=1"`
+}
+
 type CreateServerRequest struct {
 	Name      string     `json:"name"`
 	Country   string     `json:"country,omitempty"`
@@ -498,6 +510,10 @@ type DeleteNodeRequest struct {
 }
 
 type DeletePaymentMethodRequest struct {
+	Id int64 `json:"id" validate:"required"`
+}
+
+type DeleteRedemptionCodeRequest struct {
 	Id int64 `json:"id" validate:"required"`
 }
 
@@ -932,6 +948,31 @@ type GetPreSendEmailCountRequest struct {
 
 type GetPreSendEmailCountResponse struct {
 	Count int64 `json:"count"`
+}
+
+type GetRedemptionCodeListRequest struct {
+	Page          int64  `form:"page" validate:"required"`
+	Size          int64  `form:"size" validate:"required"`
+	SubscribePlan int64  `form:"subscribe_plan,omitempty"`
+	UnitTime      string `form:"unit_time,omitempty"`
+	Code          string `form:"code,omitempty"`
+}
+
+type GetRedemptionCodeListResponse struct {
+	Total int64            `json:"total"`
+	List  []RedemptionCode `json:"list"`
+}
+
+type GetRedemptionRecordListRequest struct {
+	Page   int64 `form:"page" validate:"required"`
+	Size   int64 `form:"size" validate:"required"`
+	UserId int64 `form:"user_id,omitempty"`
+	CodeId int64 `form:"code_id,omitempty"`
+}
+
+type GetRedemptionRecordListResponse struct {
+	Total int64              `json:"total"`
+	List  []RedemptionRecord `json:"list"`
 }
 
 type GetServerConfigRequest struct {
@@ -1779,6 +1820,37 @@ type RechargeOrderResponse struct {
 	OrderNo string `json:"order_no"`
 }
 
+type RedeemCodeRequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
+type RedeemCodeResponse struct {
+	Message string `json:"message"`
+}
+
+type RedemptionCode struct {
+	Id            int64  `json:"id"`
+	Code          string `json:"code"`
+	TotalCount    int64  `json:"total_count"`
+	UsedCount     int64  `json:"used_count"`
+	SubscribePlan int64  `json:"subscribe_plan"`
+	UnitTime      string `json:"unit_time"`
+	Quantity      int64  `json:"quantity"`
+	CreatedAt     int64  `json:"created_at"`
+	UpdatedAt     int64  `json:"updated_at"`
+}
+
+type RedemptionRecord struct {
+	Id               int64  `json:"id"`
+	RedemptionCodeId int64  `json:"redemption_code_id"`
+	UserId           int64  `json:"user_id"`
+	SubscribeId      int64  `json:"subscribe_id"`
+	UnitTime         string `json:"unit_time"`
+	Quantity         int64  `json:"quantity"`
+	RedeemedAt       int64  `json:"redeemed_at"`
+	CreatedAt        int64  `json:"created_at"`
+}
+
 type RegisterConfig struct {
 	StopRegister            bool   `json:"stop_register"`
 	EnableTrial             bool   `json:"enable_trial"`
@@ -2414,6 +2486,14 @@ type UpdatePaymentMethodRequest struct {
 	FeePercent  int64       `json:"fee_percent,omitempty"`
 	FeeAmount   int64       `json:"fee_amount,omitempty"`
 	Enable      *bool       `json:"enable" validate:"required"`
+}
+
+type UpdateRedemptionCodeRequest struct {
+	Id            int64  `json:"id" validate:"required"`
+	TotalCount    int64  `json:"total_count,omitempty"`
+	SubscribePlan int64  `json:"subscribe_plan,omitempty"`
+	UnitTime      string `json:"unit_time,omitempty" validate:"omitempty,oneof=day month quarter half_year year"`
+	Quantity      int64  `json:"quantity,omitempty"`
 }
 
 type UpdateServerRequest struct {

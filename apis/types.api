@@ -448,6 +448,27 @@ type (
 		CreatedAt  int64   `json:"created_at"`
 		UpdatedAt  int64   `json:"updated_at"`
 	}
+	RedemptionCode {
+		Id            int64  `json:"id"`
+		Code          string `json:"code"`
+		TotalCount    int64  `json:"total_count"`
+		UsedCount     int64  `json:"used_count"`
+		SubscribePlan int64  `json:"subscribe_plan"`
+		UnitTime      string `json:"unit_time"`
+		Quantity      int64  `json:"quantity"`
+		CreatedAt     int64  `json:"created_at"`
+		UpdatedAt     int64  `json:"updated_at"`
+	}
+	RedemptionRecord {
+		Id               int64  `json:"id"`
+		RedemptionCodeId int64  `json:"redemption_code_id"`
+		UserId           int64  `json:"user_id"`
+		SubscribeId      int64  `json:"subscribe_id"`
+		UnitTime         string `json:"unit_time"`
+		Quantity         int64  `json:"quantity"`
+		RedeemedAt       int64  `json:"redeemed_at"`
+		CreatedAt        int64  `json:"created_at"`
+	}
 	Announcement {
 		Id        int64  `json:"id"`
 		Title     string `json:"title"`

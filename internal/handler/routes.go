@@ -16,6 +16,7 @@ import (
 	adminMarketing "github.com/perfect-panel/server/internal/handler/admin/marketing"
 	adminOrder "github.com/perfect-panel/server/internal/handler/admin/order"
 	adminPayment "github.com/perfect-panel/server/internal/handler/admin/payment"
+	adminRedemption "github.com/perfect-panel/server/internal/handler/admin/redemption"
 	adminServer "github.com/perfect-panel/server/internal/handler/admin/server"
 	adminSubscribe "github.com/perfect-panel/server/internal/handler/admin/subscribe"
 	adminSystem "github.com/perfect-panel/server/internal/handler/admin/system"
@@ -30,6 +31,7 @@ import (
 	publicOrder "github.com/perfect-panel/server/internal/handler/public/order"
 	publicPayment "github.com/perfect-panel/server/internal/handler/public/payment"
 	publicPortal "github.com/perfect-panel/server/internal/handler/public/portal"
+	publicRedemption "github.com/perfect-panel/server/internal/handler/public/redemption"
 	publicSubscribe "github.com/perfect-panel/server/internal/handler/public/subscribe"
 	publicTicket "github.com/perfect-panel/server/internal/handler/public/ticket"
 	publicUser "github.com/perfect-panel/server/internal/handler/public/user"
@@ -296,6 +298,29 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get supported payment platform
 		adminPaymentGroupRouter.GET("/platform", adminPayment.GetPaymentPlatformHandler(serverCtx))
+	}
+
+	adminRedemptionGroupRouter := router.Group("/v1/admin/redemption")
+	adminRedemptionGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Create redemption code
+		adminRedemptionGroupRouter.POST("/code", adminRedemption.CreateRedemptionCodeHandler(serverCtx))
+
+		// Update redemption code
+		adminRedemptionGroupRouter.PUT("/code", adminRedemption.UpdateRedemptionCodeHandler(serverCtx))
+
+		// Delete redemption code
+		adminRedemptionGroupRouter.DELETE("/code", adminRedemption.DeleteRedemptionCodeHandler(serverCtx))
+
+		// Batch delete redemption code
+		adminRedemptionGroupRouter.DELETE("/code/batch", adminRedemption.BatchDeleteRedemptionCodeHandler(serverCtx))
+
+		// Get redemption code list
+		adminRedemptionGroupRouter.GET("/code/list", adminRedemption.GetRedemptionCodeListHandler(serverCtx))
+
+		// Get redemption record list
+		adminRedemptionGroupRouter.GET("/record/list", adminRedemption.GetRedemptionRecordListHandler(serverCtx))
 	}
 
 	adminServerGroupRouter := router.Group("/v1/admin/server")
@@ -746,6 +771,14 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get Subscription
 		publicPortalGroupRouter.GET("/subscribe", publicPortal.GetSubscriptionHandler(serverCtx))
+	}
+
+	publicRedemptionGroupRouter := router.Group("/v1/public/redemption")
+	publicRedemptionGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
+
+	{
+		// Redeem code
+		publicRedemptionGroupRouter.POST("/", publicRedemption.RedeemCodeHandler(serverCtx))
 	}
 
 	publicSubscribeGroupRouter := router.Group("/v1/public/subscribe")
