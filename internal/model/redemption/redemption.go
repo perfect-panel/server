@@ -14,6 +14,7 @@ type RedemptionCode struct {
 	SubscribePlan int64          `gorm:"type:bigint;not null;default:0;comment:Subscribe Plan"`
 	UnitTime      string         `gorm:"type:varchar(50);not null;default:'month';comment:Unit Time: day, month, quarter, half_year, year"`
 	Quantity      int64          `gorm:"type:int;not null;default:1;comment:Quantity"`
+	Status        int64          `gorm:"type:tinyint;not null;default:1;comment:Status: 1=enabled, 0=disabled"`
 	CreatedAt     time.Time      `gorm:"<-:create;comment:Create Time"`
 	UpdatedAt     time.Time      `gorm:"comment:Update Time"`
 	DeletedAt     gorm.DeletedAt `gorm:"index;comment:Delete Time"`
