@@ -11,13 +11,6 @@ on:
         description: 'Version to build (leave empty for auto)'
         required: false
         type: string
-      create_release:
-        description: 'Create GitHub Release'
-        required: false
-        default: false
-        type: boolean
-  release:
-    types: [ published ]
 
 permissions:
   contents: write
@@ -27,109 +20,46 @@ jobs:
     name: Build Linux Binary
     runs-on: ubuntu-latest
 
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      binary_name: ${{ steps.build.outputs.binary_name }}
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.23.3'
           cache: true
 
-      - name: Get version information
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_type }}" = "tag" ]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-          elif [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION=$(git describe --tags --always --dirty)
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_ENV
-          echo "GIT_COMMIT=${GITHUB_SHA}" >> $GITHUB_ENV
-
-      - name: Build binary
-        id: build
+      - name: Build
         env:
           CGO_ENABLED: 0
           GOOS: linux
           GOARCH: amd64
         run: |
-          BINARY_NAME_WITH_VERSION="ppanel-server-${{ env.VERSION }}-linux-amd64"
-          echo "binary_name=$BINARY_NAME_WITH_VERSION" >> $GITHUB_OUTPUT
+          VERSION=${{ github.event.inputs.version }}
+          if [ -z "$VERSION" ]; then
+            VERSION=$(git describe --tags --always --dirty)
+          fi
 
-          go build \
-            -ldflags "-s -w \
-              -X 'github.com/perfect-panel/server/pkg/constant.Version=${{ env.VERSION }}' \
-              -X 'github.com/perfect-panel/server/pkg/constant.BuildTime=${{ env.BUILD_TIME }}' \
-              -X 'github.com/perfect-panel/server/pkg/constant.GitCommit=${{ env.GIT_COMMIT }}'" \
-            -o "$BINARY_NAME_WITH_VERSION" \
-            ./ppanel.go
+          echo "Building ppanel-server $VERSION"
+          go build -ldflags "-s -w -X main.Version=$VERSION" -o ppanel-server ./ppanel.go
+          tar -czf ppanel-server-${VERSION}-linux-amd64.tar.gz ppanel-server
+          sha256sum ppanel-server ppanel-server-${VERSION}-linux-amd64.tar.gz > checksum.txt
 
-      - name: Generate checksum
-        run: |
-          sha256sum "${{ steps.build.outputs.binary_name }}" > checksum.txt
-          echo "Checksum: $(cat checksum.txt)"
-
-      - name: Upload build artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ppanel-server-linux-amd64
           path: |
-            ${{ steps.build.outputs.binary_name }}
+            ppanel-server
+            ppanel-server-*-linux-amd64.tar.gz
             checksum.txt
-          retention-days: 30
 
-      - name: Create and Upload to GitHub Release
-        if: github.event_name == 'release' || github.event.inputs.create_release == 'true' || (github.event_name == 'push' && github.ref_type == 'tag')
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Create release if it doesn't exist
-          if [ "${{ github.event.inputs.create_release }}" = "true" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Creating release for ${{ env.VERSION }}"
-            gh release create ${{ env.VERSION }} \
-              --title "PPanel Server ${{ env.VERSION }}" \
-              --notes "Release ${{ env.VERSION }}" \
-              --latest
-          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "Creating release for tag ${{ env.VERSION }}"
-            gh release create ${{ env.VERSION }} \
-              --title "PPanel Server ${{ env.VERSION }}" \
-              --notes "Release ${{ env.VERSION }}" \
-              --latest
-          fi
-
-          echo "Uploading binaries to release ${{ env.VERSION }}"
-          gh release upload ${{ env.VERSION }} \
-            ${{ steps.build.outputs.binary_name }} \
-            checksum.txt
-
-      - name: Create summary
-        run: |
-          echo "## 📦 Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Binary:** ${{ steps.build.outputs.binary_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Size:** $(du -h ${{ steps.build.outputs.binary_name }} | cut -f1)" >> $GITHUB_STEP_SUMMARY
-          echo "**Checksum:** $(cat checksum.txt)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
-          echo "Go to Actions → Artifacts → \`ppanel-server-linux-amd64\` to download" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🚀 Usage" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download the binary" >> $GITHUB_STEP_SUMMARY
-          echo "2. Extract from tar.gz" >> $GITHUB_STEP_SUMMARY
-          echo "3. Run: chmod +x ppanel-server-* && ./ppanel-server-* run --config etc/ppanel.yaml" >> $GITHUB_STEP_SUMMARY
+          VERSION=${GITHUB_REF#refs/tags/}
+          gh release create $VERSION --title "PPanel Server $VERSION" || true
+          gh release upload $VERSION ppanel-server-${VERSION}-linux-amd64.tar.gz checksum.txt
