@@ -54,6 +54,14 @@ func (l *RedeemCodeLogic) RedeemCode(req *types.RedeemCodeRequest) (resp *types.
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find redemption code error: %v", err.Error())
 	}
 
+	// Check if redemption code is enabled
+	if redemptionCode.Status != 1 {
+		l.Errorw("[RedeemCode] Redemption code is disabled",
+			logger.Field("code", req.Code),
+			logger.Field("status", redemptionCode.Status))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "redemption code is disabled")
+	}
+
 	// Check if redemption code has remaining count
 	if redemptionCode.TotalCount > 0 && redemptionCode.UsedCount >= redemptionCode.TotalCount {
 		l.Errorw("[RedeemCode] Redemption code has been fully used",

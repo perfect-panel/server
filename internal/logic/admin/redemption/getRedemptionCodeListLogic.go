@@ -49,6 +49,7 @@ func (l *GetRedemptionCodeListLogic) GetRedemptionCodeList(req *types.GetRedempt
 			SubscribePlan: item.SubscribePlan,
 			UnitTime:      item.UnitTime,
 			Quantity:      item.Quantity,
+			Status:        item.Status,
 			CreatedAt:     item.CreatedAt.Unix(),
 			UpdatedAt:     item.UpdatedAt.Unix(),
 		})

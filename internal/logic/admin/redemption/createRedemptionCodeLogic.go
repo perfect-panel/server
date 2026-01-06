@@ -100,6 +100,7 @@ func (l *CreateRedemptionCodeLogic) CreateRedemptionCode(req *types.CreateRedemp
 			SubscribePlan: req.SubscribePlan,
 			UnitTime:      req.UnitTime,
 			Quantity:      req.Quantity,
+			Status:        1, // Default to enabled
 		}
 
 		err = l.svcCtx.RedemptionCodeModel.Insert(l.ctx, redemptionCode)

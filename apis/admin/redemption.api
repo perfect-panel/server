@@ -24,6 +24,11 @@ type (
 		SubscribePlan int64  `json:"subscribe_plan,omitempty"`
 		UnitTime      string `json:"unit_time,omitempty" validate:"omitempty,oneof=day month quarter half_year year"`
 		Quantity      int64  `json:"quantity,omitempty"`
+		Status        int64  `json:"status,omitempty" validate:"omitempty,oneof=0 1"`
+	}
+	ToggleRedemptionCodeStatusRequest {
+		Id     int64  `json:"id" validate:"required"`
+		Status int64  `json:"status" validate:"oneof=0 1"`
 	}
 	DeleteRedemptionCodeRequest {
 		Id int64 `json:"id" validate:"required"`
@@ -67,6 +72,10 @@ service ppanel {
 	@doc "Update redemption code"
 	@handler UpdateRedemptionCode
 	put /code (UpdateRedemptionCodeRequest)
+
+	@doc "Toggle redemption code status"
+	@handler ToggleRedemptionCodeStatus
+	put /code/status (ToggleRedemptionCodeStatusRequest)
 
 	@doc "Delete redemption code"
 	@handler DeleteRedemptionCode

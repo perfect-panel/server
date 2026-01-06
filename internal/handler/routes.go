@@ -319,6 +319,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get redemption code list
 		adminRedemptionGroupRouter.GET("/code/list", adminRedemption.GetRedemptionCodeListHandler(serverCtx))
 
+		// Toggle redemption code status
+		adminRedemptionGroupRouter.PUT("/code/status", adminRedemption.ToggleRedemptionCodeStatusHandler(serverCtx))
+
 		// Get redemption record list
 		adminRedemptionGroupRouter.GET("/record/list", adminRedemption.GetRedemptionRecordListHandler(serverCtx))
 	}
