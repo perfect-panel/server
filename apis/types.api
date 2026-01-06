@@ -32,6 +32,7 @@ type (
 		CreatedAt             int64            `json:"created_at"`
 		UpdatedAt             int64            `json:"updated_at"`
 		DeletedAt             int64            `json:"deleted_at,omitempty"`
+		IsDel                 bool             `json:"is_del,omitempty"`
 	}
 	Follow {
 		Id        int64  `json:"id"`
@@ -135,14 +136,12 @@ type (
 		EnableDomainSuffix bool   `json:"enable_domain_suffix"`
 		DomainSuffixList   string `json:"domain_suffix_list"`
 	}
-
-    DeviceAuthticateConfig {
-        Enable            bool   `json:"enable"`
-        ShowAds           bool   `json:"show_ads"`
-        EnableSecurity    bool   `json:"enable_security"`
-        OnlyRealDevice    bool   `json:"only_real_device"`
-    }
-
+	DeviceAuthticateConfig {
+		Enable         bool `json:"enable"`
+		ShowAds        bool `json:"show_ads"`
+		EnableSecurity bool `json:"enable_security"`
+		OnlyRealDevice bool `json:"only_real_device"`
+	}
 	RegisterConfig {
 		StopRegister            bool   `json:"stop_register"`
 		EnableTrial             bool   `json:"enable_trial"`
