@@ -84,6 +84,7 @@ func (adapter *Adapter) Client() (*Client, error) {
 		OutputFormat:   adapter.OutputFormat,
 		Proxies:        []Proxy{},
 		UserInfo:       adapter.UserInfo,
+		Params:         adapter.Params,
 	}
 
 	proxies, err := adapter.Proxies(adapter.Servers)
