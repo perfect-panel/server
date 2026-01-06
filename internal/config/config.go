@@ -73,6 +73,7 @@ type RegisterConfig struct {
 	IpRegisterLimit         int64  `yaml:"IpRegisterLimit" default:"0"`
 	IpRegisterLimitDuration int64  `yaml:"IpRegisterLimitDuration" default:"0"`
 	EnableIpRegisterLimit   bool   `yaml:"EnableIpRegisterLimit" default:"false"`
+	DeviceLimit             int64  `yaml:"DeviceLimit" default:"5"`
 }
 
 type EmailConfig struct {

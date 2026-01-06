@@ -66,6 +66,7 @@ type (
 	UnbindOAuthRequest {
 		Method string `json:"method"`
 	}
+
 	GetLoginLogRequest {
 		Page int `form:"page"`
 		Size int `form:"size"`
@@ -94,17 +95,21 @@ type (
 		Email string `json:"email" validate:"required"`
 		Code  string `json:"code" validate:"required"`
 	}
-	GetDeviceListResponse {
-		List  []UserDevice `json:"list"`
-		Total int64        `json:"total"`
-	}
-	UnbindDeviceRequest {
-		Id int64 `json:"id" validate:"required"`
-	}
+
+    GetDeviceListResponse {
+        List  []UserDevice `json:"list"`
+        Total int64        `json:"total"`
+    }
+
+    UnbindDeviceRequest {
+        Id int64 `json:"id" validate:"required"`
+    }
+
 	UpdateUserSubscribeNoteRequest {
 		UserSubscribeId int64  `json:"user_subscribe_id" validate:"required"`
 		Note            string `json:"note" validate:"max=500"`
 	}
+
 	UpdateUserRulesRequest {
 		Rules []string `json:"rules" validate:"required"`
 	}
@@ -130,6 +135,23 @@ type (
 		List  []WithdrawalLog `json:"list"`
 		Total int64           `json:"total"`
 	}
+
+
+    GetDeviceOnlineStatsResponse {
+        WeeklyStats []WeeklyStat `json:"weekly_stats"`
+        ConnectionRecords ConnectionRecords `json:"connection_records"`
+    }
+
+    WeeklyStat {
+        Day int `json:"day"`
+        DayName string `json:"day_name"`
+        Hours float64 `json:"hours"`
+    }
+    ConnectionRecords {
+        CurrentContinuousDays int64 `json:"current_continuous_days"`
+        HistoryContinuousDays int64 `json:"history_continuous_days"`
+        LongestSingleConnection int64 `json:"longest_single_connection"`
+    }
 )
 
 @server (
@@ -226,9 +248,9 @@ service ppanel {
 	@handler UpdateBindEmail
 	put /bind_email (UpdateBindEmailRequest)
 
-	@doc "Get Device List"
-	@handler GetDeviceList
-	get /devices returns (GetDeviceListResponse)
+    @doc "Get Device List"
+    @handler GetDeviceList
+    get /devices returns (GetDeviceListResponse)
 
 	@doc "Unbind Device"
 	@handler UnbindDevice
@@ -249,5 +271,14 @@ service ppanel {
 	@doc "Query Withdrawal Log"
 	@handler QueryWithdrawalLog
 	get /withdrawal_log (QueryWithdrawalLogListRequest) returns (QueryWithdrawalLogListResponse)
+
+    @doc "Device Online Statistics"
+    @handler DeviceOnlineStatistics
+    get /device_online_statistics returns (GetDeviceOnlineStatsResponse)
+
+    @doc "Delete Current User Account"
+    @handler DeleteCurrentUserAccount
+    delete /current_user_account
+
 }
 

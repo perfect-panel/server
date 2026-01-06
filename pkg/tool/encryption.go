@@ -46,12 +46,11 @@ func MultiPasswordVerify(algo, salt, password, hash string) bool {
 	case "md5salt":
 		sum := md5.Sum([]byte(password + salt))
 		return hex.EncodeToString(sum[:]) == hash
-	case "default": // PPanel's default algorithm
-		return VerifyPassWord(password, hash)
 	case "bcrypt":
 		// Bcrypt (corresponding to PHP's password_hash/password_verify)
 		err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 		return err == nil
+	default:
+		return VerifyPassWord(password, hash)
 	}
-	return false
 }

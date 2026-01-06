@@ -32,6 +32,7 @@ type (
 		CreatedAt             int64            `json:"created_at"`
 		UpdatedAt             int64            `json:"updated_at"`
 		DeletedAt             int64            `json:"deleted_at,omitempty"`
+		IsDel                 bool             `json:"is_del,omitempty"`
 	}
 	Follow {
 		Id        int64  `json:"id"`
@@ -150,6 +151,7 @@ type (
 		EnableIpRegisterLimit   bool   `json:"enable_ip_register_limit"`
 		IpRegisterLimit         int64  `json:"ip_register_limit"`
 		IpRegisterLimitDuration int64  `json:"ip_register_limit_duration"`
+		DeviceLimit             int64  `json:"device_limit"`
 	}
 	VerifyConfig {
 		TurnstileSiteKey          string `json:"turnstile_site_key"`
@@ -204,7 +206,7 @@ type (
 		CurrencySymbol string `json:"currency_symbol"`
 	}
 	SubscribeDiscount {
-		Quantity int64   `json:"quantity"`
+		Quantity int64 `json:"quantity"`
 		Discount float64 `json:"discount"`
 	}
 	Subscribe {
@@ -446,6 +448,28 @@ type (
 		CreatedAt  int64   `json:"created_at"`
 		UpdatedAt  int64   `json:"updated_at"`
 	}
+	RedemptionCode {
+		Id            int64  `json:"id"`
+		Code          string `json:"code"`
+		TotalCount    int64  `json:"total_count"`
+		UsedCount     int64  `json:"used_count"`
+		SubscribePlan int64  `json:"subscribe_plan"`
+		UnitTime      string `json:"unit_time"`
+		Quantity      int64  `json:"quantity"`
+		Status        int64  `json:"status"`
+		CreatedAt     int64  `json:"created_at"`
+		UpdatedAt     int64  `json:"updated_at"`
+	}
+	RedemptionRecord {
+		Id               int64  `json:"id"`
+		RedemptionCodeId int64  `json:"redemption_code_id"`
+		UserId           int64  `json:"user_id"`
+		SubscribeId      int64  `json:"subscribe_id"`
+		UnitTime         string `json:"unit_time"`
+		Quantity         int64  `json:"quantity"`
+		RedeemedAt       int64  `json:"redeemed_at"`
+		CreatedAt        int64  `json:"created_at"`
+	}
 	Announcement {
 		Id        int64  `json:"id"`
 		Title     string `json:"title"`
@@ -656,7 +680,7 @@ type (
 	// public announcement
 	QueryAnnouncementRequest {
 		Page   int   `form:"page"`
-		Size   int   `form:"size"`
+		Size   int   `form:"size,default=15"`
 		Pinned *bool `form:"pinned"`
 		Popup  *bool `form:"popup"`
 	}
@@ -673,6 +697,7 @@ type (
 		List  []SubscribeGroup `json:"list"`
 		Total int64            `json:"total"`
 	}
+
 	GetUserSubscribeTrafficLogsRequest {
 		Page        int   `form:"page"`
 		Size        int   `form:"size"`

@@ -39,7 +39,7 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 	data.Country = req.Country
 	data.City = req.City
 	// only update address when it's  different
-	if req.Address != data.Address {
+	if req.Address != data.Address || (data.Country == "" || req.Country == "") {
 		// query server ip location
 		result, err := ip.GetRegionByIp(req.Address)
 		if err != nil {
@@ -47,6 +47,10 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 		} else {
 			data.City = result.City
 			data.Country = result.Country
+			data.Latitude = result.Latitude
+			data.Longitude = result.Longitude
+			data.LatitudeCenter = result.LatitudeCenter
+			data.LongitudeCenter = result.LongitudeCenter
 		}
 		// update address
 		data.Address = req.Address

@@ -1,0 +1,130 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - "386"
+      - amd64
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: "386"
+    binary: ppanel-server
+    ldflags:
+      - -s -w
+      - -X "github.com/perfect-panel/server/pkg/constant.Version={{.Version}}"
+      - -X "github.com/perfect-panel/server/pkg/constant.BuildTime={{.Date}}"
+      - -X "github.com/perfect-panel/server/pkg/constant.GitCommit={{.Commit}}"
+    main: ./ppanel.go
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- .Version }}-
+      {{- title .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - LICENSE
+      - etc/*
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Others
+      order: 999
+
+dockers:
+  - image_templates:
+      - "{{ .Env.DOCKER_USERNAME }}/ppanel-server:{{ .Tag }}"
+      - "{{ .Env.DOCKER_USERNAME }}/ppanel-server:v{{ .Major }}"
+      - "{{ .Env.DOCKER_USERNAME }}/ppanel-server:v{{ .Major }}.{{ .Minor }}"
+      - "{{ .Env.DOCKER_USERNAME }}/ppanel-server:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
+    use: docker
+    extra_files:
+      - etc/
+
+  - image_templates:
+      - "{{ .Env.DOCKER_USERNAME }}/ppanel-server:{{ .Tag }}-arm64"
+      - "{{ .Env.DOCKER_USERNAME }}/ppanel-server:v{{ .Major }}.{{ .Minor }}-arm64"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm64"
+    use: docker
+    goarch: arm64
+    extra_files:
+      - etc/
+
+docker_signs:
+  - cmd: cosign
+    args:
+      - "sign"
+      - "${artifact}@${digest}"
+    env:
+      - COSIGN_EXPERIMENTAL=1
+
+release:
+  github:
+    owner: perfect-panel
+    name: server
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  header: |
+    ## ppanel-server {{.Version}}
+
+    Welcome to this new release!
+  footer: |
+    Docker images are available at:
+    - `{{ .Env.DOCKER_USERNAME }}/ppanel-server:{{ .Tag }}`
+    - `{{ .Env.DOCKER_USERNAME }}/ppanel-server:latest`
+
+    For more information, visit our documentation.

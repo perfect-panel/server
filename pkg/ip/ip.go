@@ -55,12 +55,30 @@ var (
 
 // GetRegionByIp queries the geolocation of an IP address using supported services.
 func GetRegionByIp(ip string) (*GeoLocationResponse, error) {
+	// 如果是域名，先解析成 IP
+	if net.ParseIP(ip) == nil {
+		ips, err := GetIP(ip)
+		if err != nil || len(ips) == 0 {
+			return nil, errors.Wrap(err, "无法解析域名为IP")
+		}
+		ip = ips[0] // 取第一个解析到的IP
+	}
+
 	for service, enabled := range queryUrls {
 		if enabled {
 			response, err := fetchGeolocation(service, ip)
 			if err != nil {
 				zap.S().Errorf("Failed to fetch geolocation from %s: %v", service, err)
 				continue
+			}
+			if response.Country == "" {
+				continue
+			}
+			response.LatitudeCenter, response.LongitudeCenter, _ = GetCapitalCoordinates(fmt.Sprintf("%s,%s", response.Country, response.City))
+			if response.LatitudeCenter == "" || response.LongitudeCenter == "" {
+				response.LatitudeCenter = response.Latitude
+				response.LongitudeCenter = response.Longitude
+
 			}
 			return response, nil
 		}
@@ -169,11 +187,13 @@ func decompressResponse(resp *http.Response) ([]byte, error) {
 
 // GeoLocationResponse represents the geolocation data returned by the API.
 type GeoLocationResponse struct {
-	Country     string `json:"country"`
-	CountryName string `json:"country_name"`
-	Region      string `json:"region"`
-	City        string `json:"city"`
-	Latitude    string `json:"latitude"`
-	Longitude   string `json:"longitude"`
-	Loc         string `json:"loc"`
+	Country         string `json:"country"`
+	CountryName     string `json:"country_name"`
+	Region          string `json:"region"`
+	City            string `json:"city"`
+	Latitude        string `json:"latitude"`
+	Longitude       string `json:"longitude"`
+	LatitudeCenter  string `json:"latitude_center"`
+	LongitudeCenter string `json:"longitude_center"`
+	Loc             string `json:"loc"`
 }
