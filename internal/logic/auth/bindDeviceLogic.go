@@ -89,6 +89,36 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 		logger.Field("user_id", userId),
 	)
 
+	// Check device limit
+	deviceLimit := l.svcCtx.Config.Register.DeviceLimit
+	if deviceLimit > 0 {
+		// Count current user's devices
+		var deviceCount int64
+		if err := l.svcCtx.DB.Model(&user.Device{}).Where("user_id = ?", userId).Count(&deviceCount).Error; err != nil {
+			l.Errorw("failed to count user devices",
+				logger.Field("user_id", userId),
+				logger.Field("error", err.Error()),
+			)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count devices failed: %v", err.Error())
+		}
+
+		// Check if limit reached
+		if deviceCount >= deviceLimit {
+			l.Errorw("device limit reached",
+				logger.Field("user_id", userId),
+				logger.Field("device_count", deviceCount),
+				logger.Field("device_limit", deviceLimit),
+			)
+			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "device limit reached: maximum %d devices allowed", deviceLimit)
+		}
+
+		l.Infow("device limit check passed",
+			logger.Field("user_id", userId),
+			logger.Field("device_count", deviceCount),
+			logger.Field("device_limit", deviceLimit),
+		)
+	}
+
 	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Create device auth method
 		authMethod := &user.AuthMethods{
@@ -147,6 +177,37 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 
 func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, userAgent string, newUserId int64) error {
 	oldUserId := deviceInfo.UserId
+
+	// Check device limit for new user
+	deviceLimit := l.svcCtx.Config.Register.DeviceLimit
+	if deviceLimit > 0 {
+		// Count new user's current devices (excluding the one being rebound)
+		var deviceCount int64
+		if err := l.svcCtx.DB.Model(&user.Device{}).Where("user_id = ? AND id != ?", newUserId, deviceInfo.Id).Count(&deviceCount).Error; err != nil {
+			l.Errorw("failed to count new user devices",
+				logger.Field("user_id", newUserId),
+				logger.Field("error", err.Error()),
+			)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count devices failed: %v", err.Error())
+		}
+
+		// Check if limit reached
+		if deviceCount >= deviceLimit {
+			l.Errorw("device limit reached for new user",
+				logger.Field("user_id", newUserId),
+				logger.Field("device_count", deviceCount),
+				logger.Field("device_limit", deviceLimit),
+			)
+			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "device limit reached: maximum %d devices allowed", deviceLimit)
+		}
+
+		l.Infow("device limit check passed for rebinding",
+			logger.Field("user_id", newUserId),
+			logger.Field("device_count", deviceCount),
+			logger.Field("device_limit", deviceLimit),
+		)
+	}
+
 	var users []*user.User
 	err := l.svcCtx.DB.Where("id in (?)", []int64{oldUserId, newUserId}).Find(&users).Error
 	if err != nil {

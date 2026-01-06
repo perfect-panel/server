@@ -1836,6 +1836,7 @@ type RedemptionCode struct {
 	SubscribePlan int64  `json:"subscribe_plan"`
 	UnitTime      string `json:"unit_time"`
 	Quantity      int64  `json:"quantity"`
+	Status        int64  `json:"status"`
 	CreatedAt     int64  `json:"created_at"`
 	UpdatedAt     int64  `json:"updated_at"`
 }
@@ -1860,6 +1861,7 @@ type RegisterConfig struct {
 	EnableIpRegisterLimit   bool   `json:"enable_ip_register_limit"`
 	IpRegisterLimit         int64  `json:"ip_register_limit"`
 	IpRegisterLimitDuration int64  `json:"ip_register_limit_duration"`
+	DeviceLimit             int64  `json:"device_limit"`
 }
 
 type RegisterLog struct {
@@ -2318,6 +2320,11 @@ type ToggleNodeStatusRequest struct {
 	Enable *bool `json:"enable"`
 }
 
+type ToggleRedemptionCodeStatusRequest struct {
+	Id     int64 `json:"id" validate:"required"`
+	Status int64 `json:"status" validate:"oneof=0 1"`
+}
+
 type ToggleUserSubscribeStatusRequest struct {
 	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
@@ -2494,6 +2501,7 @@ type UpdateRedemptionCodeRequest struct {
 	SubscribePlan int64  `json:"subscribe_plan,omitempty"`
 	UnitTime      string `json:"unit_time,omitempty" validate:"omitempty,oneof=day month quarter half_year year"`
 	Quantity      int64  `json:"quantity,omitempty"`
+	Status        int64  `json:"status,omitempty" validate:"omitempty,oneof=0 1"`
 }
 
 type UpdateServerRequest struct {
