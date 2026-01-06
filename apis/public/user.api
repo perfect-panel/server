@@ -281,4 +281,14 @@ service ppanel {
     delete /current_user_account
 
 }
+@server(
+    prefix:     v1/public/user
+    group:      public/user/ws
+    middleware: AuthMiddleware
+)
 
+service ppanel {
+    @doc "Webosocket Device Connect"
+    @handler DeviceWsConnect
+    get /device_ws_connect
+}

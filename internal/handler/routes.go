@@ -35,6 +35,7 @@ import (
 	publicSubscribe "github.com/perfect-panel/server/internal/handler/public/subscribe"
 	publicTicket "github.com/perfect-panel/server/internal/handler/public/ticket"
 	publicUser "github.com/perfect-panel/server/internal/handler/public/user"
+	publicUserWs "github.com/perfect-panel/server/internal/handler/public/user/ws"
 	server "github.com/perfect-panel/server/internal/handler/server"
 	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
@@ -908,6 +909,14 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Query Withdrawal Log
 		publicUserGroupRouter.GET("/withdrawal_log", publicUser.QueryWithdrawalLogHandler(serverCtx))
+	}
+
+	publicUserWsGroupRouter := router.Group("/v1/public/user")
+	publicUserWsGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Webosocket Device Connect
+		publicUserWsGroupRouter.GET("/device_ws_connect", publicUserWs.DeviceWsConnectHandler(serverCtx))
 	}
 
 	serverGroupRouter := router.Group("/v1/server")
