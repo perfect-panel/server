@@ -42,7 +42,9 @@ jobs:
           fi
 
           echo "Building ppanel-server $VERSION"
-          go build -ldflags "-s -w -X main.Version=$VERSION" -o ppanel-server ./ppanel.go
+          BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S")
+          LDFLAGS="-w -s -X github.com/perfect-panel/server/pkg/constant.Version=$VERSION -X github.com/perfect-panel/server/pkg/constant.BuildTime=${BUILD_TIME}"
+          go build -ldflags "${LDFLAGS}" -o ppanel-server ./ppanel.go
           tar -czf ppanel-server-${VERSION}-linux-amd64.tar.gz ppanel-server
           sha256sum ppanel-server ppanel-server-${VERSION}-linux-amd64.tar.gz > checksum.txt
 
