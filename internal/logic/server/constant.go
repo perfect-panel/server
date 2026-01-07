@@ -24,6 +24,7 @@ type SecurityConfig struct {
 	RealityPublicKey     string `json:"reality_public_key"`
 	RealityShortId       string `json:"reality_short_id"`
 	RealityMldsa65seed   string `json:"reality_mldsa65seed"`
+	PaddingScheme        string `json:"padding_scheme"`
 }
 
 type TransportConfig struct {

@@ -199,6 +199,7 @@ func (l *GetServerConfigLogic) compatible(config node.Protocol) map[string]inter
 				RealityPrivateKey:    config.RealityPrivateKey,
 				RealityPublicKey:     config.RealityPublicKey,
 				RealityShortId:       config.RealityShortId,
+				PaddingScheme:        config.PaddingScheme,
 			},
 		}
 	case Tuic:
