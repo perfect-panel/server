@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/system"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -54,6 +55,7 @@ func (l *UpdateCurrencyConfigLogic) UpdateCurrencyConfig(req *types.CurrencyConf
 		// clear cache
 		return l.svcCtx.Redis.Del(l.ctx, config.CurrencyConfigKey, config.GlobalConfigKey).Err()
 	})
+	initialize.Currency(l.svcCtx)
 	if err != nil {
 		l.Errorw("[UpdateCurrencyConfig] update currency config error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update invite config error: %v", err)

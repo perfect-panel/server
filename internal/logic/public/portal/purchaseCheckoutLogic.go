@@ -51,6 +51,7 @@ func NewPurchaseCheckoutLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 // PurchaseCheckout processes the checkout for an order using the specified payment method
 // It validates the order, retrieves payment configuration, and routes to the appropriate payment handler
 func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest) (resp *types.CheckoutOrderResponse, err error) {
+
 	// Validate and retrieve order information
 	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, req.OrderNo)
 	if err != nil {
@@ -76,6 +77,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 		// Process EPay payment - generates payment URL for redirect
 		url, err := l.epayPayment(paymentConfig, orderInfo, req.ReturnUrl)
 		if err != nil {
+			l.Logger.Error("[PurchaseCheckout] epay error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "epayPayment error: %v", err.Error())
 		}
 		resp = &types.CheckoutOrderResponse{
@@ -274,6 +276,7 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 		// Convert order amount to CNY using current exchange rate
 		amount, err = l.queryExchangeRate("CNY", info.Amount)
 		if err != nil {
+			l.Logger.Error("[PurchaseCheckout] queryExchangeRate error", logger.Field("error", err.Error()))
 			return "", err
 		}
 	} else {
@@ -381,6 +384,11 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 	// Convert cents to decimal amount
 	amount = float64(src) / float64(100)
 
+	// No conversion needed if target currency matches system currency
+	if to == l.svcCtx.Config.Currency.Unit {
+		return amount, nil
+	}
+
 	if l.svcCtx.ExchangeRate != 0 && to == "CNY" {
 		amount = amount * l.svcCtx.ExchangeRate
 		return amount, nil
@@ -394,6 +402,7 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 	// Convert currency if system currency differs from target currency
 	result, err := exchangeRate.GetExchangeRete(l.svcCtx.Config.Currency.Unit, to, l.svcCtx.Config.Currency.AccessKey, 1)
 	if err != nil {
+		l.Logger.Error("[PurchaseCheckout] QueryExchangeRate error", logger.Field("error", err.Error()))
 		return 0, err
 	}
 	l.svcCtx.ExchangeRate = result

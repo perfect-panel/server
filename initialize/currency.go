@@ -24,7 +24,7 @@ func Currency(ctx *svc.ServiceContext) {
 		AccessKey      string
 	}{}
 	tool.SystemConfigSliceReflectToStruct(currency, &configs)
-
+	ctx.ExchangeRate = 0 // Default exchange rate to 0
 	ctx.Config.Currency = config.Currency{
 		Unit:      configs.CurrencyUnit,
 		Symbol:    configs.CurrencySymbol,
