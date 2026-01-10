@@ -160,6 +160,24 @@ func (l *RedeemCodeLogic) RedeemCode(req *types.RedeemCodeRequest) (resp *types.
 				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update subscribe error: %v", err.Error())
 			}
 		} else {
+			// Check quota limit before creating new subscribe
+			if subscribePlan.Quota > 0 {
+				var count int64
+				if err := tx.Model(&user.Subscribe{}).Where("user_id = ? AND subscribe_id = ?", u.Id, redemptionCode.SubscribePlan).Count(&count).Error; err != nil {
+					l.Errorw("[RedeemCode] Count user subscribe failed", logger.Field("error", err.Error()))
+					return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count user subscribe error: %v", err.Error())
+				}
+				if count >= subscribePlan.Quota {
+					l.Infow("[RedeemCode] Subscribe quota limit exceeded",
+						logger.Field("user_id", u.Id),
+						logger.Field("subscribe_id", redemptionCode.SubscribePlan),
+						logger.Field("quota", subscribePlan.Quota),
+						logger.Field("current_count", count),
+					)
+					return errors.Wrapf(xerr.NewErrCode(xerr.SubscribeQuotaLimit), "subscribe quota limit exceeded")
+				}
+			}
+
 			// Create new subscribe
 			expireTime, traffic, err := calculateSubscribeTimeAndTraffic(redemptionCode.UnitTime, redemptionCode.Quantity, subscribePlan.Traffic)
 			if err != nil {

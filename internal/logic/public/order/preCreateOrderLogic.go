@@ -55,6 +55,25 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
+
+	// check subscribe plan quota limit
+	if sub.Quota > 0 {
+		userSub, err := l.svcCtx.UserModel.QueryUserSubscribe(l.ctx, u.Id)
+		if err != nil {
+			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user subscription error: %v", err.Error())
+		}
+		var count int64
+		for _, v := range userSub {
+			if v.SubscribeId == req.SubscribeId {
+				count++
+			}
+		}
+		if count >= sub.Quota {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeQuotaLimit), "quota limit")
+		}
+	}
+
 	var discount float64 = 1
 	if sub.Discount != "" {
 		var dis []types.SubscribeDiscount

@@ -342,6 +342,24 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 		Status:      1,
 	}
 
+	// Check quota limit before creating subscription (final safeguard)
+	if sub.Quota > 0 {
+		var count int64
+		if err := l.svc.DB.Model(&user.Subscribe{}).Where("user_id = ? AND subscribe_id = ?", orderInfo.UserId, orderInfo.SubscribeId).Count(&count).Error; err != nil {
+			logger.WithContext(ctx).Error("Count user subscribe failed", logger.Field("error", err.Error()))
+			return nil, err
+		}
+		if count >= sub.Quota {
+			logger.WithContext(ctx).Infow("Subscribe quota limit exceeded",
+				logger.Field("user_id", orderInfo.UserId),
+				logger.Field("subscribe_id", orderInfo.SubscribeId),
+				logger.Field("quota", sub.Quota),
+				logger.Field("current_count", count),
+			)
+			return nil, fmt.Errorf("subscribe quota limit exceeded")
+		}
+	}
+
 	if err := l.svc.UserModel.InsertSubscribe(ctx, userSub); err != nil {
 		logger.WithContext(ctx).Error("Insert user subscribe failed", logger.Field("error", err.Error()))
 		return nil, err

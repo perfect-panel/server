@@ -87,19 +87,6 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeOutOfStock), "subscribe out of stock")
 	}
 
-	// check subscribe plan limit
-	if sub.Quota > 0 {
-		var count int64
-		for _, v := range userSub {
-			if v.SubscribeId == req.SubscribeId {
-				count += 1
-			}
-		}
-		if count >= sub.Quota {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeQuotaLimit), "quota limit")
-		}
-	}
-
 	var discount float64 = 1
 	if sub.Discount != "" {
 		var dis []types.SubscribeDiscount
@@ -195,6 +182,24 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	}
 	// Database transaction
 	err = l.svcCtx.DB.Transaction(func(db *gorm.DB) error {
+		// check subscribe plan quota limit inside transaction to prevent race condition
+		if sub.Quota > 0 {
+			var currentUserSub []user.Subscribe
+			if e := db.Model(&user.Subscribe{}).Where("user_id = ?", u.Id).Find(&currentUserSub).Error; e != nil {
+				l.Errorw("[Purchase] Database query error", logger.Field("error", e.Error()), logger.Field("user_id", u.Id))
+				return e
+			}
+			var count int64
+			for _, v := range currentUserSub {
+				if v.SubscribeId == req.SubscribeId {
+					count++
+				}
+			}
+			if count >= sub.Quota {
+				return errors.Wrapf(xerr.NewErrCode(xerr.SubscribeQuotaLimit), "quota limit")
+			}
+		}
+
 		// update user deduction && Pre deduction ,Return after canceling the order
 		if orderInfo.GiftAmount > 0 {
 			// update user deduction && Pre deduction ,Return after canceling the order
