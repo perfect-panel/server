@@ -558,6 +558,7 @@ type DeviceLoginRequest struct {
 	IP         string `header:"X-Original-Forwarded-For"`
 	UserAgent  string `json:"user_agent" validate:"required"`
 	CfToken    string `json:"cf_token,optional"`
+	ShortCode  string `json:"short_code,optional"`
 }
 
 type Document struct {

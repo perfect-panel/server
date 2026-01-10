@@ -197,6 +197,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 			UserId:     userInfo.Id,
 			UserAgent:  req.UserAgent,
 			Identifier: req.Identifier,
+			ShortCode:  req.ShortCode,
 			Enabled:    true,
 			Online:     false,
 		}
