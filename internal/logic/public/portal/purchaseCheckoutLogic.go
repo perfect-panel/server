@@ -366,6 +366,7 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 		}
 		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
 	}
+
 	// Create payment URL for user redirection
 	url := client.CreatePayUrl(epay.Order{
 		Name:      l.svcCtx.Config.Site.SiteName,

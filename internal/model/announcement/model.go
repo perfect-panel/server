@@ -27,6 +27,9 @@ type Filter struct {
 
 // GetAnnouncementListByPage  get announcement list by page
 func (m *customAnnouncementModel) GetAnnouncementListByPage(ctx context.Context, page, size int, filter Filter) (int64, []*Announcement, error) {
+	if size == 0 {
+		size = 10
+	}
 	var list []*Announcement
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {

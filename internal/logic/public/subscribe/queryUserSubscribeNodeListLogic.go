@@ -38,7 +38,7 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *ty
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
-	userSubscribes, err := l.svcCtx.UserModel.QueryUserSubscribe(l.ctx, u.Id, 1, 2)
+	userSubscribes, err := l.svcCtx.UserModel.QueryUserSubscribe(l.ctx, u.Id, 0, 1, 2, 3)
 	if err != nil {
 		logger.Errorw("failed to query user subscribe", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "DB_ERROR")
@@ -79,7 +79,6 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *ty
 		if l.svcCtx.Config.Register.EnableTrial && l.svcCtx.Config.Register.TrialSubscribe == userSubscribe.SubscribeId {
 			userSubscribeInfo.IsTryOut = true
 		}
-
 		resp.List = append(resp.List, userSubscribeInfo)
 	}
 
@@ -137,16 +136,21 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 				continue
 			}
 			userSubscribeNode := &types.UserSubscribeNodeInfo{
-				Id:        n.Id,
-				Name:      n.Name,
-				Uuid:      userSub.UUID,
-				Protocol:  n.Protocol,
-				Port:      n.Port,
-				Address:   n.Address,
-				Tags:      strings.Split(n.Tags, ","),
-				Country:   server.Country,
-				City:      server.City,
-				CreatedAt: n.CreatedAt.Unix(),
+				Id:              n.Id,
+				Name:            n.Name,
+				Uuid:            userSub.UUID,
+				Protocol:        n.Protocol,
+				Protocols:       server.Protocols,
+				Port:            n.Port,
+				Address:         n.Address,
+				Tags:            strings.Split(n.Tags, ","),
+				Country:         server.Country,
+				City:            server.City,
+				Latitude:        server.Latitude,
+				Longitude:       server.Longitude,
+				LongitudeCenter: server.LongitudeCenter,
+				LatitudeCenter:  server.LatitudeCenter,
+				CreatedAt:       n.CreatedAt.Unix(),
 			}
 			userSubscribeNodes = append(userSubscribeNodes, userSubscribeNode)
 		}

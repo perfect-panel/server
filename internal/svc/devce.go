@@ -51,7 +51,7 @@ func NewDeviceManager(srv *ServiceContext) *device.DeviceManager {
 
 		//获取设备昨日在线记录
 		var onlineRecord user.DeviceOnlineRecord
-		if err := srv.DB.Model(&onlineRecord).Where("user_id = ? and create_at >= ? and  create_at < ?", userID, startTime, endTime).First(&onlineRecord).Error; err != nil {
+		if err := srv.DB.Model(&onlineRecord).Where("user_id = ? and created_at >= ? and  created_at < ?", userID, startTime, endTime).First(&onlineRecord).Error; err != nil {
 			//昨日未在线，连续在线天数为1
 			deviceOnlineRecord.DurationDays = 1
 		} else {

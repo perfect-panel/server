@@ -2,14 +2,12 @@ package system
 
 import (
 	"context"
-	"os"
+	"strings"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
-	"github.com/pkg/errors"
 )
 
 type GetModuleConfigLogic struct {
@@ -28,14 +26,14 @@ func NewGetModuleConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 }
 
 func (l *GetModuleConfigLogic) GetModuleConfig() (resp *types.ModuleConfig, err error) {
-	value, exists := os.LookupEnv("SECRET_KEY")
-	if !exists {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), " SECRET_KEY not set in environment variables")
-	}
+	//value, exists := os.LookupEnv("SECRET_KEY")
+	//if !exists {
+	//	return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), " SECRET_KEY not set in environment variables")
+	//}
 
 	return &types.ModuleConfig{
-		Secret:         value,
+		//Secret:         value,
 		ServiceName:    constant.ServiceName,
-		ServiceVersion: constant.Version,
+		ServiceVersion: strings.ReplaceAll(constant.Version, "v", ""),
 	}, nil
 }

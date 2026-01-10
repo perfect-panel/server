@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -43,19 +44,32 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
 	}
 
-	if l.svcCtx.Config.Mobile.Enable {
+	if !l.svcCtx.Config.Mobile.Enable {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SmsNotEnabled), "sms login is not enabled")
 	}
 
 	// if the email verification is enabled, the verification code is required
-	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, constant.Security, phoneNumber)
+	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, constant.ParseVerifyType(uint8(constant.Security)), phoneNumber)
+	l.Logger.Infof("TelephoneResetPassword cacheKey: %s, code: %s", cacheKey, code)
 	value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 	if err != nil {
 		l.Errorw("Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
+	l.Logger.Infof("TelephoneResetPassword cacheKey: %s, code: %s,value : %s", cacheKey, code, value)
+	if value == "" {
+		l.Errorf("TelephoneResetPassword value empty: %s", value)
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
+	}
 
-	if value != code {
+	var payload CacheKeyPayload
+	if err := json.Unmarshal([]byte(value), &payload); err != nil {
+		l.Errorf("TelephoneResetPassword Unmarshal Error: %s", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
+	}
+
+	if payload.Code != code {
+		l.Errorf("TelephoneResetPassword code: %s, code: %s", code, payload.Code)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
 
@@ -96,8 +110,8 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 			// Don't fail register if device binding fails, just log the error
 		}
 	}
-	if l.ctx.Value(constant.LoginType) != nil {
-		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	if l.ctx.Value(constant.CtxLoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.CtxLoginType).(string)
 	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
@@ -108,7 +122,8 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("LoginType", req.LoginType),
+		jwt.WithOption("identifier", req.Identifier),
+		jwt.WithOption("CtxLoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Errorw("[UserLogin] token generate error", logger.Field("error", err.Error()))

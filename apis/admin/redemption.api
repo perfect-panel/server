@@ -1,0 +1,95 @@
+syntax = "v1"
+
+info (
+	title:   "redemption API"
+	desc:    "API for redemption code management"
+	author:  "Tension"
+	email:   "tension@ppanel.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	CreateRedemptionCodeRequest {
+		TotalCount    int64  `json:"total_count" validate:"required"`
+		SubscribePlan int64  `json:"subscribe_plan" validate:"required"`
+		UnitTime      string `json:"unit_time" validate:"required,oneof=day month quarter half_year year"`
+		Quantity      int64  `json:"quantity" validate:"required"`
+		BatchCount    int64  `json:"batch_count" validate:"required,min=1"`
+	}
+	UpdateRedemptionCodeRequest {
+		Id            int64  `json:"id" validate:"required"`
+		TotalCount    int64  `json:"total_count,omitempty"`
+		SubscribePlan int64  `json:"subscribe_plan,omitempty"`
+		UnitTime      string `json:"unit_time,omitempty" validate:"omitempty,oneof=day month quarter half_year year"`
+		Quantity      int64  `json:"quantity,omitempty"`
+		Status        int64  `json:"status,omitempty" validate:"omitempty,oneof=0 1"`
+	}
+	ToggleRedemptionCodeStatusRequest {
+		Id     int64  `json:"id" validate:"required"`
+		Status int64  `json:"status" validate:"oneof=0 1"`
+	}
+	DeleteRedemptionCodeRequest {
+		Id int64 `json:"id" validate:"required"`
+	}
+	BatchDeleteRedemptionCodeRequest {
+		Ids []int64 `json:"ids" validate:"required"`
+	}
+	GetRedemptionCodeListRequest {
+		Page          int64  `form:"page" validate:"required"`
+		Size          int64  `form:"size" validate:"required"`
+		SubscribePlan int64  `form:"subscribe_plan,omitempty"`
+		UnitTime      string `form:"unit_time,omitempty"`
+		Code          string `form:"code,omitempty"`
+	}
+	GetRedemptionCodeListResponse {
+		Total int64            `json:"total"`
+		List  []RedemptionCode `json:"list"`
+	}
+	GetRedemptionRecordListRequest {
+		Page   int64 `form:"page" validate:"required"`
+		Size   int64 `form:"size" validate:"required"`
+		UserId int64 `form:"user_id,omitempty"`
+		CodeId int64 `form:"code_id,omitempty"`
+	}
+	GetRedemptionRecordListResponse {
+		Total int64              `json:"total"`
+		List  []RedemptionRecord `json:"list"`
+	}
+)
+
+@server (
+	prefix:     v1/admin/redemption
+	group:      admin/redemption
+	middleware: AuthMiddleware
+)
+service ppanel {
+	@doc "Create redemption code"
+	@handler CreateRedemptionCode
+	post /code (CreateRedemptionCodeRequest)
+
+	@doc "Update redemption code"
+	@handler UpdateRedemptionCode
+	put /code (UpdateRedemptionCodeRequest)
+
+	@doc "Toggle redemption code status"
+	@handler ToggleRedemptionCodeStatus
+	put /code/status (ToggleRedemptionCodeStatusRequest)
+
+	@doc "Delete redemption code"
+	@handler DeleteRedemptionCode
+	delete /code (DeleteRedemptionCodeRequest)
+
+	@doc "Batch delete redemption code"
+	@handler BatchDeleteRedemptionCode
+	delete /code/batch (BatchDeleteRedemptionCodeRequest)
+
+	@doc "Get redemption code list"
+	@handler GetRedemptionCodeList
+	get /code/list (GetRedemptionCodeListRequest) returns (GetRedemptionCodeListResponse)
+
+	@doc "Get redemption record list"
+	@handler GetRedemptionRecordList
+	get /record/list (GetRedemptionRecordListRequest) returns (GetRedemptionRecordListResponse)
+}

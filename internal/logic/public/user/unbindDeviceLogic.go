@@ -64,9 +64,23 @@ func (l *UnbindDeviceLogic) UnbindDevice(req *types.UnbindDeviceRequest) error {
 		if err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete device online record err: %v", err)
 		}
-		sessionId := l.ctx.Value(constant.CtxKeySessionID)
-		sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
-		l.svcCtx.Redis.Del(l.ctx, sessionIdCacheKey)
+		var count int64
+		err = tx.Model(user.AuthMethods{}).Where("user_id = ?", deleteDevice.UserId).Count(&count).Error
+		if err != nil {
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count user auth methods err: %v", err)
+		}
+
+		if count < 1 {
+			_ = tx.Where("id = ?", deleteDevice.UserId).Delete(&user.User{}).Error
+		}
+
+		//remove device cache
+		deviceCacheKey := fmt.Sprintf("%v:%v", config.DeviceCacheKeyKey, deleteDevice.Identifier)
+		if sessionId, err := l.svcCtx.Redis.Get(l.ctx, deviceCacheKey).Result(); err == nil && sessionId != "" {
+			_ = l.svcCtx.Redis.Del(l.ctx, deviceCacheKey).Err()
+			sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
+			_ = l.svcCtx.Redis.Del(l.ctx, sessionIdCacheKey).Err()
+		}
 		return nil
 	})
 }
