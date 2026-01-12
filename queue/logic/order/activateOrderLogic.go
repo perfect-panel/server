@@ -68,17 +68,22 @@ func NewActivateOrderLogic(svc *svc.ServiceContext) *ActivateOrderLogic {
 func (l *ActivateOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task) error {
 	payload, err := l.parsePayload(ctx, task.Payload())
 	if err != nil {
-		return nil // Log and continue
+		return err // Return error to trigger retry
 	}
 
 	orderInfo, err := l.validateAndGetOrder(ctx, payload.OrderNo)
 	if err != nil {
-		return nil // Log and continue
+		return err // Return error to trigger retry
+	}
+
+	// Idempotency: if order is already finished, skip processing
+	if orderInfo == nil {
+		return nil
 	}
 
 	if err = l.processOrderByType(ctx, orderInfo); err != nil {
 		logger.WithContext(ctx).Error("[ActivateOrderLogic] Process task failed", logger.Field("error", err.Error()))
-		return nil
+		return err // Return error to trigger retry
 	}
 
 	l.finalizeCouponAndOrder(ctx, orderInfo)
@@ -108,6 +113,14 @@ func (l *ActivateOrderLogic) validateAndGetOrder(ctx context.Context, orderNo st
 			logger.Field("order_no", orderNo),
 		)
 		return nil, err
+	}
+
+	// Idempotency check: if order is already finished, return success
+	if orderInfo.Status == OrderStatusFinished {
+		logger.WithContext(ctx).Info("Order already finished, skip processing",
+			logger.Field("order_no", orderInfo.OrderNo),
+		)
+		return nil, nil
 	}
 
 	if orderInfo.Status != OrderStatusPaid {
@@ -340,6 +353,24 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 		Token:       uuidx.SubscribeToken(orderInfo.OrderNo),
 		UUID:        uuid.New().String(),
 		Status:      1,
+	}
+
+	// Check quota limit before creating subscription (final safeguard)
+	if sub.Quota > 0 {
+		var count int64
+		if err := l.svc.DB.Model(&user.Subscribe{}).Where("user_id = ? AND subscribe_id = ?", orderInfo.UserId, orderInfo.SubscribeId).Count(&count).Error; err != nil {
+			logger.WithContext(ctx).Error("Count user subscribe failed", logger.Field("error", err.Error()))
+			return nil, err
+		}
+		if count >= sub.Quota {
+			logger.WithContext(ctx).Infow("Subscribe quota limit exceeded",
+				logger.Field("user_id", orderInfo.UserId),
+				logger.Field("subscribe_id", orderInfo.SubscribeId),
+				logger.Field("quota", sub.Quota),
+				logger.Field("current_count", count),
+			)
+			return nil, fmt.Errorf("subscribe quota limit exceeded")
+		}
 	}
 
 	if err := l.svc.UserModel.InsertSubscribe(ctx, userSub); err != nil {

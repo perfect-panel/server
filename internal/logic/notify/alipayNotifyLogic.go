@@ -82,7 +82,7 @@ func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
 			l.Logger.Error("[AlipayNotify] Marshal payload failed", logger.Field("error", err.Error()))
 			return err
 		}
-		task := asynq.NewTask(types.ForthwithActivateOrder, bytes)
+		task := asynq.NewTask(types.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
 		taskInfo, err := l.svcCtx.Queue.EnqueueContext(l.ctx, task)
 		if err != nil {
 			l.Logger.Error("[AlipayNotify] Enqueue task failed", logger.Field("error", err.Error()))

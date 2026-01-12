@@ -81,6 +81,7 @@ type Device struct {
 	UserId     int64     `gorm:"index:idx_user_id;not null;comment:User ID"`
 	UserAgent  string    `gorm:"default:null;comment:UserAgent."`
 	Identifier string    `gorm:"type:varchar(255);unique;index:idx_identifier;default:'';comment:Device Identifier"`
+	ShortCode  string    `gorm:"type:varchar(255);default:'';comment:Short Code"`
 	Online     bool      `gorm:"default:false;not null;comment:Online"`
 	Enabled    bool      `gorm:"default:true;not null;comment:Enabled"`
 	CreatedAt  time.Time `gorm:"<-:create;comment:Creation Time"`

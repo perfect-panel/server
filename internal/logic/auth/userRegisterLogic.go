@@ -89,6 +89,10 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user email deleted: %v", req.Email)
 	}
 
+	if !registerIpLimit(l.svcCtx, l.ctx, req.IP, "email", req.Email) {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.RegisterIPLimit), "register ip limit: %v", req.IP)
+	}
+
 	// Generate password
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo := &user.User{
@@ -141,8 +145,8 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 			// Don't fail register if device binding fails, just log the error
 		}
 	}
-	if l.ctx.Value(constant.LoginType) != nil {
-		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	if l.ctx.Value(constant.CtxLoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.CtxLoginType).(string)
 	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()

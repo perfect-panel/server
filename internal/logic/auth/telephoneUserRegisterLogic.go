@@ -102,7 +102,9 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InviteCodeError), "invite code is invalid")
 		}
 	}
-
+	if !registerIpLimit(l.svcCtx, l.ctx, req.IP, "mobile", phoneNumber) {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.RegisterIPLimit), "register ip limit: %v", req.IP)
+	}
 	// Generate password
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo := &user.User{
@@ -152,8 +154,8 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 			// Don't fail register if device binding fails, just log the error
 		}
 	}
-	if l.ctx.Value(constant.LoginType) != nil {
-		req.LoginType = l.ctx.Value(constant.LoginType).(string)
+	if l.ctx.Value(constant.CtxLoginType) != nil {
+		req.LoginType = l.ctx.Value(constant.CtxLoginType).(string)
 	}
 	// Generate session id
 	sessionId := uuidx.NewUUID().String()
@@ -164,7 +166,8 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
-		jwt.WithOption("LoginType", req.LoginType),
+		jwt.WithOption("identifier", req.Identifier),
+		jwt.WithOption("CtxLoginType", req.LoginType),
 	)
 	if err != nil {
 		l.Logger.Error("[UserLogin] token generate error", logger.Field("error", err.Error()))
@@ -245,5 +248,12 @@ func (l *TelephoneUserRegisterLogic) activeTrial(uid int64) error {
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
-	return l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
+	err = l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
+	if err != nil {
+		return err
+	}
+	if clearErr := l.svcCtx.NodeModel.ClearServerAllCache(l.ctx); clearErr != nil {
+		l.Errorf("ClearServerAllCache error: %v", clearErr.Error())
+	}
+	return err
 }

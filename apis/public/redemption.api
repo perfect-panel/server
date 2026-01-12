@@ -1,0 +1,32 @@
+syntax = "v1"
+
+info (
+	title:   "redemption API"
+	desc:    "API for redemption"
+	author:  "Tension"
+	email:   "tension@ppanel.com"
+	version: "0.0.1"
+)
+
+import "../types.api"
+
+type (
+	RedeemCodeRequest {
+		Code string `json:"code" validate:"required"`
+	}
+	RedeemCodeResponse {
+		Message string `json:"message"`
+	}
+)
+
+@server (
+	prefix:     v1/public/redemption
+	group:      public/redemption
+	jwt:        JwtAuth
+	middleware: AuthMiddleware,DeviceMiddleware
+)
+service ppanel {
+	@doc "Redeem code"
+	@handler RedeemCode
+	post / (RedeemCodeRequest) returns (RedeemCodeResponse)
+}

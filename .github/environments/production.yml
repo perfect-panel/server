@@ -1,0 +1,27 @@
+# Production Environment Configuration for GitHub Actions
+# This file defines production-specific deployment settings
+
+environment:
+  name: production
+  url: https://api.ppanel.example.com
+  protection_rules:
+    - type: wait_timer
+      minutes: 5
+    - type: reviewers
+      reviewers:
+        - "@admin-team"
+        - "@devops-team"
+  variables:
+    ENVIRONMENT: production
+    LOG_LEVEL: info
+    DEPLOY_TIMEOUT: 300
+
+# Environment-specific secrets required:
+# PRODUCTION_HOST - Production server hostname/IP
+# PRODUCTION_USER - SSH username for production server
+# PRODUCTION_SSH_KEY - SSH private key for production server
+# PRODUCTION_PORT - SSH port (default: 22)
+# PRODUCTION_URL - Application URL for health checks
+# DATABASE_PASSWORD - Production database password
+# REDIS_PASSWORD - Production Redis password
+# JWT_SECRET - JWT secret key for production
