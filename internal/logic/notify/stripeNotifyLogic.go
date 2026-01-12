@@ -85,7 +85,7 @@ func (l *StripeNotifyLogic) StripeNotify(r *http.Request, w http.ResponseWriter)
 			l.Errorw("[StripeNotify] Marshal error", logger.Field("errors", err.Error()), logger.Field("payload", payload))
 			return err
 		}
-		task := asynq.NewTask(types.ForthwithActivateOrder, bytes)
+		task := asynq.NewTask(types.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
 		_, err = l.svcCtx.Queue.Enqueue(task)
 		if err != nil {
 			l.Errorw("[StripeNotify] Enqueue error", logger.Field("errors", err.Error()))

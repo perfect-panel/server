@@ -68,17 +68,22 @@ func NewActivateOrderLogic(svc *svc.ServiceContext) *ActivateOrderLogic {
 func (l *ActivateOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task) error {
 	payload, err := l.parsePayload(ctx, task.Payload())
 	if err != nil {
-		return nil // Log and continue
+		return err // Return error to trigger retry
 	}
 
 	orderInfo, err := l.validateAndGetOrder(ctx, payload.OrderNo)
 	if err != nil {
-		return nil // Log and continue
+		return err // Return error to trigger retry
+	}
+
+	// Idempotency: if order is already finished, skip processing
+	if orderInfo == nil {
+		return nil
 	}
 
 	if err = l.processOrderByType(ctx, orderInfo); err != nil {
 		logger.WithContext(ctx).Error("[ActivateOrderLogic] Process task failed", logger.Field("error", err.Error()))
-		return nil
+		return err // Return error to trigger retry
 	}
 
 	l.finalizeCouponAndOrder(ctx, orderInfo)
@@ -108,6 +113,14 @@ func (l *ActivateOrderLogic) validateAndGetOrder(ctx context.Context, orderNo st
 			logger.Field("order_no", orderNo),
 		)
 		return nil, err
+	}
+
+	// Idempotency check: if order is already finished, return success
+	if orderInfo.Status == OrderStatusFinished {
+		logger.WithContext(ctx).Info("Order already finished, skip processing",
+			logger.Field("order_no", orderInfo.OrderNo),
+		)
+		return nil, nil
 	}
 
 	if orderInfo.Status != OrderStatusPaid {

@@ -84,7 +84,7 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 		l.Logger.Error("[EPayNotify] Marshal payload failed", logger.Field("error", err.Error()))
 		return err
 	}
-	task := asynq.NewTask(queueType.ForthwithActivateOrder, bytes)
+	task := asynq.NewTask(queueType.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
 	taskInfo, err := l.svcCtx.Queue.EnqueueContext(l.ctx, task)
 	if err != nil {
 		l.Logger.Error("[EPayNotify] Enqueue task failed", logger.Field("error", err.Error()))
