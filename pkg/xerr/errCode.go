@@ -28,6 +28,7 @@ const (
 	UserNotBindOauth        uint32 = 20008
 	InviteCodeError         uint32 = 20009
 	UserCommissionNotEnough uint32 = 20010
+	RegisterIPLimit         uint32 = 20011
 )
 
 // Node error
