@@ -46,7 +46,13 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		return nil, err
 	}
 
-	userAgent := strings.ToLower(l.ctx.Request.UserAgent())
+	// Priority: flag/type query parameter > User-Agent header
+	clientIdentifier := strings.ToLower(l.ctx.Request.UserAgent())
+	if req.Flag != "" {
+		clientIdentifier = strings.ToLower(req.Flag)
+	} else if req.Type != "" {
+		clientIdentifier = strings.ToLower(req.Type)
+	}
 
 	var targetApp, defaultApp *client.SubscribeApplication
 
@@ -56,9 +62,9 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 			defaultApp = item
 		}
 
-		if strings.Contains(userAgent, u) {
+		if strings.Contains(clientIdentifier, u) {
 			// Special handling for Stash
-			if strings.Contains(userAgent, "stash") && !strings.Contains(u, "stash") {
+			if strings.Contains(clientIdentifier, "stash") && !strings.Contains(u, "stash") {
 				continue
 			}
 			targetApp = item
@@ -66,9 +72,9 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		}
 	}
 	if targetApp == nil {
-		l.Debugf("[SubscribeLogic] No matching client found", logger.Field("userAgent", userAgent))
+		l.Debugf("[SubscribeLogic] No matching client found", logger.Field("clientIdentifier", clientIdentifier))
 		if defaultApp == nil {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "No matching client found for user agent: %s", userAgent)
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "No matching client found for: %s", clientIdentifier)
 		}
 		targetApp = defaultApp
 	}
