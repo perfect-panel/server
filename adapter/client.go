@@ -77,6 +77,10 @@ type Proxy struct {
 	EncryptionClientPadding string // encryption client padding
 	EncryptionPassword      string // encryption password
 
+	// ECH
+	EchEnable     bool   // ECH enable
+	EchServerName string // ECH SNI
+
 	Ratio           float64 // Traffic ratio, default is 1
 	CertMode        string  // Certificate mode, `none`｜`http`｜`dns`｜`self`
 	CertDNSProvider string  // DNS provider for certificate

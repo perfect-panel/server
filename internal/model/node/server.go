@@ -144,6 +144,8 @@ type Protocol struct {
 	EncryptionPrivateKey    string `json:"encryption_private_key,omitempty"`    // encryption private key
 	EncryptionClientPadding string `json:"encryption_client_padding,omitempty"` // encryption client padding
 	EncryptionPassword      string `json:"encryption_password,omitempty"`       // encryption password
+	EchEnable               bool   `json:"ech_enable,omitempty"`                // ECH enable
+	EchServerName           string `json:"ech_server_name,omitempty"`           // ECH SNI
 
 	Ratio           float64 `json:"ratio,omitempty"`             // Traffic ratio, default is 1
 	CertMode        string  `json:"cert_mode,omitempty"`         // Certificate mode, `none`｜`http`｜`dns`｜`self`
