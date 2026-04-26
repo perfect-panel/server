@@ -12,6 +12,35 @@ func (m *defaultUserModel) UpdateUserSubscribeCache(ctx context.Context, data *S
 	return m.ClearSubscribeCacheByModels(ctx, data)
 }
 
+// QuerySubscribeCountsByUserIds 返回 map[user_id]count,统计每个用户的活跃订阅数(status IN 0/1)。
+// 用于用户列表批量展示订阅数,避免 N+1 查询。
+func (m *defaultUserModel) QuerySubscribeCountsByUserIds(ctx context.Context, userIds []int64) (map[int64]int64, error) {
+	if len(userIds) == 0 {
+		return map[int64]int64{}, nil
+	}
+	type Row struct {
+		UserId int64
+		Total  int64
+	}
+	var rows []Row
+	err := m.QueryNoCacheCtx(ctx, &rows, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Subscribe{}).
+			Where("user_id IN ? AND `status` IN ?", userIds, []int64{0, 1}).
+			Select("user_id, COUNT(id) as total").
+			Group("user_id").
+			Scan(&rows).
+			Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	resultMap := make(map[int64]int64, len(rows))
+	for _, r := range rows {
+		resultMap[r.UserId] = r.Total
+	}
+	return resultMap, nil
+}
+
 // QueryActiveSubscriptions returns the number of active subscriptions.
 func (m *defaultUserModel) QueryActiveSubscriptions(ctx context.Context, subscribeId ...int64) (map[int64]int64, error) {
 	type SubscriptionCount struct {

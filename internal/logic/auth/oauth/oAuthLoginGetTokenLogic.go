@@ -358,6 +358,10 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 		)
 
 		userInfo = &user.User{Avatar: avatar, OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase}
+		// V4.3 决策 22:注册送 ¥2 余额(可在 register config 关闭/调整)。
+		if l.svcCtx.Config.Register.TrialBalance > 0 {
+			userInfo.Balance = l.svcCtx.Config.Register.TrialBalance
+		}
 		if err := db.Create(userInfo).Error; err != nil {
 			l.Errorw("failed to create user record",
 				logger.Field("request_id", requestID),

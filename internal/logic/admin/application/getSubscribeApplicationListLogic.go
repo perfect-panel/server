@@ -49,6 +49,8 @@ func (l *GetSubscribeApplicationListLogic) GetSubscribeApplicationList(req *type
 			SubscribeTemplate: item.SubscribeTemplate,
 			OutputFormat:      item.OutputFormat,
 			DownloadLink:      temp,
+			TutorialKey:       item.TutorialKey,
+			Enabled:           item.Enabled,
 			CreatedAt:         item.CreatedAt.UnixMilli(),
 			UpdatedAt:         item.UpdatedAt.UnixMilli(),
 		})

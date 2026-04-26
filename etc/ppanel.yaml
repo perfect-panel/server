@@ -1,0 +1,29 @@
+Host: "0.0.0.0"
+Port: 8080
+Debug: false
+JwtAuth:
+  AccessSecret: "ppanel-dev-secret-change-me"
+  AccessExpire: 604800
+Logger:
+  ServiceName: "ppanel"
+  Mode: "console"
+  Encoding: "plain"
+  Level: "info"
+MySQL:
+  Addr: "127.0.0.1:3306"
+  Username: "root"
+  Password: "ppanel123"
+  Dbname: "vpnboard"
+  Config: "charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai"
+  MaxIdleConns: 10
+  MaxOpenConns: 100
+  LogMode: "info"
+  LogZap: true
+  SlowThreshold: 1000
+Redis:
+  Host: "127.0.0.1:6379"
+  Pass: ""
+  DB: 0
+Administer:
+  Email: "admin@ppanel.dev"
+  Password: "password"

@@ -89,5 +89,6 @@ func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.Qu
 		Outbound:               outbound,
 		Protocols:              protocols,
 		Total:                  int64(len(protocols)),
+		DeviceLimitEnabled:     l.svcCtx.Config.Feature.DeviceLimitEnabled,
 	}, nil
 }

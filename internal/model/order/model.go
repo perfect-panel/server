@@ -48,6 +48,10 @@ type OrdersTotalWithDate struct {
 }
 
 type customOrderLogicModel interface {
+	// V4.3 traffic addon orders
+	InsertTrafficAddonOrder(ctx context.Context, data *TrafficAddonOrder, tx ...*gorm.DB) error
+	QueryTrafficAddonOrders(ctx context.Context, userSubscribeId int64) ([]*TrafficAddonOrder, error)
+
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
 	QueryOrderListByPage(ctx context.Context, page, size int, status uint8, user, subscribe int64, search string) (int64, []*Details, error)
 	FindOneDetails(ctx context.Context, id int64) (*Details, error)

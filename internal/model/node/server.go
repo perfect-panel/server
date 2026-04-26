@@ -18,6 +18,9 @@ type Server struct {
 	Address        string     `gorm:"type:varchar(100);not null;default:'';comment:Server Address"`
 	Sort           int        `gorm:"type:int;not null;default:0;comment:Sort"`
 	Protocols      string     `gorm:"type:text;default:null;comment:Protocol"`
+	// V4.3 决策 39:per-server 直连白名单。JSON array,e.g. ["example.com","stripe.com"]。
+	// 节点拉取时将其注入客户端订阅 Clash/Surge 规则中作 DIRECT。
+	DirectList     string     `gorm:"column:direct_list;type:text;default:null;comment:V4.3 direct list JSON array"`
 	LastReportedAt *time.Time `gorm:"comment:Last Reported Time"`
 	CreatedAt      time.Time  `gorm:"<-:create;comment:Creation Time"`
 	UpdatedAt      time.Time  `gorm:"comment:Update Time"`

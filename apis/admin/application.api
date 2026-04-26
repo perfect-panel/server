@@ -22,8 +22,12 @@ type (
 		SubscribeTemplate string       `json:"template"`
 		OutputFormat      string       `json:"output_format"`
 		DownloadLink      DownloadLink `json:"download_link,omitempty"`
-		CreatedAt         int64        `json:"created_at"`
-		UpdatedAt         int64        `json:"updated_at"`
+		// V4.3 决策 25:关联 site_content.content_key 提供多语言教程。
+		TutorialKey string `json:"tutorial_key,omitempty"`
+		// 启用开关:false = 用户端不显示。
+		Enabled   bool  `json:"enabled"`
+		CreatedAt int64 `json:"created_at"`
+		UpdatedAt int64 `json:"updated_at"`
 	}
 	GetSubscribeApplicationListResponse {
 		Total int64                  `json:"total"`
@@ -39,6 +43,8 @@ type (
 		SubscribeTemplate string       `json:"template"`
 		OutputFormat      string       `json:"output_format"`
 		DownloadLink      DownloadLink `json:"download_link"`
+		TutorialKey       string       `json:"tutorial_key,omitempty"`
+		Enabled           bool         `json:"enabled,optional"`
 	}
 	UpdateSubscribeApplicationRequest {
 		Id                int64        `json:"id"`
@@ -51,6 +57,8 @@ type (
 		SubscribeTemplate string       `json:"template"`
 		OutputFormat      string       `json:"output_format"`
 		DownloadLink      DownloadLink `json:"download_link,omitempty"`
+		TutorialKey       string       `json:"tutorial_key,omitempty"`
+		Enabled           bool         `json:"enabled,optional"`
 	}
 	DeleteSubscribeApplicationRequest {
 		Id int64 `json:"id"`

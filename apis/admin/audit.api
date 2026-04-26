@@ -1,0 +1,44 @@
+syntax = "v1"
+
+// Audit log admin endpoints.
+
+import "../types.api"
+
+type (
+    QueryAuditLogRequest {
+        UserId  int64  `form:"user_id,optional"`
+        Actor   string `form:"actor,optional"`
+        ActorId int64  `form:"actor_id,optional"`
+        Action  string `form:"action,optional"`
+        Since   int64  `form:"since,optional"` // unix ms
+        Until   int64  `form:"until,optional"`
+        Page    int    `form:"page,optional"`
+        Size    int    `form:"size,optional"`
+    }
+    AuditLogItem {
+        Id        int64  `json:"id"`
+        UserId    int64  `json:"user_id"`
+        Actor     string `json:"actor"`
+        ActorId   int64  `json:"actor_id"`
+        Action    string `json:"action"`
+        Target    string `json:"target"`
+        Detail    string `json:"detail"`
+        ClientIp  string `json:"client_ip"`
+        CreatedAt int64  `json:"created_at"`
+    }
+    QueryAuditLogResponse {
+        List  []AuditLogItem `json:"list"`
+        Total int64          `json:"total"`
+    }
+)
+
+@server (
+    prefix:     v1/admin/audit
+    group:      admin/audit
+    middleware: AuthMiddleware
+)
+service ppanel {
+    @doc "Query audit log"
+    @handler QueryAuditLog
+    get /list (QueryAuditLogRequest) returns (QueryAuditLogResponse)
+}

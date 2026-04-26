@@ -65,16 +65,35 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 	if !*sub.Sell {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "subscribe not sell")
 	}
-	var discount float64 = 1
-	if sub.Discount != "" {
-		var dis []types.SubscribeDiscount
-		_ = json.Unmarshal([]byte(sub.Discount), &dis)
-		discount = getDiscount(dis, req.Quantity)
+	// V4.3 device-billing: 当 DeviceCount > 0 且套餐启用了 unit_price_per_device,
+	// 使用 amount = device_count × unit_price_per_device,Quantity 固定为 1 unit_time。
+	// 否则回退旧的时长计费(向后兼容)。
+	var (
+		discount       float64 = 1
+		price          int64
+		discountAmount int64
+	)
+	deviceMode := req.DeviceCount > 0 && sub.UnitPricePerDevice > 0
+	if deviceMode {
+		if sub.MaxDeviceCount > 0 && req.DeviceCount > sub.MaxDeviceCount {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams),
+				"device_count %d exceeds subscribe.max_device_count %d", req.DeviceCount, sub.MaxDeviceCount)
+		}
+		if req.Quantity <= 0 {
+			req.Quantity = 1 // device-billing 固定走 1 个 unit_time
+		}
+		price = sub.UnitPricePerDevice * req.DeviceCount
+	} else {
+		if sub.Discount != "" {
+			var dis []types.SubscribeDiscount
+			_ = json.Unmarshal([]byte(sub.Discount), &dis)
+			discount = getDiscount(dis, req.Quantity)
+		}
+		price = sub.UnitPrice * req.Quantity
 	}
-	price := sub.UnitPrice * req.Quantity
-	// discount amount
+	// discount amount (设备模式当前不支持折扣;预留)
 	amount := int64(float64(price) * discount)
-	discountAmount := price - amount
+	discountAmount = price - amount
 
 	var couponAmount int64 = 0
 	// Calculate the coupon deduction
@@ -125,6 +144,7 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 		OrderNo:        tool.GenerateTradeNo(),
 		Type:           1,
 		Quantity:       req.Quantity,
+		DeviceCount:    req.DeviceCount,
 		Price:          price,
 		Amount:         amount,
 		Discount:       discountAmount,

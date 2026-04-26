@@ -100,11 +100,38 @@ type Client struct {
 	Proxies        []Proxy           // List of proxy configurations
 	UserInfo       User              // User information
 	Params         map[string]string // Additional parameters
+	DirectList     []string          // V4.3: 直连白名单 host suffix(决策 39)
 }
 
 func (c *Client) Build() ([]byte, error) {
 	var buf bytes.Buffer
-	tmpl, err := template.New("client").Funcs(sprig.TxtFuncMap()).Parse(c.ClientTemplate)
+	// V4.3 模板辅助函数(决策 39):
+	//   directRulesClash  → "DOMAIN-SUFFIX,host,DIRECT" 行(Clash/Stash/ClashMeta)
+	//   directRulesSurge  → "DOMAIN-SUFFIX,host,DIRECT" 行(Surge/Loon/Shadowrocket)
+	//   directRulesQuanX  → "host-suffix,host,direct" 行(Quantumult X)
+	funcs := sprig.TxtFuncMap()
+	funcs["directRulesClash"] = func(hosts []string) []string {
+		out := make([]string, 0, len(hosts))
+		for _, h := range hosts {
+			if h == "" {
+				continue
+			}
+			out = append(out, "DOMAIN-SUFFIX,"+h+",DIRECT")
+		}
+		return out
+	}
+	funcs["directRulesSurge"] = funcs["directRulesClash"]
+	funcs["directRulesQuanX"] = func(hosts []string) []string {
+		out := make([]string, 0, len(hosts))
+		for _, h := range hosts {
+			if h == "" {
+				continue
+			}
+			out = append(out, "host-suffix,"+h+",direct")
+		}
+		return out
+	}
+	tmpl, err := template.New("client").Funcs(funcs).Parse(c.ClientTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +148,7 @@ func (c *Client) Build() ([]byte, error) {
 		"Proxies":       proxies,
 		"UserInfo":      c.UserInfo,
 		"Params":        c.Params,
+		"DirectList":    c.DirectList, // V4.3 决策 39
 	})
 	if err != nil {
 		return nil, err

@@ -11,6 +11,11 @@ import (
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
+// MaxOnlineUsersPerRequest bounds a single /online payload to protect Redis from
+// a rogue or buggy node. Excess entries are truncated + logged; the node will
+// catch up on the next push cycle.
+const MaxOnlineUsersPerRequest = 10000
+
 type PushOnlineUsersLogic struct {
 	logger.Logger
 	ctx    context.Context
@@ -30,6 +35,14 @@ func (l *PushOnlineUsersLogic) PushOnlineUsers(req *types.OnlineUsersRequest) er
 	// 验证请求数据
 	if req.ServerId <= 0 || len(req.Users) == 0 {
 		return errors.New("invalid request parameters")
+	}
+
+	if len(req.Users) > MaxOnlineUsersPerRequest {
+		l.Errorw("[PushOnlineUsers] payload truncated",
+			logger.Field("server_id", req.ServerId),
+			logger.Field("received", len(req.Users)),
+			logger.Field("kept", MaxOnlineUsersPerRequest))
+		req.Users = req.Users[:MaxOnlineUsersPerRequest]
 	}
 
 	// 验证用户数据

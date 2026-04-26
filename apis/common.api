@@ -82,6 +82,8 @@ type (
 		Scheme       string       `json:"scheme,omitempty"`
 		IsDefault    bool         `json:"is_default"`
 		DownloadLink DownloadLink `json:"download_link,omitempty"`
+		// V4.3 决策 25:site_content key for multi-lang tutorial. Empty = none.
+		TutorialKey string `json:"tutorial_key,omitempty"`
 	}
 	GetSubscribeClientResponse {
 		Total int64             `json:"total"`
@@ -91,6 +93,19 @@ type (
 		Status    bool   `json:"status"`
 		Message   string `json:"message,omitempty"`
 		Timestamp int64  `json:"timestamp,omitempty"`
+	}
+	// V4.3 决策 25:用户端读取站内 CMS 单条教程内容
+	GetSiteContentItemRequest {
+		Key  string `form:"key"`
+		Lang string `form:"lang,optional"`
+	}
+	GetSiteContentItemResponse {
+		ContentKey  string `json:"content_key"`
+		ContentLang string `json:"content_lang"`
+		Title       string `json:"title"`
+		Body        string `json:"body"`
+		Version     string `json:"version,omitempty"`
+		UpdatedAt   int64  `json:"updated_at"`
 	}
 )
 
@@ -139,5 +154,9 @@ service ppanel {
 	@doc "Heartbeat"
 	@handler Heartbeat
 	get /heartbeat returns (HeartbeatResponse)
+
+	@doc "Get a single site_content row (multi-lang client tutorial / TOS / etc.)"
+	@handler GetSiteContentItem
+	get /site_content (GetSiteContentItemRequest) returns (GetSiteContentItemResponse)
 }
 

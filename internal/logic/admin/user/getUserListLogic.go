@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"strings"
 
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -41,9 +42,25 @@ func (l *GetUserListLogic) GetUserList(req *types.GetUserListRequest) (*types.Ge
 
 	userRespList := make([]types.User, 0, len(list))
 
+	// 批量查每个用户的活跃订阅数(避免 N+1)
+	userIds := make([]int64, 0, len(list))
+	for _, item := range list {
+		userIds = append(userIds, item.Id)
+	}
+	subCountMap, _ := l.svcCtx.UserModel.QuerySubscribeCountsByUserIds(l.ctx, userIds)
+
 	for _, item := range list {
 		var u types.User
 		tool.DeepCopy(&u, item)
+
+		// Tags: DB 是逗号分隔字符串,响应转成 []string
+		if item.Tags != "" {
+			u.Tags = strings.Split(item.Tags, ",")
+		} else {
+			u.Tags = []string{}
+		}
+
+		u.SubscribeCount = subCountMap[item.Id]
 
 		// 处理 AuthMethods
 		authMethods := make([]types.UserAuthMethod, len(u.AuthMethods)) // 直接创建目标 slice

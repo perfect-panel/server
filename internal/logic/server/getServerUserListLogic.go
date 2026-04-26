@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/node"
@@ -17,13 +18,25 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 )
 
+// V4.3 节点 user list 重构(决策 17 / 31 / 32 / 40):
+// - 输出粒度由 user_subscribe → user_subscribe_device(每设备一行,Id = device.id)
+// - 跨协议 limiter 用 user_subscribe_id 作 key(决策 32)
+// - SS 协议密码 = sha256(uuid)[:16] 派生(决策 17)
+// - subscribe.cut_off_at < now → 整组 device 不下发,实现"24h 后断网"(决策 40)
+// - subscribe.throttled_at != nil → 把 speed_limit 压到 1 Mbps(决策 31)
+// - device.status == 0(停用)→ 不下发
+
+const (
+	throttledSpeedLimit = 1 * 1024 * 1024 // 1 MiB/s ≈ 1 Mbps(MiB 进制,决策 31/30)
+	deviceLimitPerSlot  = 1               // 每 UUID 内置 device_limit=1,防 URL 共享(决策 32)
+)
+
 type GetServerUserListLogic struct {
 	logger.Logger
 	ctx    *gin.Context
 	svcCtx *svc.ServiceContext
 }
 
-// NewGetServerUserListLogic Get user list
 func NewGetServerUserListLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *GetServerUserListLogic {
 	return &GetServerUserListLogic{
 		Logger: logger.WithContext(ctx.Request.Context()),
@@ -34,22 +47,21 @@ func NewGetServerUserListLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *Ge
 
 func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
 	cacheKey := fmt.Sprintf("%s%d", node.ServerUserListCacheKey, req.ServerId)
-	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
+	cache, _ := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 	if cache != "" {
 		etag := tool.GenerateETag([]byte(cache))
-		resp = &types.GetServerUserListResponse{}
-		//  Check If-None-Match header
 		if match := l.ctx.GetHeader("If-None-Match"); match == etag {
 			return nil, xerr.StatusNotModified
 		}
 		l.ctx.Header("ETag", etag)
-		err = json.Unmarshal([]byte(cache), resp)
-		if err != nil {
+		resp = &types.GetServerUserListResponse{}
+		if err = json.Unmarshal([]byte(cache), resp); err != nil {
 			l.Errorw("[ServerUserListCacheKey] json unmarshal error", logger.Field("error", err.Error()))
 			return nil, err
 		}
 		return resp, nil
 	}
+
 	server, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		return nil, err
@@ -73,7 +85,6 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 			nodeTag = append(nodeTag, strings.Split(n.Tags, ",")...)
 		}
 	}
-
 	_, subs, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
 		Page: 1,
 		Size: 9999,
@@ -81,53 +92,90 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		Tags: nodeTag,
 	})
 	if err != nil {
-		l.Errorw("QuerySubscribeIdsByServerIdAndServerGroupId error", logger.Field("error", err.Error()))
+		l.Errorw("Subscribe FilterList error", logger.Field("error", err.Error()))
 		return nil, err
 	}
 	if len(subs) == 0 {
-		return &types.GetServerUserListResponse{
-			Users: []types.ServerUser{
-				{
-					Id:   1,
-					UUID: uuidx.NewUUID().String(),
-				},
-			},
-		}, nil
+		return placeholderResp(), nil
 	}
-	users := make([]types.ServerUser, 0)
-	for _, sub := range subs {
-		data, err := l.svcCtx.UserModel.FindUsersSubscribeBySubscribeId(l.ctx, sub.Id)
+
+	now := time.Now()
+	users := make([]types.ServerUser, 0, 64)
+	for _, plan := range subs {
+		userSubs, err := l.svcCtx.UserModel.FindUsersSubscribeBySubscribeId(l.ctx, plan.Id)
 		if err != nil {
-			return nil, err
+			l.Errorw("FindUsersSubscribeBySubscribeId error",
+				logger.Field("error", err.Error()),
+				logger.Field("subscribe_id", plan.Id))
+			continue
 		}
-		for _, datum := range data {
-			users = append(users, types.ServerUser{
-				Id:          datum.Id,
-				UUID:        datum.UUID,
-				SpeedLimit:  sub.SpeedLimit,
-				DeviceLimit: sub.DeviceLimit,
-			})
+		for _, sub := range userSubs {
+			// 决策 40:24h 后整组断网,直接跳过该 subscribe 的所有 device
+			if sub.CutOffAt != nil && now.After(*sub.CutOffAt) {
+				continue
+			}
+
+			// 决策 31:超额限速到 1 Mbps,优先级链取 min(节点级, 套餐级, 1 Mbps)
+			speedLimit := plan.SpeedLimit
+			if sub.ThrottledAt != nil {
+				speedLimit = throttledSpeedLimit
+			}
+
+			// 拉本订阅的所有设备槽
+			devices, err := l.svcCtx.UserModel.QuerySubscribeDevices(l.ctx, sub.Id)
+			if err != nil {
+				l.Errorw("QuerySubscribeDevices error",
+					logger.Field("error", err.Error()),
+					logger.Field("user_subscribe_id", sub.Id))
+				continue
+			}
+			// 兼容老数据:无设备槽的 subscribe(legacy 单 UUID 模式)→ 退化下发 1 行(沿用旧 token/uuid)
+			if len(devices) == 0 && sub.UUID != "" {
+				users = append(users, types.ServerUser{
+					Id:              sub.Id,
+					UUID:            sub.UUID,
+					SpeedLimit:      speedLimit,
+					DeviceLimit:     plan.DeviceLimit,
+					UserSubscribeId: sub.Id,
+					Password:        tool.DerivePasswordFromUUID(sub.UUID),
+				})
+				continue
+			}
+			for _, d := range devices {
+				if d.Status == 0 {
+					continue // 停用槽不下发
+				}
+				users = append(users, types.ServerUser{
+					Id:              d.Id,
+					UUID:            d.UUID,
+					SpeedLimit:      speedLimit,
+					DeviceLimit:     deviceLimitPerSlot,
+					UserSubscribeId: sub.Id,
+					Password:        tool.DerivePasswordFromUUID(d.UUID),
+				})
+			}
 		}
 	}
 	if len(users) == 0 {
-		users = append(users, types.ServerUser{
-			Id:   1,
-			UUID: uuidx.NewUUID().String(),
-		})
+		return placeholderResp(), nil
 	}
-	resp = &types.GetServerUserListResponse{
-		Users: users,
-	}
+	resp = &types.GetServerUserListResponse{Users: users}
 	val, _ := json.Marshal(resp)
 	etag := tool.GenerateETag(val)
 	l.ctx.Header("ETag", etag)
-	err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), -1).Err()
-	if err != nil {
+	if err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), -1).Err(); err != nil {
 		l.Errorw("[ServerUserListCacheKey] redis set error", logger.Field("error", err.Error()))
 	}
-	//  Check If-None-Match header
 	if match := l.ctx.GetHeader("If-None-Match"); match == etag {
 		return nil, xerr.StatusNotModified
 	}
 	return resp, nil
+}
+
+// placeholderResp returns 1-element list so the node never sees empty users
+// (some node implementations treat empty as "config error" rather than "no users").
+func placeholderResp() *types.GetServerUserListResponse {
+	return &types.GetServerUserListResponse{
+		Users: []types.ServerUser{{Id: 1, UUID: uuidx.NewUUID().String()}},
+	}
 }

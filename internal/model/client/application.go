@@ -16,8 +16,14 @@ type SubscribeApplication struct {
 	SubscribeTemplate string    `gorm:"type:MEDIUMTEXT;default:null;comment:Subscribe Template"`
 	OutputFormat      string    `gorm:"type:varchar(50);default:'yaml';not null;comment:Output Format"`
 	DownloadLink      string    `gorm:"type:text;not null;comment:Download Link"`
-	CreatedAt         time.Time `gorm:"<-:create;comment:Create Time"`
-	UpdatedAt         time.Time `gorm:"comment:Update Time"`
+	// V4.3 决策 25:关联 site_content.content_key,提供多语言使用教程。
+	// 空字符串表示该客户端没有教程。
+	TutorialKey string `gorm:"column:tutorial_key;type:varchar(64);not null;default:'';comment:site_content key for multi-lang tutorial"`
+	// 启用开关:控制是否在用户端的客户端列表中显示。
+	// false = 用户看不到这个客户端;管理端和 UA 自动匹配仍可命中。
+	Enabled   bool      `gorm:"column:enabled;type:tinyint(1);not null;default:1;comment:Visible on user-facing client list"`
+	CreatedAt time.Time `gorm:"<-:create;comment:Create Time"`
+	UpdatedAt time.Time `gorm:"comment:Update Time"`
 }
 
 func (SubscribeApplication) TableName() string {

@@ -1,10 +1,75 @@
 syntax = "v1"
 
 info (
-	title:   "Device API"
-	desc:    "API for ppanel"
-	author:  "Tension"
-	email:   "tension@ppanel.com"
-	version: "0.0.1"
+    title:   "Device API"
+    desc:    "API for ppanel"
+    author:  "Tension"
+    email:   "tension@ppanel.com"
+    version: "0.0.1"
 )
 
+import "../types.api"
+
+type (
+    QueryUserDevicesRequest {
+        UserId          int64 `form:"user_id"`
+        UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+    }
+    AdminUserDeviceItem {
+        Id              int64  `json:"id"`
+        UserSubscribeId int64  `json:"user_subscribe_id"`
+        UserId          int64  `json:"user_id"`
+        DeviceName      string `json:"device_name"`
+        Token           string `json:"token"`
+        UUID            string `json:"uuid"`
+        LastSeenIp      string `json:"last_seen_ip"`
+        LastSeenAt      int64  `json:"last_seen_at"`
+        TodayTraffic    int64  `json:"today_traffic"`
+        Status          uint8  `json:"status"`
+    }
+    QueryUserDevicesResponse {
+        List []AdminUserDeviceItem `json:"list"`
+    }
+    AdminDeviceIdRequest {
+        DeviceId int64 `path:"device_id"`
+    }
+    AdminDeviceStatusResponse {
+        DeviceId int64 `json:"device_id"`
+        Status   uint8 `json:"status"`
+    }
+    AdminDeviceRenameRequest {
+        DeviceId int64  `path:"device_id"`
+        Name     string `json:"name"`
+    }
+    AdminDeviceRenameResponse {
+        DeviceId int64  `json:"device_id"`
+        Name     string `json:"name"`
+    }
+)
+
+@server (
+    prefix:     v1/admin/device
+    group:      admin/device
+    middleware: AuthMiddleware
+)
+service ppanel {
+    @doc "Query a user's device slots"
+    @handler QueryUserDevices
+    get /list (QueryUserDevicesRequest) returns (QueryUserDevicesResponse)
+
+    @doc "Force-disable a device slot"
+    @handler AdminDisableDevice
+    post /:device_id/disable (AdminDeviceIdRequest) returns (AdminDeviceStatusResponse)
+
+    @doc "Force-enable a device slot"
+    @handler AdminEnableDevice
+    post /:device_id/enable (AdminDeviceIdRequest) returns (AdminDeviceStatusResponse)
+
+    @doc "Force-reset a device token"
+    @handler AdminResetDevice
+    post /:device_id/reset (AdminDeviceIdRequest) returns (AdminDeviceStatusResponse)
+
+    @doc "Rename a device"
+    @handler AdminRenameDevice
+    put /:device_id/name (AdminDeviceRenameRequest) returns (AdminDeviceRenameResponse)
+}

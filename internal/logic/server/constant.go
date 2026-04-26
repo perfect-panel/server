@@ -8,9 +8,14 @@ const (
 	Trojan      = "trojan"
 	AnyTLS      = "anytls"
 	Tuic        = "tuic"
-	Hysteria    = "hysteria"
-	// Deprecated: Hysteria2 is deprecated, use Hysteria instead
-	// TODO: remove in future versions
+	// Hysteria is the canonical key for the Hysteria 2 protocol.
+	// Legacy Hysteria 1 has been removed upstream; the wire value remains
+	// "hysteria" for backward compatibility while displaying "Hysteria 2"
+	// in the UI.
+	Hysteria = "hysteria"
+	// Deprecated: the literal "hysteria2" input is normalized to "hysteria"
+	// in GetServerConfig. Kept for backward compatibility with old node
+	// agents; remove once all agents have been upgraded.
 	Hysteria2 = "hysteria2"
 )
 

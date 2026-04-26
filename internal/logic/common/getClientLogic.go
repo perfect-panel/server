@@ -34,6 +34,10 @@ func (l *GetClientLogic) GetClient() (resp *types.GetSubscribeClientResponse, er
 	}
 	var list []types.SubscribeClient
 	for _, item := range data {
+		// 用户端只显示启用的客户端;管理员可关掉某个客户端但保留 UA 命中规则。
+		if !item.Enabled {
+			continue
+		}
 		var temp types.DownloadLink
 		if item.DownloadLink != "" {
 			_ = json.Unmarshal([]byte(item.DownloadLink), &temp)
@@ -46,6 +50,7 @@ func (l *GetClientLogic) GetClient() (resp *types.GetSubscribeClientResponse, er
 			Scheme:       item.Scheme,
 			IsDefault:    item.IsDefault,
 			DownloadLink: temp,
+			TutorialKey:  item.TutorialKey,
 		})
 	}
 	resp = &types.GetSubscribeClientResponse{

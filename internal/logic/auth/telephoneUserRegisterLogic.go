@@ -120,6 +120,10 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 	if referer != nil {
 		userInfo.RefererId = referer.Id
 	}
+	// V4.3 决策 22:注册送 ¥2 余额(可在 register config 关闭/调整)。
+	if l.svcCtx.Config.Register.TrialBalance > 0 {
+		userInfo.Balance = l.svcCtx.Config.Register.TrialBalance
+	}
 	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		// Save user information
 		if err := db.Create(userInfo).Error; err != nil {

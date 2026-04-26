@@ -50,6 +50,8 @@ func (l *UpdateSubscribeApplicationLogic) UpdateSubscribeApplication(req *types.
 	data.SubscribeTemplate = req.SubscribeTemplate
 	data.OutputFormat = req.OutputFormat
 	data.DownloadLink = string(linkData)
+	data.TutorialKey = req.TutorialKey
+	data.Enabled = req.Enabled
 	err = l.svcCtx.ClientModel.Update(l.ctx, data)
 	if err != nil {
 		l.Errorf("Failed to update subscribe application with ID %d: %v", req.Id, err)

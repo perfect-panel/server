@@ -48,6 +48,99 @@ type (
 		City      string   `json:"city"`
 		CreatedAt int64    `json:"created_at"`
 	}
+
+	// V4.3 设备槽 — 加购设备(可选 quantity,默认 1 台)
+	AddSubscribeDeviceRequest {
+		UserSubscribeId int64 `path:"id"`
+		Quantity        int64 `json:"quantity,optional"` // 加购数量,默认 1
+	}
+	AddSubscribeDeviceResponse {
+		// 单台加购:返回首台设备信息(向后兼容)
+		DeviceId     int64  `json:"device_id"`
+		Token        string `json:"token"`
+		UUID         string `json:"uuid"`
+		// 多台加购汇总
+		Amount       int64    `json:"amount"`        // 本次扣费总额(分)
+		Ratio        int64    `json:"ratio"`         // 万分比 (e.g. 6700 = 67%)
+		SubscribeUrl string   `json:"subscribe_url"` // 首台设备的订阅 URL
+		Quantity     int64    `json:"quantity,omitempty"`
+		DeviceIds    []int64  `json:"device_ids,omitempty"`
+	}
+
+	// V4.3 流量加购
+	AddTrafficAddonRequest {
+		UserSubscribeId int64 `path:"id"`
+		AddonBytes      int64 `json:"addon_bytes"` // 必须为 unit_size 的整数倍
+	}
+	AddTrafficAddonResponse {
+		AddonOrderId int64 `json:"addon_order_id"`
+		AddonBytes   int64 `json:"addon_bytes"`
+		Amount       int64 `json:"amount"`
+		TrafficTotal int64 `json:"traffic_total"` // 加购后总配额(traffic + traffic_addon)
+	}
+
+	// V4.3 我的订阅(含设备列表)
+	QueryMySubscribesResponse {
+		List []MySubscribeInfo `json:"list"`
+	}
+	MySubscribeInfo {
+		Id              int64               `json:"id"`
+		SubscribeId     int64               `json:"subscribe_id"`
+		SubscribeName   string              `json:"subscribe_name"`
+		DeviceCount     int64               `json:"device_count"`
+		TrafficTotal    int64               `json:"traffic_total"`
+		TrafficAddon    int64               `json:"traffic_addon"`
+		TrafficUsed     int64               `json:"traffic_used"`
+		TrafficRemainPct int64              `json:"traffic_remain_pct"`
+		ExpireTime      int64               `json:"expire_time"`
+		Status          string              `json:"status"` // normal / throttled / cutoff
+		ThrottledAt     int64               `json:"throttled_at,omitempty"`
+		CutOffAt        int64               `json:"cut_off_at,omitempty"`
+		Devices         []MySubscribeDevice `json:"devices"`
+	}
+	MySubscribeDevice {
+		Id           int64  `json:"id"`
+		DeviceName   string `json:"device_name"`
+		Token        string `json:"token"`
+		UUID         string `json:"uuid"`
+		SubscribeUrl string `json:"subscribe_url"`
+		QrCodeUrl    string `json:"qr_code_url"`
+		LastSeenAt   int64  `json:"last_seen_at"`
+		LastSeenIp   string `json:"last_seen_ip"`
+		TodayTraffic int64  `json:"today_traffic"`
+		Status       uint8  `json:"status"`
+	}
+
+	// V4.3 设备槽 — 重置 / 停用 / 启用 / 改名 / 一键重置
+	DeviceIdRequest {
+		DeviceId int64 `path:"device_id"`
+	}
+	DeviceResetResponse {
+		DeviceId         int64  `json:"device_id"`
+		Token            string `json:"token"`
+		UUID             string `json:"uuid"`
+		SubscribeUrl     string `json:"subscribe_url"`
+		ResetCountHour   int    `json:"reset_count_hour"`
+		ResetCountDay    int    `json:"reset_count_day"`
+	}
+	DeviceRenameRequest {
+		DeviceId int64  `path:"device_id"`
+		Name     string `json:"name"`
+	}
+	DeviceRenameResponse {
+		DeviceId int64  `json:"device_id"`
+		Name     string `json:"name"`
+	}
+	DeviceStatusResponse {
+		DeviceId int64 `json:"device_id"`
+		Status   uint8 `json:"status"`
+	}
+	ResetAllDevicesRequest {
+		UserSubscribeId int64 `path:"id"`
+	}
+	ResetAllDevicesResponse {
+		ResetCount int `json:"reset_count"`
+	}
 )
 
 @server (
@@ -63,5 +156,59 @@ service ppanel {
 	@doc "Get user subscribe node info"
 	@handler QueryUserSubscribeNodeList
 	get /node/list returns (QueryUserSubscribeNodeListResponse)
+
+	@doc "V4.3: 我的订阅(含设备槽 + 用量)"
+	@handler QueryMySubscribes
+	get /my returns (QueryMySubscribesResponse)
+}
+
+// 设备域 — URL 仍挂在 /v1/public/subscribe 下保持前端不变,
+// goctl 生成的 Go 代码落到 internal/{handler,logic}/public/device 包。
+@server (
+	prefix:     v1/public/subscribe
+	group:      public/device
+	middleware: AuthMiddleware,DeviceMiddleware
+)
+service ppanel {
+	@doc "V4.3: 加购单设备(按剩余天数比例计费)"
+	@handler AddSubscribeDevice
+	post /:id/device/add (AddSubscribeDeviceRequest) returns (AddSubscribeDeviceResponse)
+
+	@doc "V4.3: 重置设备(换 token+uuid)"
+	@handler ResetDevice
+	post /device/:device_id/reset (DeviceIdRequest) returns (DeviceResetResponse)
+
+	@doc "V4.3: 停用设备槽"
+	@handler DisableDevice
+	post /device/:device_id/disable (DeviceIdRequest) returns (DeviceStatusResponse)
+
+	@doc "V4.3: 启用设备槽(换发新 token+uuid 防泄露)"
+	@handler EnableDevice
+	post /device/:device_id/enable (DeviceIdRequest) returns (DeviceStatusResponse)
+
+	@doc "V4.3: 改设备名"
+	@handler RenameDevice
+	put /device/:device_id/name (DeviceRenameRequest) returns (DeviceRenameResponse)
+
+	@doc "V4.3: 一键重置全部设备"
+	@handler ResetAllDevices
+	post /:id/devices/reset_all (ResetAllDevicesRequest) returns (ResetAllDevicesResponse)
+
+	@doc "V4.3: 删除加购设备(仅 is_addon=true 的设备可删,无退款)"
+	@handler DeleteAddonDevice
+	delete /device/:device_id (DeviceIdRequest) returns (DeviceStatusResponse)
+}
+
+// 流量加购域 — URL 仍挂在 /v1/public/subscribe 下保持前端不变,
+// goctl 生成的 Go 代码落到 internal/{handler,logic}/public/trafficaddon 包。
+@server (
+	prefix:     v1/public/subscribe
+	group:      public/trafficaddon
+	middleware: AuthMiddleware,DeviceMiddleware
+)
+service ppanel {
+	@doc "V4.3: 流量加购"
+	@handler AddTrafficAddon
+	post /:id/traffic/addon (AddTrafficAddonRequest) returns (AddTrafficAddonResponse)
 }
 

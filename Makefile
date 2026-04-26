@@ -82,3 +82,44 @@ $(gz_releases): %.gz : %
 
 $(zip_releases): %.zip : %
 	zip -m -j $(BINDIR)/$(NAME)-$(basename $@)-$(VERSION).zip $(BINDIR)/$(NAME)-$(basename $@).exe
+
+# ---- V4.3 测试 / 集成栈 / 压测 ----
+
+.PHONY: test
+test:
+	go test -count=1 \
+		./internal/logic/public/subscribe/... \
+		./internal/logic/subscribe/... \
+		./pkg/tool/... \
+		-run 'V43|ProRated|Frequency|Token|UUID|Password|PickClientApp|Adapter_Build|DirectListEmpty'
+
+.PHONY: test-all
+test-all:
+	go test -count=1 ./...
+
+.PHONY: integration-up
+integration-up:
+	docker compose -f script/integration/docker-compose.yml up -d --build
+	@echo "waiting for ppanel-server health…"
+	@for i in $$(seq 1 30); do \
+		curl -sf http://localhost:38080/metrics >/dev/null && exit 0; \
+		sleep 2; \
+	done; \
+	echo "ppanel-server not ready"; exit 1
+
+.PHONY: integration-down
+integration-down:
+	docker compose -f script/integration/docker-compose.yml down -v
+
+.PHONY: integration-test
+integration-test:
+	BASE=http://localhost:38080 bash script/integration/smoke.sh
+
+.PHONY: integration-cycle
+integration-cycle: integration-up integration-test integration-down
+
+.PHONY: perf
+perf:
+	@echo "Running k6 against staging. Requires BASE / SECRET / SERVER env."
+	k6 run -e BASE="$$BASE" -e SECRET="$$SECRET" -e SERVER="$$SERVER" \
+		script/perf/server-user-list.k6.js

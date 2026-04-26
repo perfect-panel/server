@@ -10,12 +10,15 @@ import (
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/ads"
 	"github.com/perfect-panel/server/internal/model/announcement"
+	"github.com/perfect-panel/server/internal/model/audit"
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/internal/model/coupon"
 	"github.com/perfect-panel/server/internal/model/document"
 	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/message"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/sitecontent"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/system"
 	"github.com/perfect-panel/server/internal/model/ticket"
@@ -56,6 +59,11 @@ type ServiceContext struct {
 	SubscribeModel    subscribe.Model
 	TrafficLogModel   traffic.Model
 	AnnouncementModel announcement.Model
+
+	// V4.3 device-billing additions
+	AuditModel       audit.Model
+	SiteContentModel sitecontent.Model
+	MessageModel     message.Model
 
 	Restart               func() error
 	TelegramBot           *tgbotapi.BotAPI
@@ -117,6 +125,9 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		SubscribeModel:    subscribe.NewModel(db, rds),
 		TrafficLogModel:   traffic.NewModel(db),
 		AnnouncementModel: announcement.NewModel(db, rds),
+		AuditModel:        audit.NewModel(db),
+		SiteContentModel:  sitecontent.NewModel(db),
+		MessageModel:      message.NewModel(db),
 	}
 	srv.DeviceManager = NewDeviceManager(srv)
 	return srv

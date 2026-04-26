@@ -45,6 +45,8 @@ func (l *CreateSubscribeApplicationLogic) CreateSubscribeApplication(req *types.
 		SubscribeTemplate: req.SubscribeTemplate,
 		OutputFormat:      req.OutputFormat,
 		DownloadLink:      string(linkData),
+		TutorialKey:       req.TutorialKey,
+		Enabled:           req.Enabled,
 	}
 
 	err = l.svcCtx.ClientModel.Insert(l.ctx, data)

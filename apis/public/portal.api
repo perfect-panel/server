@@ -18,6 +18,7 @@ type (
 		Payment        int64  `json:"payment"`
 		SubscribeId    int64  `json:"subscribe_id"`
 		Quantity       int64  `json:"quantity"`
+		DeviceCount    int64  `json:"device_count,omitempty"` // V4.3: 设备槽数,留 0 走旧时长计费
 		Coupon         string `json:"coupon,omitempty"`
 		InviteCode     string `json:"invite_code,omitempty"`
 		TurnstileToken string `json:"turnstile_token,omitempty"`

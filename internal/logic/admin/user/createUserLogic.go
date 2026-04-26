@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/user"
@@ -46,6 +47,7 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 		ReferCode:          req.ReferCode,
 		Balance:            req.Balance,
 		IsAdmin:            &req.IsAdmin,
+		Tags:               strings.Join(req.Tags, ","),
 	}
 	var ams []user.AuthMethods
 

@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"time"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -42,7 +43,35 @@ func (l *GetUserSubscribeLogic) GetUserSubscribe(req *types.GetUserSubscribeList
 		var sub types.UserSubscribe
 		tool.DeepCopy(&sub, item)
 		sub.Short, _ = tool.FixedUniqueString(item.Token, 8, "")
+		sub.ResetTime = calculateNextResetTime(&sub)
 		resp.List = append(resp.List, sub)
 	}
 	return
+}
+
+// calculateNextResetTime — 与 public/user/queryUserSubscribeLogic.go 同语义,根据
+// 套餐 reset_cycle 算下次自动清零的毫秒时间戳。0 = 不重置。
+func calculateNextResetTime(sub *types.UserSubscribe) int64 {
+	if sub.Subscribe.ResetCycle == 0 {
+		return 0
+	}
+	resetTime := time.UnixMilli(sub.ExpireTime)
+	now := time.Now()
+	switch sub.Subscribe.ResetCycle {
+	case 1:
+		return time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location()).UnixMilli()
+	case 2:
+		if resetTime.Day() > now.Day() {
+			return time.Date(now.Year(), now.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
+		}
+		return time.Date(now.Year(), now.Month()+1, resetTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
+	case 3:
+		targetTime := time.Date(now.Year(), resetTime.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location())
+		if targetTime.Before(now) {
+			targetTime = time.Date(now.Year()+1, resetTime.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location())
+		}
+		return targetTime.UnixMilli()
+	default:
+		return 0
+	}
 }

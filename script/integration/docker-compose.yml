@@ -1,0 +1,55 @@
+# 集成测试栈 — 一键起 mysql + redis + ppanel-server,跑端到端 HTTP 测试。
+# 与生产 docker-compose.yml 隔离;数据库走 tmpfs,关闭即销毁。
+#
+# 用法:
+#   make -C ../.. integration-up    # 起栈
+#   make -C ../.. integration-test  # 跑测试
+#   make -C ../.. integration-down  # 关栈
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ppanel-int-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: integration
+      MYSQL_DATABASE: ppanel
+    tmpfs:
+      - /var/lib/mysql:rw
+    ports:
+      - "33306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pintegration"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    container_name: ppanel-int-redis
+    ports:
+      - "36379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 20
+
+  ppanel-server:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: ppanel-int-server
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      # ppanel.yaml 用环境变量覆盖关键 DSN,避免改文件
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASS: integration
+      MYSQL_DB: ppanel
+      REDIS_HOST: redis:6379
+    ports:
+      - "38080:8080"
+    volumes:
+      - ./ppanel-test.yaml:/app/etc/ppanel.yaml
