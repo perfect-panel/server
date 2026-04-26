@@ -21,24 +21,37 @@ const (
 )
 
 type SubscribeDetails struct {
-	Id          int64                `gorm:"primarykey"`
-	UserId      int64                `gorm:"index:idx_user_id;not null;comment:User ID"`
-	User        *User                `gorm:"foreignKey:UserId;references:Id"`
-	OrderId     int64                `gorm:"index:idx_order_id;not null;comment:Order ID"`
-	SubscribeId int64                `gorm:"index:idx_subscribe_id;not null;comment:Subscription ID"`
-	Subscribe   *subscribe.Subscribe `gorm:"foreignKey:SubscribeId;references:Id"`
-	StartTime   time.Time            `gorm:"default:CURRENT_TIMESTAMP(3);not null;comment:Subscription Start Time"`
-	ExpireTime  time.Time            `gorm:"default:NULL;comment:Subscription Expire Time"`
-	FinishedAt  *time.Time           `gorm:"default:NULL;comment:Finished Time"`
-	Traffic     int64                `gorm:"default:0;comment:Traffic"`
-	Download    int64                `gorm:"default:0;comment:Download Traffic"`
-	Upload      int64                `gorm:"default:0;comment:Upload Traffic"`
-	Token       string               `gorm:"index:idx_token;unique;type:varchar(255);default:'';comment:Token"`
-	UUID        string               `gorm:"type:varchar(255);unique;index:idx_uuid;default:'';comment:UUID"`
-	Status      uint8                `gorm:"type:tinyint(1);default:0;comment:Subscription Status: 0: Pending 1: Active 2: Finished 3: Expired; 4: Cancelled"`
-	Note        string               `gorm:"type:varchar(500);default:'';comment:User note for subscription"`
-	CreatedAt   time.Time            `gorm:"<-:create;comment:Creation Time"`
-	UpdatedAt   time.Time            `gorm:"comment:Update Time"`
+	Id           int64                `gorm:"primarykey"`
+	UserId       int64                `gorm:"index:idx_user_id;not null;comment:User ID"`
+	User         *User                `gorm:"foreignKey:UserId;references:Id"`
+	OrderId      int64                `gorm:"index:idx_order_id;not null;comment:Order ID"`
+	SubscribeId  int64                `gorm:"index:idx_subscribe_id;not null;comment:Subscription ID"`
+	Subscribe    *subscribe.Subscribe `gorm:"foreignKey:SubscribeId;references:Id"`
+	DeviceCount  int64                `gorm:"column:device_count;not null;default:1"`
+	StartTime    time.Time            `gorm:"default:CURRENT_TIMESTAMP(3);not null;comment:Subscription Start Time"`
+	ExpireTime   time.Time            `gorm:"default:NULL;comment:Subscription Expire Time"`
+	FinishedAt   *time.Time           `gorm:"default:NULL;comment:Finished Time"`
+	Traffic      int64                `gorm:"default:0;comment:Traffic"`
+	TrafficAddon int64                `gorm:"column:traffic_addon;not null;default:0"`
+	Download     int64                `gorm:"default:0;comment:Download Traffic"`
+	Upload       int64                `gorm:"default:0;comment:Upload Traffic"`
+	Token        string               `gorm:"index:idx_token;type:varchar(255);default:''"`
+	UUID         string               `gorm:"type:varchar(255);index:idx_uuid;default:''"`
+	Status       uint8                `gorm:"type:tinyint(1);default:0;comment:Subscription Status"`
+	ThrottledAt  *time.Time           `gorm:"column:throttled_at"`
+	CutOffAt     *time.Time           `gorm:"column:cut_off_at"`
+	Notified90   bool                 `gorm:"column:notified_90;not null;default:0"`
+	Notified100  bool                 `gorm:"column:notified_100;not null;default:0"`
+	Notified12h  bool                 `gorm:"column:notified_12h;not null;default:0"`
+	Notified24h  bool                 `gorm:"column:notified_24h;not null;default:0"`
+	Note         string               `gorm:"type:varchar(500);default:''"`
+	Devices      []SubscribeDevice    `gorm:"foreignKey:UserSubscribeId;references:Id"`
+	CreatedAt    time.Time            `gorm:"<-:create"`
+	UpdatedAt    time.Time            `gorm:"comment:Update Time"`
+}
+
+func (*SubscribeDetails) TableName() string {
+	return "user_subscribe"
 }
 
 type SubscribeLogFilterParams struct {
@@ -88,6 +101,7 @@ type customUserLogicModel interface {
 	UpdateUserCache(ctx context.Context, data *User) error
 	UpdateUserSubscribeCache(ctx context.Context, data *Subscribe) error
 	QueryActiveSubscriptions(ctx context.Context, subscribeId ...int64) (map[int64]int64, error)
+	QuerySubscribeCountsByUserIds(ctx context.Context, userIds []int64) (map[int64]int64, error)
 	FindUserAuthMethods(ctx context.Context, userId int64) ([]*AuthMethods, error)
 	InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	UpdateUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
@@ -106,6 +120,18 @@ type customUserLogicModel interface {
 
 	ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error
 	ClearUserCache(ctx context.Context, data ...*User) error
+
+	// V4.3 device-billing — user_subscribe_device CRUD
+	InsertSubscribeDevice(ctx context.Context, data *SubscribeDevice, tx ...*gorm.DB) error
+	BatchInsertSubscribeDevices(ctx context.Context, list []*SubscribeDevice, tx ...*gorm.DB) error
+	FindOneSubscribeDevice(ctx context.Context, id int64) (*SubscribeDevice, error)
+	FindOneSubscribeDeviceByToken(ctx context.Context, token string) (*SubscribeDevice, error)
+	FindOneSubscribeDeviceByUUID(ctx context.Context, uuid string) (*SubscribeDevice, error)
+	QuerySubscribeDevices(ctx context.Context, userSubscribeId int64) ([]*SubscribeDevice, error)
+	UpdateSubscribeDevice(ctx context.Context, data *SubscribeDevice, tx ...*gorm.DB) error
+	DeleteSubscribeDevice(ctx context.Context, device *SubscribeDevice, tx ...*gorm.DB) error
+	DeleteSubscribeDevicesBySubscribeId(ctx context.Context, userSubscribeId int64, tx ...*gorm.DB) error
+	CountActiveDevicesBySubscribe(ctx context.Context, userSubscribeId int64) (int64, error)
 
 	QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)
 	QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]UserStatisticsWithDate, error)

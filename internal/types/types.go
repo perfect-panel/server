@@ -380,6 +380,8 @@ type CreateSubscribeApplicationRequest struct {
 	SubscribeTemplate string       `json:"template"`
 	OutputFormat      string       `json:"output_format"`
 	DownloadLink      DownloadLink `json:"download_link"`
+	TutorialKey       string       `json:"tutorial_key,omitempty"`
+	Enabled           bool         `json:"enabled,optional"`
 }
 
 type CreateSubscribeGroupRequest struct {
@@ -388,27 +390,32 @@ type CreateSubscribeGroupRequest struct {
 }
 
 type CreateSubscribeRequest struct {
-	Name              string              `json:"name" validate:"required"`
-	Language          string              `json:"language"`
-	Description       string              `json:"description"`
-	UnitPrice         int64               `json:"unit_price"`
-	UnitTime          string              `json:"unit_time"`
-	Discount          []SubscribeDiscount `json:"discount"`
-	Replacement       int64               `json:"replacement"`
-	Inventory         int64               `json:"inventory"`
-	Traffic           int64               `json:"traffic"`
-	SpeedLimit        int64               `json:"speed_limit"`
-	DeviceLimit       int64               `json:"device_limit"`
-	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
-	NodeTags          []string            `json:"node_tags"`
-	Show              *bool               `json:"show"`
-	Sell              *bool               `json:"sell"`
-	DeductionRatio    int64               `json:"deduction_ratio"`
-	AllowDeduction    *bool               `json:"allow_deduction"`
-	ResetCycle        int64               `json:"reset_cycle"`
-	RenewalReset      *bool               `json:"renewal_reset"`
-	ShowOriginalPrice bool                `json:"show_original_price"`
+	Name                  string              `json:"name" validate:"required"`
+	Language              string              `json:"language"`
+	Description           string              `json:"description"`
+	UnitPrice             int64               `json:"unit_price"`
+	UnitTime              string              `json:"unit_time"`
+	Discount              []SubscribeDiscount `json:"discount"`
+	Replacement           int64               `json:"replacement"`
+	Inventory             int64               `json:"inventory"`
+	Traffic               int64               `json:"traffic"`
+	SpeedLimit            int64               `json:"speed_limit"`
+	DeviceLimit           int64               `json:"device_limit"`
+	Quota                 int64               `json:"quota"`
+	Nodes                 []int64             `json:"nodes"`
+	NodeTags              []string            `json:"node_tags"`
+	Show                  *bool               `json:"show"`
+	Sell                  *bool               `json:"sell"`
+	DeductionRatio        int64               `json:"deduction_ratio"`
+	AllowDeduction        *bool               `json:"allow_deduction"`
+	ResetCycle            int64               `json:"reset_cycle"`
+	RenewalReset          *bool               `json:"renewal_reset"`
+	ShowOriginalPrice     bool                `json:"show_original_price"`
+	MaxDeviceCount        int64               `json:"max_device_count"`
+	UnitPricePerDevice    int64               `json:"unit_price_per_device"`
+	TrafficAddonUnitPrice int64               `json:"traffic_addon_unit_price"`
+	TrafficAddonUnitSize  int64               `json:"traffic_addon_unit_size"`
+	CommissionRate        int64               `json:"commission_rate"`
 }
 
 type CreateTicketFollowRequest struct {
@@ -425,20 +432,21 @@ type CreateUserAuthMethodRequest struct {
 }
 
 type CreateUserRequest struct {
-	Email              string `json:"email"`
-	Telephone          string `json:"telephone"`
-	TelephoneAreaCode  string `json:"telephone_area_code"`
-	Password           string `json:"password"`
-	ProductId          int64  `json:"product_id"`
-	Duration           int64  `json:"duration"`
-	ReferralPercentage uint8  `json:"referral_percentage"`
-	OnlyFirstPurchase  bool   `json:"only_first_purchase"`
-	RefererUser        string `json:"referer_user"`
-	ReferCode          string `json:"refer_code"`
-	Balance            int64  `json:"balance"`
-	Commission         int64  `json:"commission"`
-	GiftAmount         int64  `json:"gift_amount"`
-	IsAdmin            bool   `json:"is_admin"`
+	Email              string   `json:"email"`
+	Telephone          string   `json:"telephone"`
+	TelephoneAreaCode  string   `json:"telephone_area_code"`
+	Password           string   `json:"password"`
+	ProductId          int64    `json:"product_id"`
+	Duration           int64    `json:"duration"`
+	ReferralPercentage uint8    `json:"referral_percentage"`
+	OnlyFirstPurchase  bool     `json:"only_first_purchase"`
+	RefererUser        string   `json:"referer_user"`
+	ReferCode          string   `json:"refer_code"`
+	Balance            int64    `json:"balance"`
+	Commission         int64    `json:"commission"`
+	GiftAmount         int64    `json:"gift_amount"`
+	IsAdmin            bool     `json:"is_admin"`
+	Tags               []string `json:"tags"`
 }
 
 type CreateUserSubscribeRequest struct {
@@ -949,6 +957,63 @@ type GetServerUserListResponse struct {
 	Users []ServerUser `json:"users"`
 }
 
+// GetAliveListRequest Query params for /v1/server/alivelist (reuses ServerCommon auth)
+type GetAliveListRequest struct {
+	ServerCommon
+}
+
+// GetAliveListResponse Alive is uid → count (kept for backward compatibility with
+// pre-v1.0.10 nodes). AliveDetail is uid → IPs sorted oldest→newest, consumed by
+// v1.0.10+ nodes for LRU replacement under dynamic-IP churn.
+type GetAliveListResponse struct {
+	Alive       map[int64]int64    `json:"alive"`
+	AliveDetail map[int64][]string `json:"alive_detail"`
+}
+
+// EvictRequest Tells the server to drop (uid, ip) from the alive set
+// immediately after a node-side LRU eviction.
+type EvictRequest struct {
+	ServerCommon
+	UID int64  `json:"uid"`
+	IP  string `json:"ip"`
+}
+
+// RejectEvent is a single aggregated Reject observation from the node limiter.
+// Count is the local delta since the last successful push; reason is a short tag.
+type RejectEvent struct {
+	UID    int64  `json:"uid"`
+	Count  int64  `json:"count"`
+	Reason string `json:"reason"`
+}
+
+type ReportRejectRequest struct {
+	ServerCommon
+	Events []RejectEvent `json:"events"`
+}
+
+// GetUserOnlineStatusRequest Single-user limiter status query.
+type GetUserOnlineStatusRequest struct {
+	UID int64 `form:"uid"`
+}
+
+// UserOnlineStatus Aggregated limiter state for one uid. DataSourceVersion records
+// the minimum node version that produces full data; older nodes omit Reject counters.
+type UserOnlineStatus struct {
+	UID               int64    `json:"uid"`
+	OnlineIPs         []string `json:"online_ips"`
+	OnlineIPCount     int64    `json:"online_ip_count"`
+	RejectCount24h    int64    `json:"reject_count_24h"`
+	DataSourceVersion string   `json:"data_source_version"`
+}
+
+type BatchGetUserOnlineStatusRequest struct {
+	UIDs []int64 `json:"uids"`
+}
+
+type BatchGetUserOnlineStatusResponse struct {
+	Items []UserOnlineStatus `json:"items"`
+}
+
 type GetStatResponse struct {
 	User     int64    `json:"user"`
 	Node     int64    `json:"node"`
@@ -1300,6 +1365,9 @@ type OAuthLoginResponse struct {
 	Redirect string `json:"redirect"`
 }
 
+// OnlineUser is reported by node to server.
+// SID maps to JSON "uid" and MUST equal User.Id (same key as limiter.AliveList).
+// IP is the client's public IP observed at inbound.
 type OnlineUser struct {
 	SID int64  `json:"uid"`
 	IP  string `json:"ip"`
@@ -1421,6 +1489,7 @@ type PortalPurchaseRequest struct {
 	Payment        int64  `json:"payment"`
 	SubscribeId    int64  `json:"subscribe_id"`
 	Quantity       int64  `json:"quantity"`
+	DeviceCount    int64  `json:"device_count,omitempty"` // V4.3: 设备槽数,留 0 走旧时长计费
 	Coupon         string `json:"coupon,omitempty"`
 	InviteCode     string `json:"invite_code,omitempty"`
 	TurnstileToken string `json:"turnstile_token,omitempty"`
@@ -1438,6 +1507,11 @@ type PreOrderResponse struct {
 	Coupon         string `json:"coupon"`
 	CouponDiscount int64  `json:"coupon_discount"`
 	FeeAmount      int64  `json:"fee_amount"`
+	// V4.3:加购设备的续费费用 (=addon_count × unit_price_per_device × quantity)。
+	// 仅当 UserSubscribeId 存在且套餐启用了 device-billing 时非零。
+	// 已经包含在 Price / Amount 里,单独拎出来给前端账单 breakdown 用。
+	AddonDeviceAmount int64 `json:"addon_device_amount,omitempty"`
+	AddonDeviceCount  int64 `json:"addon_device_count,omitempty"`
 }
 
 type PrePurchaseOrderRequest struct {
@@ -1551,6 +1625,9 @@ type PurchaseOrderRequest struct {
 	Quantity    int64  `json:"quantity" validate:"required,gt=0,lte=1000"`
 	Payment     int64  `json:"payment,omitempty"`
 	Coupon      string `json:"coupon,omitempty"`
+	// V4.3: 续费预览时传入,用于把已有加购设备的费用一起算进去。
+	// 新购订阅时留 0;preCreateOrder 看到 0 就只算套餐价。
+	UserSubscribeId int64 `json:"user_subscribe_id,omitempty"`
 }
 
 type PurchaseOrderResponse struct {
@@ -1675,6 +1752,11 @@ type QueryServerConfigResponse struct {
 	Outbound               []NodeOutbound `json:"outbound"`
 	Protocols              []Protocol     `json:"protocols"`
 	Total                  int64          `json:"total"`
+	// DeviceLimitEnabled is the kill-switch for public-IP concurrent limiting.
+	// Controlled by server config Feature.DeviceLimitEnabled; false = node disables IP enforcement.
+	// NOTE: server_time was moved to the X-Server-Time response header so the body
+	// stays hash-stable across polls (otherwise node detects "config changed" every call).
+	DeviceLimitEnabled bool `json:"device_limit_enabled"`
 }
 
 type QuerySubscribeGroupListResponse struct {
@@ -1998,10 +2080,12 @@ type ServerTrafficLog struct {
 }
 
 type ServerUser struct {
-	Id          int64  `json:"id"`
-	UUID        string `json:"uuid"`
-	SpeedLimit  int64  `json:"speed_limit"`
-	DeviceLimit int64  `json:"device_limit"`
+	Id              int64  `json:"id"`
+	UUID            string `json:"uuid"`
+	SpeedLimit      int64  `json:"speed_limit"`
+	DeviceLimit     int64  `json:"device_limit"`
+	UserSubscribeId int64  `json:"user_subscribe_id,omitempty"` // V4.3 决策 32: limiter 跨协议共享桶 key
+	Password        string `json:"password,omitempty"`          // V4.3 决策 17: SS 协议下发的派生密码
 }
 
 type SetNodeMultiplierRequest struct {
@@ -2051,31 +2135,36 @@ type StripePayment struct {
 }
 
 type Subscribe struct {
-	Id                int64               `json:"id"`
-	Name              string              `json:"name"`
-	Language          string              `json:"language"`
-	Description       string              `json:"description"`
-	UnitPrice         int64               `json:"unit_price"`
-	UnitTime          string              `json:"unit_time"`
-	Discount          []SubscribeDiscount `json:"discount"`
-	Replacement       int64               `json:"replacement"`
-	Inventory         int64               `json:"inventory"`
-	Traffic           int64               `json:"traffic"`
-	SpeedLimit        int64               `json:"speed_limit"`
-	DeviceLimit       int64               `json:"device_limit"`
-	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
-	NodeTags          []string            `json:"node_tags"`
-	Show              bool                `json:"show"`
-	Sell              bool                `json:"sell"`
-	Sort              int64               `json:"sort"`
-	DeductionRatio    int64               `json:"deduction_ratio"`
-	AllowDeduction    bool                `json:"allow_deduction"`
-	ResetCycle        int64               `json:"reset_cycle"`
-	RenewalReset      bool                `json:"renewal_reset"`
-	ShowOriginalPrice bool                `json:"show_original_price"`
-	CreatedAt         int64               `json:"created_at"`
-	UpdatedAt         int64               `json:"updated_at"`
+	Id                    int64               `json:"id"`
+	Name                  string              `json:"name"`
+	Language              string              `json:"language"`
+	Description           string              `json:"description"`
+	UnitPrice             int64               `json:"unit_price"`
+	UnitTime              string              `json:"unit_time"`
+	Discount              []SubscribeDiscount `json:"discount"`
+	Replacement           int64               `json:"replacement"`
+	Inventory             int64               `json:"inventory"`
+	Traffic               int64               `json:"traffic"`
+	SpeedLimit            int64               `json:"speed_limit"`
+	DeviceLimit           int64               `json:"device_limit"`
+	Quota                 int64               `json:"quota"`
+	Nodes                 []int64             `json:"nodes"`
+	NodeTags              []string            `json:"node_tags"`
+	Show                  bool                `json:"show"`
+	Sell                  bool                `json:"sell"`
+	Sort                  int64               `json:"sort"`
+	DeductionRatio        int64               `json:"deduction_ratio"`
+	AllowDeduction        bool                `json:"allow_deduction"`
+	ResetCycle            int64               `json:"reset_cycle"`
+	RenewalReset          bool                `json:"renewal_reset"`
+	ShowOriginalPrice     bool                `json:"show_original_price"`
+	MaxDeviceCount        int64               `json:"max_device_count"`
+	UnitPricePerDevice    int64               `json:"unit_price_per_device"`
+	TrafficAddonUnitPrice int64               `json:"traffic_addon_unit_price"`
+	TrafficAddonUnitSize  int64               `json:"traffic_addon_unit_size"`
+	CommissionRate        int64               `json:"commission_rate"`
+	CreatedAt             int64               `json:"created_at"`
+	UpdatedAt             int64               `json:"updated_at"`
 }
 
 type SubscribeApplication struct {
@@ -2089,6 +2178,8 @@ type SubscribeApplication struct {
 	SubscribeTemplate string       `json:"template"`
 	OutputFormat      string       `json:"output_format"`
 	DownloadLink      DownloadLink `json:"download_link,omitempty"`
+	TutorialKey       string       `json:"tutorial_key,omitempty"`
+	Enabled           bool         `json:"enabled"`
 	CreatedAt         int64        `json:"created_at"`
 	UpdatedAt         int64        `json:"updated_at"`
 }
@@ -2101,6 +2192,8 @@ type SubscribeClient struct {
 	Scheme       string       `json:"scheme,omitempty"`
 	IsDefault    bool         `json:"is_default"`
 	DownloadLink DownloadLink `json:"download_link,omitempty"`
+	// V4.3: site_content key for multi-lang tutorial. Empty = no tutorial.
+	TutorialKey string `json:"tutorial_key,omitempty"`
 }
 
 type SubscribeConfig struct {
@@ -2110,6 +2203,8 @@ type SubscribeConfig struct {
 	PanDomain       bool   `json:"pan_domain"`
 	UserAgentLimit  bool   `json:"user_agent_limit"`
 	UserAgentList   string `json:"user_agent_list"`
+	// V4.3:订阅自动更新间隔(小时)。0 = 不下发更新指令。详见 config.SubscribeConfig。
+	UpdateIntervalHours int64 `json:"update_interval_hours"`
 }
 
 type SubscribeDiscount struct {
@@ -2426,6 +2521,8 @@ type UpdateSubscribeApplicationRequest struct {
 	SubscribeTemplate string       `json:"template"`
 	OutputFormat      string       `json:"output_format"`
 	DownloadLink      DownloadLink `json:"download_link,omitempty"`
+	TutorialKey       string       `json:"tutorial_key,omitempty"`
+	Enabled           bool         `json:"enabled,optional"`
 }
 
 type UpdateSubscribeGroupRequest struct {
@@ -2435,29 +2532,34 @@ type UpdateSubscribeGroupRequest struct {
 }
 
 type UpdateSubscribeRequest struct {
-	Id                int64               `json:"id" validate:"required"`
-	Name              string              `json:"name" validate:"required"`
-	Language          string              `json:"language"`
-	Description       string              `json:"description"`
-	UnitPrice         int64               `json:"unit_price"`
-	UnitTime          string              `json:"unit_time"`
-	Discount          []SubscribeDiscount `json:"discount"`
-	Replacement       int64               `json:"replacement"`
-	Inventory         int64               `json:"inventory"`
-	Traffic           int64               `json:"traffic"`
-	SpeedLimit        int64               `json:"speed_limit"`
-	DeviceLimit       int64               `json:"device_limit"`
-	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
-	NodeTags          []string            `json:"node_tags"`
-	Show              *bool               `json:"show"`
-	Sell              *bool               `json:"sell"`
-	Sort              int64               `json:"sort"`
-	DeductionRatio    int64               `json:"deduction_ratio"`
-	AllowDeduction    *bool               `json:"allow_deduction"`
-	ResetCycle        int64               `json:"reset_cycle"`
-	RenewalReset      *bool               `json:"renewal_reset"`
-	ShowOriginalPrice bool                `json:"show_original_price"`
+	Id                    int64               `json:"id" validate:"required"`
+	Name                  string              `json:"name" validate:"required"`
+	Language              string              `json:"language"`
+	Description           string              `json:"description"`
+	UnitPrice             int64               `json:"unit_price"`
+	UnitTime              string              `json:"unit_time"`
+	Discount              []SubscribeDiscount `json:"discount"`
+	Replacement           int64               `json:"replacement"`
+	Inventory             int64               `json:"inventory"`
+	Traffic               int64               `json:"traffic"`
+	SpeedLimit            int64               `json:"speed_limit"`
+	DeviceLimit           int64               `json:"device_limit"`
+	Quota                 int64               `json:"quota"`
+	Nodes                 []int64             `json:"nodes"`
+	NodeTags              []string            `json:"node_tags"`
+	Show                  *bool               `json:"show"`
+	Sell                  *bool               `json:"sell"`
+	Sort                  int64               `json:"sort"`
+	DeductionRatio        int64               `json:"deduction_ratio"`
+	AllowDeduction        *bool               `json:"allow_deduction"`
+	ResetCycle            int64               `json:"reset_cycle"`
+	RenewalReset          *bool               `json:"renewal_reset"`
+	ShowOriginalPrice     bool                `json:"show_original_price"`
+	MaxDeviceCount        int64               `json:"max_device_count"`
+	UnitPricePerDevice    int64               `json:"unit_price_per_device"`
+	TrafficAddonUnitPrice int64               `json:"traffic_addon_unit_price"`
+	TrafficAddonUnitSize  int64               `json:"traffic_addon_unit_size"`
+	CommissionRate        int64               `json:"commission_rate"`
 }
 
 type UpdateTicketStatusRequest struct {
@@ -2472,19 +2574,20 @@ type UpdateUserAuthMethodRequest struct {
 }
 
 type UpdateUserBasiceInfoRequest struct {
-	UserId             int64  `json:"user_id" validate:"required"`
-	Password           string `json:"password"`
-	Avatar             string `json:"avatar"`
-	Balance            int64  `json:"balance"`
-	Commission         int64  `json:"commission"`
-	ReferralPercentage uint8  `json:"referral_percentage"`
-	OnlyFirstPurchase  bool   `json:"only_first_purchase"`
-	GiftAmount         int64  `json:"gift_amount"`
-	Telegram           int64  `json:"telegram"`
-	ReferCode          string `json:"refer_code"`
-	RefererId          int64  `json:"referer_id"`
-	Enable             bool   `json:"enable"`
-	IsAdmin            bool   `json:"is_admin"`
+	UserId             int64    `json:"user_id" validate:"required"`
+	Password           string   `json:"password"`
+	Avatar             string   `json:"avatar"`
+	Balance            int64    `json:"balance"`
+	Commission         int64    `json:"commission"`
+	ReferralPercentage uint8    `json:"referral_percentage"`
+	OnlyFirstPurchase  bool     `json:"only_first_purchase"`
+	GiftAmount         int64    `json:"gift_amount"`
+	Telegram           int64    `json:"telegram"`
+	ReferCode          string   `json:"refer_code"`
+	RefererId          int64    `json:"referer_id"`
+	Enable             bool     `json:"enable"`
+	IsAdmin            bool     `json:"is_admin"`
+	Tags               []string `json:"tags"`
 }
 
 type UpdateUserNotifyRequest struct {
@@ -2522,6 +2625,8 @@ type UpdateUserSubscribeRequest struct {
 	ExpiredAt       int64 `json:"expired_at"`
 	Upload          int64 `json:"upload"`
 	Download        int64 `json:"download"`
+	DeviceCount     int64 `json:"device_count"`
+	TrafficAddon    int64 `json:"traffic_addon"`
 }
 
 type UpdateUserTicketStatusRequest struct {
@@ -2549,6 +2654,8 @@ type User struct {
 	AuthMethods           []UserAuthMethod `json:"auth_methods"`
 	UserDevices           []UserDevice     `json:"user_devices"`
 	Rules                 []string         `json:"rules"`
+	Tags                  []string         `json:"tags"`
+	SubscribeCount        int64            `json:"subscribe_count"`
 	CreatedAt             int64            `json:"created_at"`
 	UpdatedAt             int64            `json:"updated_at"`
 	DeletedAt             int64            `json:"deleted_at,omitempty"`
@@ -2639,8 +2746,12 @@ type UserSubscribe struct {
 	Token       string    `json:"token"`
 	Status      uint8     `json:"status"`
 	Short       string    `json:"short"`
-	CreatedAt   int64     `json:"created_at"`
-	UpdatedAt   int64     `json:"updated_at"`
+	// V4.3 device-billing 字段:必须出现在响应里,否则 admin 端
+	// 「加购流量包」「加购设备」列拿不到值会显示 "--"。
+	DeviceCount  int64 `json:"device_count"`
+	TrafficAddon int64 `json:"traffic_addon"`
+	CreatedAt    int64 `json:"created_at"`
+	UpdatedAt    int64 `json:"updated_at"`
 }
 
 type UserSubscribeDetail struct {
@@ -2703,6 +2814,225 @@ type UserSubscribeNodeInfo struct {
 	Country   string   `json:"country"`
 	City      string   `json:"city"`
 	CreatedAt int64    `json:"created_at"`
+}
+
+// V4.3 device-billing types
+type AddSubscribeDeviceRequest struct {
+	UserSubscribeId int64 `path:"id"`
+	Quantity        int64 `json:"quantity,optional"` // 加购数量,默认 1
+}
+type AddSubscribeDeviceResponse struct {
+	DeviceId      int64    `json:"device_id"`
+	Token         string   `json:"token"`
+	UUID          string   `json:"uuid"`
+	Amount        int64    `json:"amount"`
+	Ratio         int64    `json:"ratio"`
+	SubscribeUrl  string   `json:"subscribe_url"`
+	SubscribeUrls []string `json:"subscribe_urls"`
+	Quantity      int64    `json:"quantity,omitempty"`
+	DeviceIds     []int64  `json:"device_ids,omitempty"`
+}
+type AddTrafficAddonRequest struct {
+	UserSubscribeId int64 `path:"id"`
+	AddonBytes      int64 `json:"addon_bytes"`
+}
+type AddTrafficAddonResponse struct {
+	AddonOrderId int64 `json:"addon_order_id"`
+	AddonBytes   int64 `json:"addon_bytes"`
+	Amount       int64 `json:"amount"`
+	TrafficTotal int64 `json:"traffic_total"`
+}
+type QueryMySubscribesResponse struct {
+	List []MySubscribeInfo `json:"list"`
+}
+type MySubscribeInfo struct {
+	Id               int64               `json:"id"`
+	SubscribeId      int64               `json:"subscribe_id"`
+	SubscribeName    string              `json:"subscribe_name"`
+	DeviceCount      int64               `json:"device_count"`
+	TrafficTotal     int64               `json:"traffic_total"`
+	TrafficAddon     int64               `json:"traffic_addon"`
+	TrafficUsed      int64               `json:"traffic_used"`
+	TrafficRemainPct int64               `json:"traffic_remain_pct"`
+	StartTime        int64               `json:"start_time,omitempty"`
+	ExpireTime       int64               `json:"expire_time"`
+	Status           string              `json:"status"`
+	ThrottledAt      int64               `json:"throttled_at,omitempty"`
+	CutOffAt         int64               `json:"cut_off_at,omitempty"`
+	Devices          []MySubscribeDevice `json:"devices"`
+	// V4.3:计价相关字段下放到前端,用于「加购设备 / 加购流量」对话框
+	// 在用户点之前预估金额。值取自 subscribe(套餐)定义。
+	UnitPricePerDevice    int64 `json:"unit_price_per_device,omitempty"`    // 每台设备单价(分)
+	MaxDeviceCount        int64 `json:"max_device_count,omitempty"`         // 最大设备数(0 = 不限)
+	TrafficAddonUnitPrice int64 `json:"traffic_addon_unit_price,omitempty"` // 加购流量单价(分/单位)
+	TrafficAddonUnitSize  int64 `json:"traffic_addon_unit_size,omitempty"`  // 加购流量步长(字节)
+}
+type MySubscribeDevice struct {
+	Id           int64  `json:"id"`
+	DeviceName   string `json:"device_name"`
+	Token        string `json:"token"`
+	UUID         string `json:"uuid"`
+	SubscribeUrl string `json:"subscribe_url"`
+	// V4.3:配置了多个订阅域名(主线 + 备用 + CDN)时,这里返回完整列表;
+	// 前端按顺序展示给用户选择,subscribe_url 仍是第一条以兼容老逻辑。
+	SubscribeUrls []string `json:"subscribe_urls"`
+	QrCodeUrl     string   `json:"qr_code_url"`
+	LastSeenAt    int64    `json:"last_seen_at"`
+	LastSeenIp    string   `json:"last_seen_ip"`
+	TodayTraffic  int64    `json:"today_traffic"`
+	Status        uint8    `json:"status"`
+	// V4.3:true = 用户加购设备(可删除),false = 套餐基础设备(不可删)
+	IsAddon bool `json:"is_addon"`
+}
+
+// V4.3 设备槽管理(reset / disable / enable / rename / reset_all)
+type DeviceIdRequest struct {
+	DeviceId int64 `path:"device_id"`
+}
+type DeviceResetResponse struct {
+	DeviceId       int64    `json:"device_id"`
+	Token          string   `json:"token"`
+	UUID           string   `json:"uuid"`
+	SubscribeUrl   string   `json:"subscribe_url"`
+	SubscribeUrls  []string `json:"subscribe_urls"`
+	ResetCountHour int      `json:"reset_count_hour"`
+	ResetCountDay  int      `json:"reset_count_day"`
+}
+type DeviceRenameRequest struct {
+	DeviceId int64  `path:"device_id"`
+	Name     string `json:"name"`
+}
+type DeviceRenameResponse struct {
+	DeviceId int64  `json:"device_id"`
+	Name     string `json:"name"`
+}
+type DeviceStatusResponse struct {
+	DeviceId int64 `json:"device_id"`
+	Status   uint8 `json:"status"`
+}
+type ResetAllDevicesRequest struct {
+	UserSubscribeId int64 `path:"id"`
+}
+type ResetAllDevicesResponse struct {
+	ResetCount int `json:"reset_count"`
+}
+
+// V4.3 admin types
+type SiteContentItem struct {
+	Id          int64  `json:"id"`
+	ContentKey  string `json:"content_key"`
+	ContentLang string `json:"content_lang"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	Version     string `json:"version"` // V4.4 #45
+	UpdatedAt   int64  `json:"updated_at"`
+}
+type GetSiteContentRequest struct {
+	Lang   string `form:"lang,optional"`
+	Prefix string `form:"prefix,optional"`
+}
+type GetSiteContentResponse struct {
+	List []SiteContentItem `json:"list"`
+}
+type UpsertSiteContentRequest struct {
+	ContentKey  string `json:"content_key"`
+	ContentLang string `json:"content_lang"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	Version     string `json:"version,optional"` // V4.4 #45 — 留空保留旧版本
+}
+type UpsertSiteContentResponse struct {
+	Id int64 `json:"id"`
+}
+
+// V4.3 决策 25:用户端读取站内 CMS 单条教程内容
+type GetSiteContentItemRequest struct {
+	Key  string `form:"key" validate:"required"`
+	Lang string `form:"lang,optional"`
+}
+
+type GetSiteContentItemResponse struct {
+	ContentKey  string `json:"content_key"`
+	ContentLang string `json:"content_lang"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	Version     string `json:"version,omitempty"`
+	UpdatedAt   int64  `json:"updated_at"`
+}
+type QueryAuditLogRequest struct {
+	UserId  int64  `form:"user_id,optional"`
+	Actor   string `form:"actor,optional"`
+	ActorId int64  `form:"actor_id,optional"`
+	Action  string `form:"action,optional"`
+	Since   int64  `form:"since,optional"`
+	Until   int64  `form:"until,optional"`
+	Page    int    `form:"page,optional"`
+	Size    int    `form:"size,optional"`
+}
+type AuditLogItem struct {
+	Id        int64  `json:"id"`
+	UserId    int64  `json:"user_id"`
+	Actor     string `json:"actor"`
+	ActorId   int64  `json:"actor_id"`
+	Action    string `json:"action"`
+	Target    string `json:"target"`
+	Detail    string `json:"detail"`
+	ClientIp  string `json:"client_ip"`
+	CreatedAt int64  `json:"created_at"`
+}
+type QueryAuditLogResponse struct {
+	List  []AuditLogItem `json:"list"`
+	Total int64          `json:"total"`
+}
+type QueryUserDevicesRequest struct {
+	UserId          int64 `form:"user_id"`
+	UserSubscribeId int64 `form:"user_subscribe_id,optional"`
+}
+type AdminUserDeviceItem struct {
+	Id              int64  `json:"id"`
+	UserSubscribeId int64  `json:"user_subscribe_id"`
+	UserId          int64  `json:"user_id"`
+	DeviceName      string `json:"device_name"`
+	Token           string `json:"token"`
+	UUID            string `json:"uuid"`
+	LastSeenIp      string `json:"last_seen_ip"`
+	LastSeenAt      int64  `json:"last_seen_at"`
+	TodayTraffic    int64  `json:"today_traffic"`
+	Status          uint8  `json:"status"`
+	// V4.3:1 = 用户加购设备(可删可改) / 0 = 套餐基础设备(不可删)
+	IsAddon bool `json:"is_addon"`
+}
+type QueryUserDevicesResponse struct {
+	List []AdminUserDeviceItem `json:"list"`
+}
+type AdminDeviceIdRequest struct {
+	DeviceId int64 `path:"device_id"`
+}
+type AdminDeviceStatusResponse struct {
+	DeviceId int64 `json:"device_id"`
+	Status   uint8 `json:"status"`
+}
+type AdminDeviceRenameRequest struct {
+	DeviceId int64  `path:"device_id"`
+	Name     string `json:"name"`
+}
+type AdminDeviceRenameResponse struct {
+	DeviceId int64  `json:"device_id"`
+	Name     string `json:"name"`
+}
+type GetServerDirectListRequest struct {
+	ServerId int64 `path:"server_id"`
+}
+type GetServerDirectListResponse struct {
+	ServerId   int64    `json:"server_id"`
+	DirectList []string `json:"direct_list"`
+}
+type UpdateServerDirectListRequest struct {
+	ServerId   int64    `path:"server_id"`
+	DirectList []string `json:"direct_list"`
+}
+type UpdateServerDirectListResponse struct {
+	ServerId int64 `json:"server_id"`
 }
 
 type UserSubscribeTrafficLog struct {

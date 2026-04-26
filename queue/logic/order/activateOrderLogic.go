@@ -325,19 +325,36 @@ func (l *ActivateOrderLogic) getSubscribeInfo(ctx context.Context, subscribeId i
 	return sub, nil
 }
 
-// createUserSubscription creates a new user subscription record based on order and subscription plan details
+// createUserSubscription creates a new user subscription record based on order and subscription plan details.
+// V4.3: 当 orderInfo.DeviceCount > 0 时,同时建 N 个 user_subscribe_device 槽。
 func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderInfo *order.Order, sub *subscribe.Subscribe) (*user.Subscribe, error) {
 	now := time.Now()
+	deviceCount := orderInfo.DeviceCount
+	if deviceCount <= 0 {
+		// 旧时长计费 / 没传 device_count 的下单场景:用套餐定义的「使用设备」数
+		// (plan.device_limit) 作为基础包含数。0 表示套餐未限制,兜底 1 台。
+		if sub.DeviceLimit > 0 {
+			deviceCount = sub.DeviceLimit
+		} else {
+			deviceCount = 1
+		}
+	}
+	// device-billing 走 1 个 unit_time 周期;旧时长计费 quantity = N units。
+	timeQty := orderInfo.Quantity
+	if timeQty <= 0 {
+		timeQty = 1
+	}
 	userSub := &user.Subscribe{
 		UserId:      orderInfo.UserId,
 		OrderId:     orderInfo.Id,
 		SubscribeId: orderInfo.SubscribeId,
+		DeviceCount: deviceCount,
 		StartTime:   now,
-		ExpireTime:  tool.AddTime(sub.UnitTime, orderInfo.Quantity, now),
+		ExpireTime:  tool.AddTime(sub.UnitTime, timeQty, now),
 		Traffic:     sub.Traffic,
 		Download:    0,
 		Upload:      0,
-		Token:       uuidx.SubscribeToken(orderInfo.OrderNo),
+		Token:       uuidx.SubscribeToken(orderInfo.OrderNo), // 旧字段保留,新代码不再读取
 		UUID:        uuid.New().String(),
 		Status:      1,
 	}
@@ -345,6 +362,24 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 	if err := l.svc.UserModel.InsertSubscribe(ctx, userSub); err != nil {
 		logger.WithContext(ctx).Error("Insert user subscribe failed", logger.Field("error", err.Error()))
 		return nil, err
+	}
+
+	// V4.3: 创建 N 个独立设备槽。失败也只 warn,不 rollback subscribe(用户后续可通过加购/重置补救)。
+	devices := make([]*user.SubscribeDevice, 0, deviceCount)
+	for i := int64(1); i <= deviceCount; i++ {
+		devices = append(devices, &user.SubscribeDevice{
+			UserSubscribeId: userSub.Id,
+			UserId:          orderInfo.UserId,
+			DeviceName:      fmt.Sprintf("设备 %d", i),
+			Status:          1,
+		})
+	}
+	if err := l.svc.UserModel.BatchInsertSubscribeDevices(ctx, devices); err != nil {
+		logger.WithContext(ctx).Error("Batch insert subscribe devices failed",
+			logger.Field("error", err.Error()),
+			logger.Field("user_subscribe_id", userSub.Id),
+			logger.Field("device_count", deviceCount),
+		)
 	}
 
 	return userSub, nil

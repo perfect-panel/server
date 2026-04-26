@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/server"
@@ -44,6 +45,9 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) func(c *gin.Co
 
 		l := server.NewQueryServerProtocolConfigLogic(c.Request.Context(), svcCtx)
 		resp, err := l.QueryServerProtocolConfig(&req)
+		// X-Server-Time rides on the response header so the body hash stays stable
+		// across polls; the node uses it for skew check without triggering reload.
+		c.Header("X-Server-Time", strconv.FormatInt(time.Now().Unix(), 10))
 		result.HttpResult(c, resp, err)
 	}
 }

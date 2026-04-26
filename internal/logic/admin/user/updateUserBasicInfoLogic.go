@@ -123,6 +123,7 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 	tool.DeepCopy(userInfo, req)
 	userInfo.OnlyFirstPurchase = &req.OnlyFirstPurchase
 	userInfo.ReferralPercentage = req.ReferralPercentage
+	userInfo.Tags = strings.Join(req.Tags, ",")
 
 	if req.Password != "" {
 		if userInfo.Id == 2 && isDemo {

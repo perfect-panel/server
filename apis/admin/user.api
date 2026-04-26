@@ -28,6 +28,26 @@ type (
 		Total int64  `json:"total"`
 		List  []User `json:"list"`
 	}
+	// GetUserOnlineStatusRequest single-user query
+	GetUserOnlineStatusRequest {
+		UID int64 `form:"uid"`
+	}
+	// UserOnlineStatus aggregated limiter state for one uid. DataSourceVersion records
+	// the minimum node version that produces full data; during rolling upgrades older
+	// nodes omit Reject counters so admins know the number may under-report.
+	UserOnlineStatus {
+		UID                int64    `json:"uid"`
+		OnlineIPs          []string `json:"online_ips"`
+		OnlineIPCount      int64    `json:"online_ip_count"`
+		RejectCount24h     int64    `json:"reject_count_24h"`
+		DataSourceVersion  string   `json:"data_source_version"`
+	}
+	BatchGetUserOnlineStatusRequest {
+		UIDs []int64 `json:"uids"`
+	}
+	BatchGetUserOnlineStatusResponse {
+		Items []UserOnlineStatus `json:"items"`
+	}
 	// GetUserDetail
 	GetDetailRequest {
 		Id int64 `form:"id" validate:"required"`
@@ -159,6 +179,8 @@ type (
 		ExpiredAt       int64 `json:"expired_at"`
 		Upload          int64 `json:"upload"`
 		Download        int64 `json:"download"`
+		DeviceCount     int64 `json:"device_count"`
+		TrafficAddon    int64 `json:"traffic_addon"`
 	}
 	GetUserLoginLogsRequest {
 		Page   int   `form:"page"`
@@ -206,6 +228,14 @@ service ppanel {
 	@doc "Get user detail"
 	@handler GetUserDetail
 	get /detail (GetDetailRequest) returns (User)
+
+	@doc "Get limiter online status for a single user (online IPs + 24h reject count)"
+	@handler GetUserOnlineStatus
+	get /online_status (GetUserOnlineStatusRequest) returns (UserOnlineStatus)
+
+	@doc "Batch get limiter online status (list-page augmentation)"
+	@handler BatchGetUserOnlineStatus
+	post /online_status/batch (BatchGetUserOnlineStatusRequest) returns (BatchGetUserOnlineStatusResponse)
 
 	@doc "Update user basic info"
 	@handler UpdateUserBasicInfo

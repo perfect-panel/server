@@ -7,5 +7,8 @@ const (
 	Trojan      = "trojan"
 	AnyTLS      = "anytls"
 	Tuic        = "tuic"
-	Hysteria2   = "hysteria2"
+	// Hysteria is the canonical key for the Hysteria 2 protocol.
+	// The wire value stays "hysteria" for backward compatibility;
+	// admin UI shows "Hysteria 2".
+	Hysteria = "hysteria"
 )

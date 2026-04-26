@@ -15,3 +15,12 @@ node_modules
 package-lock.json
 package.json
 /bin
+# V4.3: build artifacts
+*.exe
+ppanel-server
+ppanel-server-*
+*.gz
+*.zip
+dump.rdb
+cache/GeoLite2-City.mmdb
+cache/*.mmdb

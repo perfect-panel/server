@@ -40,19 +40,32 @@ func (l *UpdateUserSubscribeLogic) UpdateUserSubscribe(req *types.UpdateUserSubs
 		userSub.Status = 1
 	}
 
+	deviceCount := req.DeviceCount
+	if deviceCount <= 0 {
+		deviceCount = userSub.DeviceCount
+	}
 	err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, &user.Subscribe{
-		Id:          userSub.Id,
-		UserId:      userSub.UserId,
-		OrderId:     userSub.OrderId,
-		SubscribeId: req.SubscribeId,
-		StartTime:   userSub.StartTime,
-		ExpireTime:  time.UnixMilli(req.ExpiredAt),
-		Traffic:     req.Traffic,
-		Download:    req.Download,
-		Upload:      req.Upload,
-		Token:       userSub.Token,
-		UUID:        userSub.UUID,
-		Status:      userSub.Status,
+		Id:           userSub.Id,
+		UserId:       userSub.UserId,
+		OrderId:      userSub.OrderId,
+		SubscribeId:  req.SubscribeId,
+		DeviceCount:  deviceCount,
+		StartTime:    userSub.StartTime,
+		ExpireTime:   time.UnixMilli(req.ExpiredAt),
+		Traffic:      req.Traffic,
+		TrafficAddon: req.TrafficAddon,
+		Download:     req.Download,
+		Upload:       req.Upload,
+		Token:        userSub.Token,
+		UUID:         userSub.UUID,
+		Status:       userSub.Status,
+		// 保留 V4.3 限速/断网状态字段,避免编辑时被清空
+		ThrottledAt:  userSub.ThrottledAt,
+		CutOffAt:     userSub.CutOffAt,
+		Notified90:   userSub.Notified90,
+		Notified100:  userSub.Notified100,
+		Notified12h:  userSub.Notified12h,
+		Notified24h:  userSub.Notified24h,
 	})
 
 	if err != nil {

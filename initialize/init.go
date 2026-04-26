@@ -16,6 +16,10 @@ func StartInitSystemConfig(svc *svc.ServiceContext) {
 	Register(svc)
 	Mobile(svc)
 	Currency(svc)
+	// V4.3 决策 25:确保 11 款官方客户端 + 教程占位存在,删除遗留 Default。
+	Application(svc)
+	// V4.3:把老订阅 device_count < plan.device_limit 的补齐(一次性纠正)。
+	SubscribeDeviceBackfill(svc)
 	if !svc.Config.Debug {
 		Telegram(svc)
 	}

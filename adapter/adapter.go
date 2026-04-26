@@ -16,6 +16,9 @@ type Adapter struct {
 	OutputFormat   string            // 输出格式，默认是 base64
 	SubscribeName  string            // 订阅名称
 	Params         map[string]string // 其他参数
+	// V4.3 决策 39:per-server direct_list 联合后传给客户端模板,
+	// 模板可用 `{{ range .DirectList }}DOMAIN-SUFFIX,{{.}},DIRECT{{end}}` 渲染规则。
+	DirectList []string
 }
 
 type Option func(*Adapter)
@@ -61,6 +64,13 @@ func WithSubscribeName(name string) Option {
 	}
 }
 
+// WithDirectList — V4.3 决策 39:把 per-server direct_list union 注入模板上下文。
+func WithDirectList(list []string) Option {
+	return func(opts *Adapter) {
+		opts.DirectList = list
+	}
+}
+
 func NewAdapter(tpl string, opts ...Option) *Adapter {
 	adapter := &Adapter{
 		Servers:        []*node.Node{},
@@ -85,6 +95,7 @@ func (adapter *Adapter) Client() (*Client, error) {
 		Proxies:        []Proxy{},
 		UserInfo:       adapter.UserInfo,
 		Params:         adapter.Params,
+		DirectList:     adapter.DirectList,
 	}
 
 	proxies, err := adapter.Proxies(adapter.Servers)

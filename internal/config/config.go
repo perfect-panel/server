@@ -30,6 +30,7 @@ type Config struct {
 	Telegram      Telegram        `yaml:"Telegram"`
 	Log           Log             `yaml:"Log"`
 	Currency      Currency        `yaml:"Currency"`
+	Feature       FeatureConfig   `yaml:"Feature"`
 	Administrator struct {
 		Email    string `yaml:"Email" default:"admin@ppanel.dev"`
 		Password string `yaml:"Password" default:"password"`
@@ -62,6 +63,12 @@ type SubscribeConfig struct {
 	PanDomain       bool   `yaml:"PanDomain" default:"false"`
 	UserAgentLimit  bool   `yaml:"UserAgentLimit" default:"false"`
 	UserAgentList   string `yaml:"UserAgentList" default:""`
+	// V4.3:导入后客户端自动更新订阅的间隔(单位:小时)。0 = 不下发,客户端按各自默认。
+	// 落地方式按客户端 UA 智能切:
+	//   - Clash 家族 / Hiddify → HTTP 响应头 Profile-Update-Interval(小时)
+	//   - Surge / Stash → 配置体首行 #!MANAGED-CONFIG <url> interval=<秒>
+	//   - 其它客户端(v2rayN / Shadowrocket / QuanX 等) → 不支持,header 仍带,客户端自行忽略
+	UpdateIntervalHours int64 `yaml:"UpdateIntervalHours" default:"24"`
 }
 
 type RegisterConfig struct {
@@ -73,6 +80,8 @@ type RegisterConfig struct {
 	IpRegisterLimit         int64  `yaml:"IpRegisterLimit" default:"0"`
 	IpRegisterLimitDuration int64  `yaml:"IpRegisterLimitDuration" default:"0"`
 	EnableIpRegisterLimit   bool   `yaml:"EnableIpRegisterLimit" default:"false"`
+	// V4.3 决策 22:注册送 ¥2 余额(单位:分,默认 200 = ¥2)。0 = 关闭。
+	TrialBalance int64 `yaml:"TrialBalance" default:"200"`
 }
 
 type EmailConfig struct {
@@ -247,4 +256,12 @@ type Currency struct {
 	Unit      string `yaml:"Unit" default:"CNY"`
 	Symbol    string `yaml:"Symbol" default:"USD"`
 	AccessKey string `yaml:"AccessKey" default:""`
+}
+
+// FeatureConfig holds runtime feature toggles. Values are pushed to nodes via
+// /v2/server/:server_id so a single flip globally disables enforcement without redeploy.
+type FeatureConfig struct {
+	// DeviceLimitEnabled gates the per-uid public-IP concurrent limit in the node limiter.
+	// false = node skips IP enforcement, speed limit still applies.
+	DeviceLimitEnabled bool `yaml:"DeviceLimitEnabled" default:"true"`
 }

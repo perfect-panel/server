@@ -61,7 +61,22 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
-	price := sub.UnitPrice * req.Quantity
+	// V4.3:续费时把已有「加购设备」一起按比例续费,避免到期后加购设备直接掉。
+	// 计费 = unit_price_per_device × addon_count × quantity (无折扣)
+	var addonAmount int64
+	var addonCount int64
+	if req.UserSubscribeId > 0 && sub.UnitPricePerDevice > 0 {
+		devices, derr := l.svcCtx.UserModel.QuerySubscribeDevices(l.ctx, req.UserSubscribeId)
+		if derr == nil {
+			for _, d := range devices {
+				if d.IsAddon {
+					addonCount++
+				}
+			}
+			addonAmount = sub.UnitPricePerDevice * addonCount * req.Quantity
+		}
+	}
+	price := sub.UnitPrice*req.Quantity + addonAmount
 
 	amount := int64(float64(price) * discount)
 	discountAmount := price - amount
@@ -125,13 +140,15 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 	}
 
 	resp = &types.PreOrderResponse{
-		Price:          price,
-		Amount:         amount,
-		Discount:       discountAmount,
-		GiftAmount:     deductionAmount,
-		Coupon:         req.Coupon,
-		CouponDiscount: couponAmount,
-		FeeAmount:      feeAmount,
+		Price:             price,
+		Amount:            amount,
+		Discount:          discountAmount,
+		GiftAmount:        deductionAmount,
+		Coupon:            req.Coupon,
+		CouponDiscount:    couponAmount,
+		FeeAmount:         feeAmount,
+		AddonDeviceAmount: addonAmount,
+		AddonDeviceCount:  addonCount,
 	}
 	return
 }

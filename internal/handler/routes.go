@@ -8,15 +8,18 @@ import (
 	adminAds "github.com/perfect-panel/server/internal/handler/admin/ads"
 	adminAnnouncement "github.com/perfect-panel/server/internal/handler/admin/announcement"
 	adminApplication "github.com/perfect-panel/server/internal/handler/admin/application"
+	adminAudit "github.com/perfect-panel/server/internal/handler/admin/audit"
 	adminAuthMethod "github.com/perfect-panel/server/internal/handler/admin/authMethod"
 	adminConsole "github.com/perfect-panel/server/internal/handler/admin/console"
 	adminCoupon "github.com/perfect-panel/server/internal/handler/admin/coupon"
+	adminDevice "github.com/perfect-panel/server/internal/handler/admin/device"
 	adminDocument "github.com/perfect-panel/server/internal/handler/admin/document"
 	adminLog "github.com/perfect-panel/server/internal/handler/admin/log"
 	adminMarketing "github.com/perfect-panel/server/internal/handler/admin/marketing"
 	adminOrder "github.com/perfect-panel/server/internal/handler/admin/order"
 	adminPayment "github.com/perfect-panel/server/internal/handler/admin/payment"
 	adminServer "github.com/perfect-panel/server/internal/handler/admin/server"
+	adminSiteContent "github.com/perfect-panel/server/internal/handler/admin/sitecontent"
 	adminSubscribe "github.com/perfect-panel/server/internal/handler/admin/subscribe"
 	adminSystem "github.com/perfect-panel/server/internal/handler/admin/system"
 	adminTicket "github.com/perfect-panel/server/internal/handler/admin/ticket"
@@ -26,19 +29,28 @@ import (
 	authOauth "github.com/perfect-panel/server/internal/handler/auth/oauth"
 	common "github.com/perfect-panel/server/internal/handler/common"
 	publicAnnouncement "github.com/perfect-panel/server/internal/handler/public/announcement"
+	publicDevice "github.com/perfect-panel/server/internal/handler/public/device"
 	publicDocument "github.com/perfect-panel/server/internal/handler/public/document"
 	publicOrder "github.com/perfect-panel/server/internal/handler/public/order"
 	publicPayment "github.com/perfect-panel/server/internal/handler/public/payment"
 	publicPortal "github.com/perfect-panel/server/internal/handler/public/portal"
+	publicMessage "github.com/perfect-panel/server/internal/handler/public/message"
 	publicSubscribe "github.com/perfect-panel/server/internal/handler/public/subscribe"
+	publicTerms "github.com/perfect-panel/server/internal/handler/public/terms"
+	publicTrafficAddon "github.com/perfect-panel/server/internal/handler/public/trafficaddon"
 	publicTicket "github.com/perfect-panel/server/internal/handler/public/ticket"
 	publicUser "github.com/perfect-panel/server/internal/handler/public/user"
 	server "github.com/perfect-panel/server/internal/handler/server"
 	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
+	// Prometheus scrape endpoint. Unauthenticated by design; expose only on
+	// internal network (bind the server behind a firewall or reverse-proxy ACL).
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	adminAdsGroupRouter := router.Group("/v1/admin/ads")
 	adminAdsGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
@@ -77,6 +89,14 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get announcement list
 		adminAnnouncementGroupRouter.GET("/list", adminAnnouncement.GetAnnouncementListHandler(serverCtx))
+	}
+
+	adminAuditGroupRouter := router.Group("/v1/admin/audit")
+	adminAuditGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Query audit log
+		adminAuditGroupRouter.GET("/list", adminAudit.QueryAuditLogHandler(serverCtx))
 	}
 
 	adminApplicationGroupRouter := router.Group("/v1/admin/application")
@@ -160,6 +180,26 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get coupon list
 		adminCouponGroupRouter.GET("/list", adminCoupon.GetCouponListHandler(serverCtx))
+	}
+
+	adminDeviceGroupRouter := router.Group("/v1/admin/device")
+	adminDeviceGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// Query a user's device slots
+		adminDeviceGroupRouter.GET("/list", adminDevice.QueryUserDevicesHandler(serverCtx))
+
+		// Force-disable a device slot
+		adminDeviceGroupRouter.POST("/:device_id/disable", adminDevice.AdminDisableDeviceHandler(serverCtx))
+
+		// Force-enable a device slot
+		adminDeviceGroupRouter.POST("/:device_id/enable", adminDevice.AdminEnableDeviceHandler(serverCtx))
+
+		// Force-reset a device token
+		adminDeviceGroupRouter.POST("/:device_id/reset", adminDevice.AdminResetDeviceHandler(serverCtx))
+
+		// Rename a device
+		adminDeviceGroupRouter.PUT("/:device_id/name", adminDevice.AdminRenameDeviceHandler(serverCtx))
 	}
 
 	adminDocumentGroupRouter := router.Group("/v1/admin/document")
@@ -340,6 +380,23 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Update Server
 		adminServerGroupRouter.POST("/update", adminServer.UpdateServerHandler(serverCtx))
+
+		// Get server direct list
+		adminServerGroupRouter.GET("/:server_id/direct_list", adminServer.GetServerDirectListHandler(serverCtx))
+
+		// Update server direct list
+		adminServerGroupRouter.PUT("/:server_id/direct_list", adminServer.UpdateServerDirectListHandler(serverCtx))
+	}
+
+	adminSiteContentGroupRouter := router.Group("/v1/admin/sitecontent")
+	adminSiteContentGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
+
+	{
+		// List site content rows (CMS)
+		adminSiteContentGroupRouter.GET("/list", adminSiteContent.GetSiteContentHandler(serverCtx))
+
+		// Upsert a site content row
+		adminSiteContentGroupRouter.PUT("/", adminSiteContent.UpsertSiteContentHandler(serverCtx))
 	}
 
 	adminSubscribeGroupRouter := router.Group("/v1/admin/subscribe")
@@ -546,6 +603,12 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		// Get user list
 		adminUserGroupRouter.GET("/list", adminUser.GetUserListHandler(serverCtx))
 
+		// Get limiter online status for a single user (online IPs + 24h reject count)
+		adminUserGroupRouter.GET("/online_status", adminUser.GetUserOnlineStatusHandler(serverCtx))
+
+		// Batch get limiter online status (list-page augmentation)
+		adminUserGroupRouter.POST("/online_status/batch", adminUser.BatchGetUserOnlineStatusHandler(serverCtx))
+
 		// Get user login logs
 		adminUserGroupRouter.GET("/login/logs", adminUser.GetUserLoginLogsHandler(serverCtx))
 
@@ -667,6 +730,9 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get Tos Content
 		commonGroupRouter.GET("/site/tos", common.GetTosHandler(serverCtx))
+
+		// V4.3 决策 25:Get a single site_content row (multi-lang client tutorial / TOS / etc.)
+		commonGroupRouter.GET("/site_content", common.GetSiteContentItemHandler(serverCtx))
 	}
 
 	publicAnnouncementGroupRouter := router.Group("/v1/public/announcement")
@@ -725,6 +791,27 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		publicPaymentGroupRouter.GET("/methods", publicPayment.GetAvailablePaymentMethodsHandler(serverCtx))
 	}
 
+	// V4.3 决策 14:订阅 URL 二维码生成
+	router.GET("/v1/public/qr", QRHandler(serverCtx))
+
+	// V4.4 #45 用户协议版本管理
+	publicTermsGroupRouter := router.Group("/v1/portal/terms")
+	publicTermsGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
+	{
+		publicTermsGroupRouter.GET("/status", publicTerms.StatusHandler(serverCtx))
+		publicTermsGroupRouter.POST("/accept", publicTerms.AcceptHandler(serverCtx))
+	}
+
+	// V4.3 站内信(决策 7.1)
+	publicMessageGroupRouter := router.Group("/v1/portal/messages")
+	publicMessageGroupRouter.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
+	{
+		publicMessageGroupRouter.GET("", publicMessage.QueryMessagesHandler(serverCtx))
+		publicMessageGroupRouter.GET("/unread_count", publicMessage.UnreadCountHandler(serverCtx))
+		publicMessageGroupRouter.PUT("/:id/read", publicMessage.MarkReadHandler(serverCtx))
+		publicMessageGroupRouter.POST("/read_all", publicMessage.MarkAllReadHandler(serverCtx))
+	}
+
 	publicPortalGroupRouter := router.Group("/v1/public/portal")
 	publicPortalGroupRouter.Use(middleware.DeviceMiddleware(serverCtx))
 
@@ -757,6 +844,18 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get user subscribe node info
 		publicSubscribeGroupRouter.GET("/node/list", publicSubscribe.QueryUserSubscribeNodeListHandler(serverCtx))
+
+		// V4.3 device-billing endpoints
+		publicSubscribeGroupRouter.GET("/my", publicSubscribe.QueryMySubscribesHandler(serverCtx))
+		publicSubscribeGroupRouter.POST("/:id/device/add", publicDevice.AddSubscribeDeviceHandler(serverCtx))
+		publicSubscribeGroupRouter.POST("/:id/traffic/addon", publicTrafficAddon.AddTrafficAddonHandler(serverCtx))
+		publicSubscribeGroupRouter.POST("/:id/devices/reset_all", publicDevice.ResetAllDevicesHandler(serverCtx))
+		publicSubscribeGroupRouter.POST("/device/:device_id/reset", publicDevice.ResetDeviceHandler(serverCtx))
+		publicSubscribeGroupRouter.POST("/device/:device_id/disable", publicDevice.DisableDeviceHandler(serverCtx))
+		publicSubscribeGroupRouter.POST("/device/:device_id/enable", publicDevice.EnableDeviceHandler(serverCtx))
+		publicSubscribeGroupRouter.PUT("/device/:device_id/name", publicDevice.RenameDeviceHandler(serverCtx))
+		// V4.3 决策:加购设备(is_addon=true)允许用户主动删除,套餐基础设备不可删
+		publicSubscribeGroupRouter.DELETE("/device/:device_id", publicDevice.DeleteAddonDeviceHandler(serverCtx))
 	}
 
 	publicTicketGroupRouter := router.Group("/v1/public/ticket")
@@ -870,6 +969,7 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 	serverGroupRouter := router.Group("/v1/server")
 	serverGroupRouter.Use(middleware.ServerMiddleware(serverCtx))
+	serverGroupRouter.Use(middleware.ServerRateLimitMiddleware(serverCtx))
 
 	{
 		// Get server config
@@ -886,6 +986,15 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Get user list
 		serverGroupRouter.GET("/user", server.GetServerUserListHandler(serverCtx))
+
+		// Get alive IP count per uid (aggregated across all nodes)
+		serverGroupRouter.GET("/alivelist", server.GetAliveListHandler(serverCtx))
+
+		// Report Reject events from node limiter
+		serverGroupRouter.POST("/reject", server.ReportRejectHandler(serverCtx))
+
+		// Evict a (uid, ip) from alive set after node-side LRU replacement
+		serverGroupRouter.POST("/evict", server.EvictAliveIPHandler(serverCtx))
 	}
 
 	serverV2GroupRouter := router.Group("/v2/server")

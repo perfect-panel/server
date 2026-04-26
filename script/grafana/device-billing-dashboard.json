@@ -1,0 +1,229 @@
+{
+  "uid": "ppanel-device-billing",
+  "title": "PPanel — Device Billing & Shared Pool",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "tags": ["ppanel", "device-billing"],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Server User List (decision §10 DoD #19)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "GET /v1/server/user latency (p50 / p95 / p99)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{path=\"/v1/server/user\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{path=\"/v1/server/user\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{path=\"/v1/server/user\"}[5m])) by (le))",
+          "legendFormat": "p99 (target < 0.5s)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "red", "value": 0.5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "user list cache hit rate (304 / total)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{path=\"/v1/server/user\",status=\"304\"}[5m])) / sum(rate(http_requests_total{path=\"/v1/server/user\"}[5m]))",
+          "legendFormat": "hit"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" } }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "user list QPS",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 1 },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{path=\"/v1/server/user\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Throttle State Machine (decision §40)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Throttled subscribes (count)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 9 },
+      "targets": [
+        {
+          "expr": "ppanel_user_subscribe_throttled_total",
+          "legendFormat": "throttled"
+        },
+        {
+          "expr": "ppanel_user_subscribe_cutoff_total",
+          "legendFormat": "cut-off"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Notice dispatch by template (per minute)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
+      "targets": [
+        {
+          "expr": "sum(rate(ppanel_notice_dispatch_total[1m])) by (template)",
+          "legendFormat": "{{template}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Email send latency p99 (notice path)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(ppanel_email_send_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Devices & Reset (decision §32, §9)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 }
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Total active devices",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 17 },
+      "targets": [
+        { "expr": "ppanel_device_active_total", "legendFormat": "active" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Device resets / hour (decision 9: 3/h limit)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 17 },
+      "targets": [
+        {
+          "expr": "sum(rate(ppanel_device_reset_total[1h]))",
+          "legendFormat": "reset/h"
+        },
+        {
+          "expr": "sum(rate(ppanel_device_reset_blocked_total[1h]))",
+          "legendFormat": "blocked (over rate-limit)"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Limiter shared bucket key cardinality (decision 32)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 9, "x": 15, "y": 17 },
+      "description": "Stable count over time = single shared bucket per user_subscribe is working. Spikes proportional to protocol count (3-4x) = bug regressed.",
+      "targets": [
+        {
+          "expr": "ppanel_node_speed_limiter_buckets",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Commerce (decisions §4, §7, §21, §22)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Purchase amount per minute (device-billing vs legacy)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(ppanel_order_amount_total{mode=\"device_billing\"}[1m]))",
+          "legendFormat": "device-billing"
+        },
+        {
+          "expr": "sum(rate(ppanel_order_amount_total{mode=\"time_billing\"}[1m]))",
+          "legendFormat": "time-billing (legacy)"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Traffic addon orders (today)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(increase(ppanel_traffic_addon_total[24h]))"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "Commission paid (today, includes addons §21)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(increase(ppanel_commission_amount_total[24h]))"
+        }
+      ]
+    }
+  ]
+}

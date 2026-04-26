@@ -9,6 +9,7 @@ type Order struct {
 	OrderNo        string    `gorm:"type:varchar(255);not null;default:'';unique;comment:Order No"`
 	Type           uint8     `gorm:"type:tinyint(1);not null;default:1;comment:Order Type: 1: Subscribe, 2: Renewal, 3: ResetTraffic, 4: Recharge"`
 	Quantity       int64     `gorm:"type:bigint;not null;default:1;comment:Quantity"`
+	DeviceCount    int64     `gorm:"column:device_count;type:int;not null;default:0;comment:V4.3 device-billing slots (0 = legacy time-billing)"`
 	Price          int64     `gorm:"type:int;not null;default:0;comment:Original price"`
 	Amount         int64     `gorm:"type:int;not null;default:0;comment:Order Amount"`
 	GiftAmount     int64     `gorm:"type:int;not null;default:0;comment:User Gift Amount"`

@@ -78,7 +78,21 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
-	price := sub.UnitPrice * req.Quantity
+	// V4.3:续费时同步把已有的加购设备一起续费(无折扣),避免到期后加购设备掉。
+	var addonAmount int64
+	if sub.UnitPricePerDevice > 0 {
+		devices, derr := l.svcCtx.UserModel.QuerySubscribeDevices(l.ctx, userSubscribe.Id)
+		if derr == nil {
+			var addonCount int64
+			for _, d := range devices {
+				if d.IsAddon {
+					addonCount++
+				}
+			}
+			addonAmount = sub.UnitPricePerDevice * addonCount * req.Quantity
+		}
+	}
+	price := sub.UnitPrice*req.Quantity + addonAmount
 	amount := int64(float64(price) * discount)
 	discountAmount := price - amount
 

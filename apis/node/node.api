@@ -11,6 +11,9 @@ info (
 import "../types.api"
 
 type (
+	// OnlineUser is reported by node to server.
+	// SID field maps to JSON "uid" and MUST equal User.Id (same key as limiter.AliveList).
+	// IP is the client's public IP observed at inbound.
 	OnlineUser {
 		SID int64  `json:"uid"`
 		IP  string `json:"ip"`
@@ -62,16 +65,45 @@ type (
 		SecretKey string `form:"secret_key"`
 	}
 	ServerUser {
-		Id          int64  `json:"id"`
-		UUID        string `json:"uuid"`
-		SpeedLimit  int64  `json:"speed_limit"`
-		DeviceLimit int64  `json:"device_limit"`
+		Id              int64  `json:"id"`
+		UUID            string `json:"uuid"`
+		SpeedLimit      int64  `json:"speed_limit"`
+		DeviceLimit     int64  `json:"device_limit"`
+		UserSubscribeId int64  `json:"user_subscribe_id,omitempty"` // V4.3 决策 32: limiter 跨协议共享桶 key
+		Password        string `json:"password,omitempty"`          // V4.3 决策 17: SS 协议下发的派生密码
 	}
 	GetServerUserListRequest {
 		ServerCommon
 	}
 	GetServerUserListResponse {
 		Users []ServerUser `json:"users"`
+	}
+	GetAliveListRequest {
+		ServerCommon
+	}
+	GetAliveListResponse {
+		Alive       map[int64]int64    `json:"alive"`
+		AliveDetail map[int64][]string `json:"alive_detail"`
+	}
+	// EvictRequest tells the server to drop a (uid, ip) entry from the alive
+	// set immediately. Sent by the node after a local LRU eviction so the
+	// global view catches up without waiting for the score-window TTL.
+	EvictRequest {
+		ServerCommon
+		UID int64  `json:"uid"`
+		IP  string `json:"ip"`
+	}
+	// RejectEvent is a single aggregated Reject observation from the node.
+	// Count is the local delta since the last successful push; reason is a short tag
+	// ("device_limit" is the only value emitted today).
+	RejectEvent {
+		UID    int64  `json:"uid"`
+		Count  int64  `json:"count"`
+		Reason string `json:"reason"`
+	}
+	ReportRejectRequest {
+		ServerCommon
+		Events []RejectEvent `json:"events"`
 	}
 	UserTraffic {
 		SID      int64 `json:"uid"`
@@ -106,6 +138,7 @@ type (
 		Outbound               []NodeOutbound `json:"outbound"`
 		Protocols              []Protocol     `json:"protocols"`
 		Total                  int64          `json:"total"`
+		DeviceLimitEnabled     bool           `json:"device_limit_enabled"`
 	}
 )
 
@@ -134,6 +167,18 @@ service ppanel {
 	@doc "Push online users"
 	@handler PushOnlineUsers
 	post /online (OnlineUsersRequest)
+
+	@doc "Get alive IP count per uid (aggregated across all nodes)"
+	@handler GetAliveList
+	get /alivelist (GetAliveListRequest) returns (GetAliveListResponse)
+
+	@doc "Report Reject events from node limiter"
+	@handler ReportReject
+	post /reject (ReportRejectRequest)
+
+	@doc "Evict a (uid, ip) from alive set after node-side LRU replacement"
+	@handler EvictAliveIP
+	post /evict (EvictRequest)
 }
 
 @server (

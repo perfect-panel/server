@@ -200,5 +200,30 @@ service ppanel {
 	@doc "Query all node tags"
 	@handler QueryNodeTag
 	get /node/tags returns (QueryNodeTagResponse)
+
+	@doc "Get server direct list"
+	@handler GetServerDirectList
+	get /:server_id/direct_list (GetServerDirectListRequest) returns (GetServerDirectListResponse)
+
+	@doc "Update server direct list"
+	@handler UpdateServerDirectList
+	put /:server_id/direct_list (UpdateServerDirectListRequest) returns (UpdateServerDirectListResponse)
 }
+
+type (
+	GetServerDirectListRequest {
+		ServerId int64 `path:"server_id"`
+	}
+	GetServerDirectListResponse {
+		ServerId   int64    `json:"server_id"`
+		DirectList []string `json:"direct_list"`
+	}
+	UpdateServerDirectListRequest {
+		ServerId   int64    `path:"server_id"`
+		DirectList []string `json:"direct_list"`
+	}
+	UpdateServerDirectListResponse {
+		ServerId int64 `json:"server_id"`
+	}
+)
 

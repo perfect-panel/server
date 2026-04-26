@@ -1,0 +1,34 @@
+# V4.3 集成测试用 ppanel.yaml(覆写默认值,指向 docker-compose 内部主机名)。
+
+Listen: "0.0.0.0:8080"
+
+MySQL:
+  Host: "mysql:3306"
+  User: "root"
+  Pass: "integration"
+  DBName: "ppanel"
+
+Redis:
+  Host: "redis:6379"
+  Pass: ""
+  DB: 0
+
+JWT:
+  AuthSecret: "test-secret-do-not-use-in-prod"
+  AuthExpire: 86400
+
+Site:
+  SiteName: "PPanel-Integration"
+
+Subscribe:
+  SubscribePath: "/v1/subscribe/config"
+  SubscribeDomain: "http://localhost:38080"
+
+Email:
+  Enable: false # 集成测试不发邮件
+
+Register:
+  TrialBalance: 200 # V4.3 决策 22
+
+Invite:
+  ReferralPercentage: 10 # V4.3 决策 21

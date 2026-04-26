@@ -1,0 +1,49 @@
+syntax = "v1"
+
+// Site content (CMS) admin endpoints.
+
+import "../types.api"
+
+type (
+    SiteContentItem {
+        Id          int64  `json:"id"`
+        ContentKey  string `json:"content_key"`
+        ContentLang string `json:"content_lang"`
+        Title       string `json:"title"`
+        Body        string `json:"body"`
+        Version     string `json:"version,optional"`
+        UpdatedAt   int64  `json:"updated_at"`
+    }
+    GetSiteContentRequest {
+        Lang   string `form:"lang,optional"`
+        Prefix string `form:"prefix,optional"`
+    }
+    GetSiteContentResponse {
+        List []SiteContentItem `json:"list"`
+    }
+    UpsertSiteContentRequest {
+        ContentKey  string `json:"content_key"`
+        ContentLang string `json:"content_lang"`
+        Title       string `json:"title"`
+        Body        string `json:"body"`
+        Version     string `json:"version,optional"`
+    }
+    UpsertSiteContentResponse {
+        Id int64 `json:"id"`
+    }
+)
+
+@server (
+    prefix:     v1/admin/sitecontent
+    group:      admin/sitecontent
+    middleware: AuthMiddleware
+)
+service ppanel {
+    @doc "List site content rows (CMS)"
+    @handler GetSiteContent
+    get /list (GetSiteContentRequest) returns (GetSiteContentResponse)
+
+    @doc "Upsert a site content row"
+    @handler UpsertSiteContent
+    put / (UpsertSiteContentRequest) returns (UpsertSiteContentResponse)
+}

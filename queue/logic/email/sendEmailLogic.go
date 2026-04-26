@@ -116,6 +116,20 @@ func (l *SendEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) erro
 		} else {
 			content = tpl
 		}
+	case types.EmailTypeNotice:
+		// V4.3:Body 已由 noticeDispatchLogic 完成模板渲染,直接取出。
+		if payload.Content == nil {
+			logger.WithContext(ctx).Error("[SendEmailLogic] Notice content empty",
+				logger.Field("payload", payload))
+			return nil
+		}
+		if body, ok := payload.Content["Body"].(string); ok {
+			content = body
+		} else {
+			logger.WithContext(ctx).Error("[SendEmailLogic] Notice missing Body",
+				logger.Field("payload", payload))
+			return nil
+		}
 	default:
 		logger.WithContext(ctx).Error("[SendEmailLogic] Unsupported email type",
 			logger.Field("type", payload.Type),

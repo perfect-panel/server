@@ -1,6 +1,7 @@
 package subscribe
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -47,33 +48,13 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 	}
 
 	userAgent := strings.ToLower(l.ctx.Request.UserAgent())
-
-	var targetApp, defaultApp *client.SubscribeApplication
-
-	for _, item := range clients {
-		u := strings.ToLower(item.UserAgent)
-		if item.IsDefault {
-			defaultApp = item
-		}
-
-		if strings.Contains(userAgent, u) {
-			// Special handling for Stash
-			if strings.Contains(userAgent, "stash") && !strings.Contains(u, "stash") {
-				continue
-			}
-			targetApp = item
-			break
-		}
-	}
+	targetApp := PickClientApp(userAgent, clients)
 	if targetApp == nil {
 		l.Debugf("[SubscribeLogic] No matching client found", logger.Field("userAgent", userAgent))
-		if defaultApp == nil {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "No matching client found for user agent: %s", userAgent)
-		}
-		targetApp = defaultApp
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "No matching client found for user agent: %s", userAgent)
 	}
-	// Find user subscribe by token
-	userSubscribe, err := l.getUserSubscribe(req.Token)
+	// Find user subscribe by token (V4.3: device token preferred → falls back to legacy)
+	userSubscribe, deviceUUID, err := l.getUserSubscribe(req.Token)
 	if err != nil {
 		l.Errorw("[SubscribeLogic] Get user subscribe failed", logger.Field("error", err.Error()), logger.Field("token", req.Token))
 		return nil, err
@@ -102,13 +83,16 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		adapter.WithSubscribeName(subscribeInfo.Name),
 		adapter.WithOutputFormat(targetApp.OutputFormat),
 		adapter.WithUserInfo(adapter.User{
-			Password:     userSubscribe.UUID,
+			// V4.3:device token 命中时用 device.UUID,否则降级到 user_subscribe.UUID(legacy)
+			Password:     pickUUID(userSubscribe.UUID, deviceUUID),
 			ExpiredAt:    userSubscribe.ExpireTime,
 			Download:     userSubscribe.Download,
 			Upload:       userSubscribe.Upload,
-			Traffic:      userSubscribe.Traffic,
+			Traffic:      userSubscribe.Traffic + userSubscribe.TrafficAddon, // V4.3: 含加购流量
 			SubscribeURL: l.getSubscribeV2URL(),
 		}),
+		// V4.3 决策 39:用户可达 server 的 direct_list 联合后传给模板
+		adapter.WithDirectList(collectDirectList(servers)),
 		adapter.WithParams(req.Params),
 	)
 
@@ -140,7 +124,9 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		Config: bytes,
 		Header: fmt.Sprintf(
 			"upload=%d;download=%d;total=%d;expire=%d",
-			userSubscribe.Upload, userSubscribe.Download, userSubscribe.Traffic, userSubscribe.ExpireTime.Unix(),
+			userSubscribe.Upload, userSubscribe.Download,
+			userSubscribe.Traffic+userSubscribe.TrafficAddon, // V4.3: 客户端看到的总配额含加购
+			userSubscribe.ExpireTime.Unix(),
 		),
 	}
 	subscribeStatus = true
@@ -163,20 +149,31 @@ func (l *SubscribeLogic) getSubscribeV2URL() string {
 	return fmt.Sprintf("https://%s%s", l.ctx.Request.Host, uri)
 }
 
-func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
-	userSub, err := l.svc.UserModel.FindOneSubscribeByToken(l.ctx.Request.Context(), token)
-	if err != nil {
-		l.Infow("[Generate Subscribe]find subscribe error: %v", logger.Field("error", err.Error()), logger.Field("token", token))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
+// getUserSubscribe — V4.3:优先按 device token 解析,fallback legacy user_subscribe.token。
+// 返回 (userSub, deviceUUIDOverride)。后者非空时,生成器用该 UUID 作 Password,
+// 这样同 user_subscribe 的 N 设备各自独立 UUID,nodes 端按 device 计流量、防共享。
+func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, string, error) {
+	ctx := l.ctx.Request.Context()
+	if device, err := l.svc.UserModel.FindOneSubscribeDeviceByToken(ctx, token); err == nil {
+		userSub, err2 := l.svc.UserModel.FindOneSubscribe(ctx, device.UserSubscribeId)
+		if err2 != nil {
+			l.Errorw("[Generate Subscribe] device→subscribe lookup failed",
+				logger.Field("error", err2.Error()), logger.Field("device_id", device.Id))
+			return nil, "", errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe via device: %v", err2.Error())
+		}
+		// 决策 34:停用槽不返回订阅
+		if device.Status == 0 {
+			return nil, "", errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "device disabled")
+		}
+		return userSub, device.UUID, nil
 	}
-
-	//  Ignore expiration check
-	//if userSub.Status > 1 {
-	//	l.Infow("[Generate Subscribe]subscribe is not available", logger.Field("status", int(userSub.Status)), logger.Field("token", token))
-	//	return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeNotAvailable), "subscribe is not available")
-	//}
-
-	return userSub, nil
+	// legacy user_subscribe.token
+	userSub, err := l.svc.UserModel.FindOneSubscribeByToken(ctx, token)
+	if err != nil {
+		l.Infow("[Generate Subscribe] find subscribe error", logger.Field("error", err.Error()), logger.Field("token", token))
+		return nil, "", errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe: %v", err.Error())
+	}
+	return userSub, "", nil
 }
 
 func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *user.Subscribe, req *types.SubscribeRequest) {
@@ -289,4 +286,73 @@ func (l *SubscribeLogic) getFirstHostLine() string {
 		return lines[0]
 	}
 	return host
+}
+
+// pickUUID — V4.3: device 命中时优先用 device.UUID,空时降级到 fallback。
+func pickUUID(fallback, override string) string {
+	if override != "" {
+		return override
+	}
+	return fallback
+}
+
+// PickClientApp — 根据 lowercased UA 选订阅模板。导出供单测用。
+//
+// 规则:
+//  1. 第一个 UA 子串命中即返回(配置顺序敏感,Stash 应排在 Clash 前)。
+//  2. Stash 特殊大小写:UA 含 "stash" 时,只接受模板 UA 也含 "stash" 的项。
+//     避免 Stash 把 Clash 模板抢了(Stash UA 自带 "Clash" 子串)。
+//  3. 都没命中 → 回 IsDefault 的项;若也没有 → nil。
+//
+// 测试用例覆盖 11 款客户端见 subscribeLogic_test.go。
+func PickClientApp(userAgent string, clients []*client.SubscribeApplication) *client.SubscribeApplication {
+	ua := strings.ToLower(userAgent)
+	var defaultApp *client.SubscribeApplication
+	for _, item := range clients {
+		u := strings.ToLower(item.UserAgent)
+		if item.IsDefault && defaultApp == nil {
+			defaultApp = item
+		}
+		if u == "" {
+			continue
+		}
+		if !strings.Contains(ua, u) {
+			continue
+		}
+		// Stash 自带 "Clash" 子串;UA 含 stash 时只接 模板也含 stash 的项
+		if strings.Contains(ua, "stash") && !strings.Contains(u, "stash") {
+			continue
+		}
+		return item
+	}
+	return defaultApp
+}
+
+// collectDirectList — V4.3 决策 39:每个 node 关联一个 server,server.DirectList 是 JSON 数组。
+// 拉取本订阅可达的所有 server.direct_list 并合并去重。空列表也返回 [],模板侧统一处理。
+func collectDirectList(nodes []*node.Node) []string {
+	seen := make(map[string]struct{}, 16)
+	out := make([]string, 0, 16)
+	for _, n := range nodes {
+		if n == nil || n.Server == nil || n.Server.DirectList == "" {
+			continue
+		}
+		var hosts []string
+		if err := json.Unmarshal([]byte(n.Server.DirectList), &hosts); err != nil {
+			logger.Errorf("[collectDirectList] bad json on server %d: %v", n.ServerId, err)
+			continue
+		}
+		for _, h := range hosts {
+			h = strings.TrimSpace(h)
+			if h == "" {
+				continue
+			}
+			if _, ok := seen[h]; ok {
+				continue
+			}
+			seen[h] = struct{}{}
+			out = append(out, h)
+		}
+	}
+	return out
 }

@@ -1,0 +1,56 @@
+name: Perf nightly (k6 against staging)
+
+# Nightly k6 run targeting STAGING. Hard-fails if SLO not met.
+#
+# Setup secrets in repo:
+#   STAGING_BASE        — e.g. https://staging.ppanel.example.com
+#   STAGING_NODE_SECRET — node secret_key for /v1/server/* probes
+#   STAGING_SERVER_ID   — id of a node configured to serve PERF SEED PLAN
+
+on:
+  schedule:
+    - cron: "30 18 * * *" # 02:30 CST(UTC+8)
+  workflow_dispatch:
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          curl -sSL https://github.com/grafana/k6/releases/download/v0.51.0/k6-v0.51.0-linux-amd64.tar.gz | tar xz
+          mv k6-v0.51.0-linux-amd64/k6 /usr/local/bin/k6
+          k6 version
+
+      - name: Run perf script
+        env:
+          BASE: ${{ secrets.STAGING_BASE }}
+          SECRET: ${{ secrets.STAGING_NODE_SECRET }}
+          SERVER: ${{ secrets.STAGING_SERVER_ID }}
+        run: |
+          k6 run \
+            --out json=perf-summary-raw.json \
+            -e BASE="$BASE" -e SECRET="$SECRET" -e SERVER="$SERVER" \
+            script/perf/server-user-list.k6.js
+
+      - name: Upload perf summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-summary-${{ github.run_id }}
+          path: |
+            perf-summary.json
+            perf-summary-raw.json
+          retention-days: 14
+
+      - name: Notify on regression (Telegram)
+        if: failure()
+        run: |
+          if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -d "text=Perf nightly FAILED: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi

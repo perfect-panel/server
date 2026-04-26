@@ -52,6 +52,42 @@ func (m *Service) Start() {
 		logger.Errorf("register update exchange rate task failed: %s", err.Error())
 	}
 
+	// schedule cleanup alive uid index: every 5 minutes
+	cleanupAliveTask := asynq.NewTask(types.SchedulerCleanupAliveIndex, nil)
+	if _, err := m.server.Register("@every 300s", cleanupAliveTask); err != nil {
+		logger.Errorf("register cleanup alive index task failed: %s", err.Error())
+	}
+
+	// V4.3 限速→断网状态机:每 5 分钟推进 90% / 12h / 24h
+	trafficStatusTask := asynq.NewTask(types.SchedulerSubscribeTrafficStatus, nil)
+	if _, err := m.server.Register("@every 300s", trafficStatusTask); err != nil {
+		logger.Errorf("register subscribe traffic status task failed: %s", err.Error())
+	}
+
+	// V4.3 audit_log 90 天清理:每天 03:00
+	auditCleanupTask := asynq.NewTask(types.SchedulerAuditCleanup, nil)
+	if _, err := m.server.Register("0 3 * * *", auditCleanupTask, asynq.MaxRetry(2)); err != nil {
+		logger.Errorf("register audit cleanup task failed: %s", err.Error())
+	}
+
+	// V4.3 设备 today_traffic + reset_count 凌晨归零:每天 00:05(避开 reset traffic 0:30)
+	deviceDailyTask := asynq.NewTask(types.SchedulerDeviceDailyReset, nil)
+	if _, err := m.server.Register("5 0 * * *", deviceDailyTask, asynq.MaxRetry(2)); err != nil {
+		logger.Errorf("register device daily reset task failed: %s", err.Error())
+	}
+
+	// V4.3 通知派发:每 60s 拉 Redis list 渲染并投递
+	noticeDispatchTask := asynq.NewTask(types.SchedulerNoticeDispatch, nil)
+	if _, err := m.server.Register("@every 60s", noticeDispatchTask); err != nil {
+		logger.Errorf("register notice dispatch task failed: %s", err.Error())
+	}
+
+	// V4.3 到期提醒:每天 00:00 扫一次,3 天/1 天预警
+	expireWarnTask := asynq.NewTask(types.SchedulerSubscribeExpireWarn, nil)
+	if _, err := m.server.Register("0 0 * * *", expireWarnTask, asynq.MaxRetry(2)); err != nil {
+		logger.Errorf("register subscribe expire warn task failed: %s", err.Error())
+	}
+
 	if err := m.server.Run(); err != nil {
 		logger.Errorf("run scheduler failed: %s", err.Error())
 	}
