@@ -2,7 +2,6 @@ package notify
 
 import (
 	"encoding/json"
-	"net/url"
 
 	"github.com/perfect-panel/server/pkg/constant"
 
@@ -37,14 +36,13 @@ func NewEPayNotifyLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *EPayNotif
 }
 
 func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
-
 	// Find payment config
 	data, ok := l.ctx.Request.Context().Value(constant.CtxKeyPayment).(*payment.Payment)
 	if !ok {
 		l.Logger.Error("[EPayNotify] Payment not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "payment config not found")
 	}
-	l.Infof("[EPayNotify] Payment config: %+v", data)
+
 	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, req.OutTradeNo)
 	if err != nil {
 		l.Logger.Error("[EPayNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OutTradeNo))
@@ -56,12 +54,30 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 		l.Logger.Errorw("[EPayNotify] Unmarshal config failed", logger.Field("error", err.Error()))
 		return err
 	}
-	// Verify sign
-	client := epay.NewClient(config.Pid, config.Url, config.Key, config.Type)
-	if !client.VerifySign(urlParamsToMap(l.ctx.Request.URL.RawQuery)) && !l.svcCtx.Config.Debug {
-		l.Logger.Error("[EPayNotify] Verify sign failed")
-		return nil
+
+	// Verify sign: must include all parameters from both Query and Body (Form)
+	if err := l.ctx.Request.ParseForm(); err != nil {
+		l.Logger.Errorw("[EPayNotify] ParseForm failed", logger.Field("error", err.Error()))
 	}
+
+	params := make(map[string]string)
+	// Collect GET and POST parameters
+	for k, v := range l.ctx.Request.Form {
+		if len(v) > 0 {
+			params[k] = v[0]
+		}
+	}
+
+	client := epay.NewClient(config.Pid, config.Url, config.Key, config.Type)
+	if !client.VerifySign(params) && !l.svcCtx.Config.Debug {
+		l.Logger.Error("[EPayNotify] Verify sign failed",
+			logger.Field("orderNo", req.OutTradeNo),
+			logger.Field("receivedParams", params),
+			logger.Field("method", l.ctx.Request.Method),
+		)
+		return errors.New("verify sign failed")
+	}
+
 	if req.TradeStatus != "TRADE_SUCCESS" {
 		l.Logger.Error("[EPayNotify] Trade status is not success", logger.Field("orderNo", req.OutTradeNo), logger.Field("tradeStatus", req.TradeStatus))
 		return nil
@@ -92,15 +108,4 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 	}
 	l.Logger.Info("[EPayNotify] Enqueue task success", logger.Field("taskInfo", taskInfo))
 	return nil
-}
-
-func urlParamsToMap(query string) map[string]string {
-	params := make(map[string]string)
-	values, _ := url.ParseQuery(query)
-	for k, v := range values {
-		if len(v) > 0 {
-			params[k] = v[0]
-		}
-	}
-	return params
 }
