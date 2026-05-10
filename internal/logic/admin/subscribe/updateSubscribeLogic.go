@@ -42,6 +42,11 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *types.UpdateSubscribeRequest
 		val, _ := json.Marshal(req.Discount)
 		discount = string(val)
 	}
+	// When NodeTags is set, clear Nodes to avoid AND-combined query returning wrong results (#94)
+	nodes := tool.Int64SliceToString(req.Nodes)
+	if len(req.NodeTags) > 0 {
+		nodes = ""
+	}
 	sub := &subscribe.Subscribe{
 		Id:                req.Id,
 		Name:              req.Name,
@@ -56,7 +61,7 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *types.UpdateSubscribeRequest
 		SpeedLimit:        req.SpeedLimit,
 		DeviceLimit:       req.DeviceLimit,
 		Quota:             req.Quota,
-		Nodes:             tool.Int64SliceToString(req.Nodes),
+		Nodes:             nodes,
 		NodeTags:          tool.StringSliceToString(req.NodeTags),
 		Show:              req.Show,
 		Sell:              req.Sell,
