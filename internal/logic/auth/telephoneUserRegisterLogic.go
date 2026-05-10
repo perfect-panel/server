@@ -241,7 +241,7 @@ func (l *TelephoneUserRegisterLogic) activeTrial(uid int64) error {
 		Traffic:     sub.Traffic,
 		Download:    0,
 		Upload:      0,
-		Token:       uuidx.SubscribeToken(fmt.Sprintf("Trial-%v", uid)),
+		Token:       uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", uid, uuidx.NewUUID().String())),
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
