@@ -257,7 +257,7 @@ func (l *DeviceLoginLogic) activeTrial(userId int64, db *gorm.DB) error {
 
 	startTime := time.Now()
 	expireTime := tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, startTime)
-uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", uid, uuidx.NewUUID().String()))
+	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", userId, uuidx.NewUUID().String()))
 	subscribeUUID := uuidx.NewUUID().String()
 
 	userSub := &user.Subscribe{
