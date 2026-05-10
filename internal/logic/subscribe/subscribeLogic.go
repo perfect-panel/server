@@ -163,6 +163,7 @@ func (l *SubscribeLogic) getSubscribeV2URL() string {
 	return fmt.Sprintf("https://%s%s", l.ctx.Request.Host, uri)
 }
 
+// getUserSubscribe 是本次修改的核心部分
 func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
 	userSub, err := l.svc.UserModel.FindOneSubscribeByToken(l.ctx.Request.Context(), token)
 	if err != nil {
@@ -170,10 +171,21 @@ func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
 
+	// =========================================================
+	// 修复开始：添加空指针检查 (Fix start)
+	// =========================================================
+	if userSub == nil {
+		l.Infow("[Generate Subscribe] token invalid or user not found", logger.Field("token", token))
+		return nil, errors.New("subscribe token invalid")
+	}
+	// =========================================================
+	// 修复结束 (Fix end)
+	// =========================================================
+
 	//  Ignore expiration check
 	//if userSub.Status > 1 {
-	//	l.Infow("[Generate Subscribe]subscribe is not available", logger.Field("status", int(userSub.Status)), logger.Field("token", token))
-	//	return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeNotAvailable), "subscribe is not available")
+	// l.Infow("[Generate Subscribe]subscribe is not available", logger.Field("status", int(userSub.Status)), logger.Field("token", token))
+	// return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeNotAvailable), "subscribe is not available")
 	//}
 
 	return userSub, nil

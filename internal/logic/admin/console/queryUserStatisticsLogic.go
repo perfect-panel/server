@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"time"
@@ -10,6 +11,9 @@ import (
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
+
+const consoleUserStatisticsCacheKey = "console:user_statistics"
+const consoleUserStatisticsCacheTTL = 60 * time.Second
 
 type QueryUserStatisticsLogic struct {
 	logger.Logger
@@ -30,6 +34,16 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 	if strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo" {
 		return l.mockRevenueStatistics(), nil
 	}
+
+	// Try cache first
+	cached, cacheErr := l.svcCtx.Redis.Get(l.ctx, consoleUserStatisticsCacheKey).Result()
+	if cacheErr == nil && cached != "" {
+		var result types.UserStatisticsResponse
+		if json.Unmarshal([]byte(cached), &result) == nil {
+			return &result, nil
+		}
+	}
+
 	resp = &types.UserStatisticsResponse{}
 	now := time.Now()
 	// query today user register count
@@ -114,6 +128,11 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 			}
 		}
 		resp.All.List = allList
+	}
+
+	// Cache the result
+	if data, marshalErr := json.Marshal(resp); marshalErr == nil {
+		l.svcCtx.Redis.Set(l.ctx, consoleUserStatisticsCacheKey, data, consoleUserStatisticsCacheTTL)
 	}
 
 	return

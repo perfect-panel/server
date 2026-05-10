@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"time"
@@ -12,6 +13,9 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
+
+const consoleRevenueStatisticsCacheKey = "console:revenue_statistics"
+const consoleRevenueStatisticsCacheTTL = 60 * time.Second
 
 type QueryRevenueStatisticsLogic struct {
 	logger.Logger
@@ -31,6 +35,15 @@ func NewQueryRevenueStatisticsLogic(ctx context.Context, svcCtx *svc.ServiceCont
 func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.RevenueStatisticsResponse, err error) {
 	if strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo" {
 		return l.mockRevenueStatistics(), nil
+	}
+
+	// Try cache first
+	cached, cacheErr := l.svcCtx.Redis.Get(l.ctx, consoleRevenueStatisticsCacheKey).Result()
+	if cacheErr == nil && cached != "" {
+		var result types.RevenueStatisticsResponse
+		if json.Unmarshal([]byte(cached), &result) == nil {
+			return &result, nil
+		}
 	}
 
 	var today, monthly, all types.OrdersStatistics
@@ -111,11 +124,18 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 		all.List = allList
 	}
 
-	return &types.RevenueStatisticsResponse{
+	resp = &types.RevenueStatisticsResponse{
 		Today:   today,
 		Monthly: monthly,
 		All:     all,
-	}, nil
+	}
+
+	// Cache the result
+	if data, marshalErr := json.Marshal(resp); marshalErr == nil {
+		l.svcCtx.Redis.Set(l.ctx, consoleRevenueStatisticsCacheKey, data, consoleRevenueStatisticsCacheTTL)
+	}
+
+	return resp, nil
 }
 
 // mockRevenueStatistics is a mock function to simulate revenue statistics data.
