@@ -156,6 +156,8 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 						EncryptionPrivateKey:    protocol.EncryptionPrivateKey,
 						EncryptionClientPadding: protocol.EncryptionClientPadding,
 						EncryptionPassword:      protocol.EncryptionPassword,
+						EchEnable:               protocol.EchEnable,
+						EchServerName:           protocol.EchServerName,
 						Ratio:                   protocol.Ratio,
 						CertMode:                protocol.CertMode,
 						CertDNSProvider:         protocol.CertDNSProvider,
