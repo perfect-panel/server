@@ -813,7 +813,7 @@ func (l *OAuthLoginGetTokenLogic) activeTrial(uid int64, requestID string) error
 
 	startTime := time.Now()
 	expireTime := tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, startTime)
-	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v", uid))
+	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", uid, uuidx.NewUUID().String()))
 	subscribeUUID := uuidx.NewUUID().String()
 
 	l.Debugw("creating trial subscription",
