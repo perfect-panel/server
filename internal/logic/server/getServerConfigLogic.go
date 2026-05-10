@@ -69,10 +69,14 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 	}
 	var cfg map[string]interface{}
 	for _, protocol := range protocols {
-		if protocol.Type == protocolRequest {
+		if protocol.Enable && protocol.Type == protocolRequest {
 			cfg = l.compatible(protocol)
 			break
 		}
+	}
+
+	if cfg == nil {
+		return nil, fmt.Errorf("protocol %s not found or disabled", req.Protocol)
 	}
 
 	resp = &types.GetServerConfigResponse{

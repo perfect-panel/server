@@ -41,6 +41,15 @@ func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.Qu
 	}
 	tool.DeepCopy(&protocols, dst)
 
+	// only return enabled protocols for node distribution
+	var enabledProtocols []types.Protocol
+	for _, p := range protocols {
+		if p.Enable {
+			enabledProtocols = append(enabledProtocols, p)
+		}
+	}
+	protocols = enabledProtocols
+
 	// filter by req.Protocols
 
 	if len(req.Protocols) > 0 {

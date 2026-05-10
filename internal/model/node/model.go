@@ -128,7 +128,7 @@ func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNo
 					return err
 				}
 				if len(keys) > 0 {
-					cacheKeys = append(keys, keys...)
+					cacheKeys = append(cacheKeys, keys...)
 				}
 				cursor = newCursor
 				if cursor == 0 {
