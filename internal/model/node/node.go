@@ -46,19 +46,19 @@ func (n *Node) BeforeDelete(tx *gorm.DB) error {
 
 func (n *Node) BeforeUpdate(tx *gorm.DB) error {
 	var count int64
-	if err := tx.Set("gorm:query_option", "FOR UPDATE").Model(&Server{}).
+	if err := tx.Set("gorm:query_option", "FOR UPDATE").Model(&Node{}).
 		Where("sort = ? AND id != ?", n.Sort, n.Id).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 1 {
 		// reorder sort
 		if err := reorderSortWithNode(tx); err != nil {
-			logger.Errorf("[Server] BeforeUpdate reorderSort error: %v", err.Error())
+			logger.Errorf("[Node] BeforeUpdate reorderSort error: %v", err.Error())
 			return err
 		}
 		// get max sort
 		var maxSort int
-		if err := tx.Model(&Server{}).Select("MAX(sort)").Scan(&maxSort).Error; err != nil {
+		if err := tx.Model(&Node{}).Select("MAX(sort)").Scan(&maxSort).Error; err != nil {
 			return err
 		}
 		n.Sort = maxSort + 1
