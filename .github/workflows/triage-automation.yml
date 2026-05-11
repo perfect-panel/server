@@ -1,6 +1,7 @@
 name: triage-automation
 
 on:
+  workflow_dispatch:
   issues:
     types: [opened, edited, reopened, labeled]
   issue_comment:
