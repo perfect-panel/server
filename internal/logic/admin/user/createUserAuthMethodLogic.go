@@ -31,7 +31,7 @@ func NewCreateUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContex
 func (l *CreateUserAuthMethodLogic) CreateUserAuthMethod(req *types.CreateUserAuthMethodRequest) error {
 	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
 		var data *user.AuthMethods
-		if err := db.Model(&user.AuthMethods{}).Where("`user_id` = ? AND `auth_type` = ?", req.UserId, req.AuthType).First(&data).Error; err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		if err := db.Model(&user.AuthMethods{}).Where("user_id = ? AND auth_type = ?", req.UserId, req.AuthType).First(&data).Error; err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 		data.UserId = req.UserId

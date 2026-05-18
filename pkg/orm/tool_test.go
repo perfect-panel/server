@@ -1,40 +1,52 @@
 package orm
 
 import (
+	"os"
+	"strings"
 	"testing"
-
-	"github.com/perfect-panel/server/internal/model/task"
-
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
-func TestParseDSN(t *testing.T) {
-	dsn := "root:mylove520@tcp(localhost:3306)/vpnboard"
-	config := ParseDSN(dsn)
-	if config == nil {
+func TestParseMySQLDSN(t *testing.T) {
+	cfg := ParseDSN("root:password@tcp(localhost:3306)/ppanel?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai")
+	if cfg == nil {
 		t.Fatal("config is nil")
 	}
-	t.Log(config)
+	if cfg.Driver != DriverMySQL || cfg.Addr != "localhost:3306" || cfg.Dbname != "ppanel" || cfg.Username != "root" {
+		t.Fatalf("unexpected config: %+v", cfg)
+	}
 }
 
-func TestPing(t *testing.T) {
-	dsn := "root:mylove520@tcp(localhost:3306)/vpnboard"
-	status := Ping(dsn)
-	t.Log(status)
+func TestParsePostgresDSN(t *testing.T) {
+	cfg := ParseDSN("postgres://postgres:password@localhost:5432/ppanel?sslmode=disable&TimeZone=Asia%2FShanghai")
+	if cfg == nil {
+		t.Fatal("config is nil")
+	}
+	if cfg.Driver != DriverPostgres || cfg.Addr != "localhost:5432" || cfg.Dbname != "ppanel" || cfg.Username != "postgres" {
+		t.Fatalf("unexpected config: %+v", cfg)
+	}
+
+	dsn := Mysql{Config: *cfg}.Dsn()
+	if want := "TimeZone=Asia/Shanghai"; !strings.Contains(dsn, want) {
+		t.Fatalf("postgres dsn %q does not contain %q", dsn, want)
+	}
 }
 
-func TestMysql(t *testing.T) {
-	db, err := gorm.Open(mysql.New(mysql.Config{
-		DSN: "root:mylove520@tcp(localhost:3306)/vpnboard",
-	}))
-	if err != nil {
-		t.Fatalf("Failed to connect to MySQL: %v", err)
+func TestPingMySQL(t *testing.T) {
+	dsn := os.Getenv("PPANEL_TEST_MYSQL_DSN")
+	if dsn == "" {
+		t.Skip("set PPANEL_TEST_MYSQL_DSN to run MySQL/MariaDB ping test")
 	}
-	err = db.Migrator().AutoMigrate(&task.Task{})
-	if err != nil {
-		t.Fatalf("Failed to auto migrate: %v", err)
-		return
+	if !PingDatabase(DriverMySQL, dsn) {
+		t.Fatal("mysql ping failed")
 	}
-	t.Log("MySQL connection and migration successful")
+}
+
+func TestPingPostgres(t *testing.T) {
+	dsn := os.Getenv("PPANEL_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("set PPANEL_TEST_POSTGRES_DSN to run PostgreSQL ping test")
+	}
+	if !PingDatabase(DriverPostgres, dsn) {
+		t.Fatal("postgres ping failed")
+	}
 }

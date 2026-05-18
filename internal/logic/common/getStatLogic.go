@@ -44,7 +44,7 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 		}
 	}
 	var u int64
-	err = l.svcCtx.DB.Model(&user.User{}).Where("enable = 1").Count(&u).Error
+	err = l.svcCtx.DB.Model(&user.User{}).Where("enable = ?", true).Count(&u).Error
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get user count failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get user count failed: %v", err.Error())
@@ -57,7 +57,7 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 		u = 1
 	}
 	var n int64
-	err = l.svcCtx.DB.Model(&node.Node{}).Where("enabled = 1").Count(&n).Error
+	err = l.svcCtx.DB.Model(&node.Node{}).Where("enabled = ?", true).Count(&n).Error
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get server count failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get server count failed: %v", err.Error())

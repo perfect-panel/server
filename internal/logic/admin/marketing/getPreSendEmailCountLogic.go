@@ -2,6 +2,7 @@ package marketing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/task"
@@ -33,20 +34,22 @@ func (l *GetPreSendEmailCountLogic) GetPreSendEmailCount(req *types.GetPreSendEm
 	var count int64
 	// 通用查询器（含 user JOIN + 注册时间范围过滤）
 	baseQuery := func() *gorm.DB {
+		userID := user.UserColumn(tx, "id")
+		userCreatedAt := user.UserColumn(tx, "created_at")
 		query := tx.Model(&user.AuthMethods{}).
 			Select("auth_identifier").
-			Joins("JOIN user ON user.id = user_auth_methods.user_id").
+			Joins(fmt.Sprintf("JOIN %s ON %s = user_auth_methods.user_id", user.UserTableName(tx), userID)).
 			Where("auth_type = ?", "email")
 
 		if req.RegisterStartTime != 0 {
 
 			registerStartTime := time.UnixMilli(req.RegisterStartTime)
 
-			query = query.Where("user.created_at >= ?", registerStartTime)
+			query = query.Where(userCreatedAt+" >= ?", registerStartTime)
 		}
 		if req.RegisterEndTime != 0 {
 			registerEndTime := time.UnixMilli(req.RegisterEndTime)
-			query = query.Where("user.created_at <= ?", registerEndTime)
+			query = query.Where(userCreatedAt+" <= ?", registerEndTime)
 		}
 		return query
 	}
@@ -59,17 +62,17 @@ func (l *GetPreSendEmailCountLogic) GetPreSendEmailCount(req *types.GetPreSendEm
 
 	case task.ScopeActive:
 		query = baseQuery().
-			Joins("JOIN user_subscribe ON user.id = user_subscribe.user_id").
+			Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
 			Where("user_subscribe.status IN ?", []int64{1, 2})
 
 	case task.ScopeExpired:
 		query = baseQuery().
-			Joins("JOIN user_subscribe ON user.id = user_subscribe.user_id").
+			Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
 			Where("user_subscribe.status = ?", 3)
 
 	case task.ScopeNone:
 		query = baseQuery().
-			Joins("LEFT JOIN user_subscribe ON user.id = user_subscribe.user_id").
+			Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
 			Where("user_subscribe.user_id IS NULL")
 	case task.ScopeSkip:
 		// Skip scope does not require a count

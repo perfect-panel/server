@@ -32,16 +32,16 @@ func (m *customAnnouncementModel) GetAnnouncementListByPage(ctx context.Context,
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		conn = conn.Model(&Announcement{})
 		if filter.Show != nil {
-			conn = conn.Where("`show` = ?", *filter.Show)
+			conn = conn.Where("show = ?", *filter.Show)
 		}
 		if filter.Pinned != nil {
-			conn = conn.Where("`pinned` = ?", *filter.Pinned)
+			conn = conn.Where("pinned = ?", *filter.Pinned)
 		}
 		if filter.Popup != nil {
-			conn = conn.Where("`popup` = ?", *filter.Popup)
+			conn = conn.Where("popup = ?", *filter.Popup)
 		}
 		if filter.Search != "" {
-			conn = conn.Where("`title` LIKE ? OR `content` LIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
+			conn = conn.Where("title LIKE ? OR content LIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
 		}
 		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(&list).Error
 	})

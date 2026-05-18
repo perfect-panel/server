@@ -12,7 +12,7 @@ func (m *customUserModel) FindOneDevice(ctx context.Context, id int64) (*Device,
 	deviceIdKey := fmt.Sprintf("%s%v", cacheUserDeviceIdPrefix, id)
 	var resp Device
 	err := m.QueryCtx(ctx, &resp, deviceIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`id` = ?", id).First(&resp).Error
+		return conn.Model(&Device{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:
@@ -26,7 +26,7 @@ func (m *customUserModel) FindOneDeviceByIdentifier(ctx context.Context, id stri
 	deviceIdKey := fmt.Sprintf("%s%v", cacheUserDeviceNumberPrefix, id)
 	var resp Device
 	err := m.QueryCtx(ctx, &resp, deviceIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`identifier` = ?", id).First(&resp).Error
+		return conn.Model(&Device{}).Where("identifier = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:
@@ -41,7 +41,7 @@ func (m *customUserModel) QueryDevicePageList(ctx context.Context, userId, subsc
 	var list []*Device
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`user_id` = ? and `subscribe_id` = ?", userId, subscribeId).Count(&total).Limit(size).Offset((page - 1) * size).Find(&list).Error
+		return conn.Model(&Device{}).Where("user_id = ? and subscribe_id = ?", userId, subscribeId).Count(&total).Limit(size).Offset((page - 1) * size).Find(&list).Error
 	})
 	return list, total, err
 }
@@ -51,7 +51,7 @@ func (m *customUserModel) QueryDeviceList(ctx context.Context, userId int64) ([]
 	var list []*Device
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`user_id` = ?", userId).Count(&total).Find(&list).Error
+		return conn.Model(&Device{}).Where("user_id = ?", userId).Count(&total).Find(&list).Error
 	})
 	return list, total, err
 }

@@ -67,7 +67,7 @@ type ServiceContext struct {
 func NewServiceContext(c config.Config) *ServiceContext {
 	// gorm initialize
 	db, err := orm.ConnectMysql(orm.Mysql{
-		Config: c.MySQL,
+		Config: c.DatabaseConfig(),
 	})
 
 	if err != nil {

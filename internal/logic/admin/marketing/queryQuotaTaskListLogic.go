@@ -27,7 +27,7 @@ func NewQueryQuotaTaskListLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskListRequest) (resp *types.QueryQuotaTaskListResponse, err error) {
 	var data []*task.Task
 	var count int64
-	query := l.svcCtx.DB.Model(&task.Task{}).Where("`type` = ?", task.TypeQuota)
+	query := l.svcCtx.DB.Model(&task.Task{}).Where("type = ?", task.TypeQuota)
 	if req.Page == 0 {
 		req.Page = 1
 	}
@@ -36,7 +36,7 @@ func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskLi
 	}
 
 	if req.Status != nil {
-		query = query.Where("`status` = ?", *req.Status)
+		query = query.Where("status = ?", *req.Status)
 	}
 	err = query.Count(&count).Offset((req.Page - 1) * req.Size).Limit(req.Size).Order("created_at DESC").Find(&data).Error
 	if err != nil {

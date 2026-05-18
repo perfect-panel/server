@@ -29,7 +29,7 @@ func NewGetBatchSendEmailTaskListLogic(ctx context.Context, svcCtx *svc.ServiceC
 func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.GetBatchSendEmailTaskListRequest) (resp *types.GetBatchSendEmailTaskListResponse, err error) {
 
 	var tasks []*task.Task
-	tx := l.svcCtx.DB.Model(&task.Task{}).Where("`type` = ?", task.TypeEmail)
+	tx := l.svcCtx.DB.Model(&task.Task{}).Where("type = ?", task.TypeEmail)
 	if req.Status != nil {
 		tx = tx.Where("status = ?", *req.Status)
 	}

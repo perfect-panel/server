@@ -42,18 +42,18 @@ func (m *customSystemLogModel) FilterSystemLog(ctx context.Context, filter *Filt
 	}
 
 	if filter.Type != 0 {
-		tx = tx.Where("`type` = ?", filter.Type)
+		tx = tx.Where("type = ?", filter.Type)
 	}
 
 	if filter.Data != "" {
-		tx = tx.Where("`date` = ?", filter.Data)
+		tx = tx.Where("date = ?", filter.Data)
 	}
 
 	if filter.ObjectID != 0 {
-		tx = tx.Where("`object_id` = ?", filter.ObjectID)
+		tx = tx.Where("object_id = ?", filter.ObjectID)
 	}
 	if filter.Search != "" {
-		tx = tx.Where("`content` LIKE ?", "%"+filter.Search+"%")
+		tx = tx.Where("content LIKE ?", "%"+filter.Search+"%")
 	}
 
 	var total int64

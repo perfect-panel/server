@@ -15,10 +15,10 @@ import (
 
 func Migrate(ctx *svc.ServiceContext) {
 	mc := orm.Mysql{
-		Config: ctx.Config.MySQL,
+		Config: ctx.Config.DatabaseConfig(),
 	}
 	now := time.Now()
-	if err := migrate.Migrate(mc.Dsn()).Up(); err != nil {
+	if err := migrate.Migrate(mc.Driver(), mc.MigrationDsn()).Up(); err != nil {
 		if errors.Is(err, migrate.NoChange) {
 			logger.Info("[Migrate] database not change")
 			return

@@ -53,13 +53,13 @@ func (m *customPaymentModel) FindListByPage(ctx context.Context, page, size int,
 		conn = conn.Model(&Payment{})
 		if req != nil {
 			if req.Enable != nil {
-				conn = conn.Where("`enable` = ?", *req.Enable)
+				conn = conn.Where("enable = ?", *req.Enable)
 			}
 			if req.Mark != "" {
-				conn = conn.Where("`mark` = ?", req.Mark)
+				conn = conn.Where("mark = ?", req.Mark)
 			}
 			if req.Search != "" {
-				conn = conn.Where("`name` LIKE ?", "%"+req.Search+"%")
+				conn = conn.Where("name LIKE ?", "%"+req.Search+"%")
 			}
 		}
 

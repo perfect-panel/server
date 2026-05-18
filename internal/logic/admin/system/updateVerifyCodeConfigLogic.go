@@ -44,7 +44,7 @@ func (l *UpdateVerifyCodeConfigLogic) UpdateVerifyCodeConfig(req *types.VerifyCo
 			// Get the field value to string
 			fieldValue := tool.ConvertValueToString(v.Field(i))
 			// Update the site config
-			err = db.Model(&system.System{}).Where("`category` = 'verify_code' and `key` = ?", fieldName).Update("value", fieldValue).Error
+			err = db.Model(&system.System{}).Where("category = 'verify_code' and key = ?", fieldName).Update("value", fieldValue).Error
 			if err != nil {
 				break
 			}

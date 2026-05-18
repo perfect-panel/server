@@ -56,7 +56,7 @@ func (m *customServerModel) FilterServerList(ctx context.Context, params *Filter
 	}
 	if params.Search != "" {
 		s := "%" + params.Search + "%"
-		query = query.Where("`name` LIKE ? OR `address` LIKE ?", s, s)
+		query = query.Where("name LIKE ? OR address LIKE ?", s, s)
 	}
 	if len(params.Ids) > 0 {
 		query = query.Where("id IN ?", params.Ids)
@@ -84,7 +84,7 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 	}
 	if params.Search != "" {
 		s := "%" + params.Search + "%"
-		query = query.Where("`name` LIKE ? OR `address` LIKE ? OR `tags` LIKE ? OR `port` LIKE ? ", s, s, s, s)
+		query = query.Where("name LIKE ? OR address LIKE ? OR tags LIKE ? OR port LIKE ? ", s, s, s, s)
 	}
 	if len(params.NodeId) > 0 {
 		query = query.Where("id IN ?", params.NodeId)

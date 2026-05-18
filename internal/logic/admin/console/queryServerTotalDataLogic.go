@@ -133,7 +133,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	yesterday := todayStart.Add(-24 * time.Hour).Format(time.DateOnly)
 
 	var yesterdayLog log.SystemLog
-	err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", yesterday, log.TypeUserTrafficRank).First(&yesterdayLog).Error
+	err = query.Model(&log.SystemLog{}).Where("date = ? AND type = ?", yesterday, log.TypeUserTrafficRank).First(&yesterdayLog).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("[QueryServerTotalDataLogic] Query yesterday user traffic rank log error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday user traffic rank log error: %v", err)
@@ -190,7 +190,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	// Query yesterday server traffic rank
 	var yesterdayTop10Server []types.ServerTrafficData
 	var yesterdayServerTrafficLog log.SystemLog
-	err = query.Model(&log.SystemLog{}).Where("`date` = ? AND `type` = ?", yesterday, log.TypeServerTrafficRank).First(&yesterdayServerTrafficLog).Error
+	err = query.Model(&log.SystemLog{}).Where("date = ? AND type = ?", yesterday, log.TypeServerTrafficRank).First(&yesterdayServerTrafficLog).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("[QueryServerTotalDataLogic] Query yesterday server traffic rank log error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday server traffic rank log error: %v", err)
@@ -241,13 +241,13 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 
 	// Query online/offline server count
 	var onlineServers, offlineServers int64
-	err = query.Model(&node.Server{}).Where("`last_reported_at` > ?", now.Add(-5*time.Minute)).Count(&onlineServers).Error
+	err = query.Model(&node.Server{}).Where("last_reported_at > ?", now.Add(-5*time.Minute)).Count(&onlineServers).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("[QueryServerTotalDataLogic] Count online servers error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count online servers error: %v", err)
 	}
 
-	err = query.Model(&node.Server{}).Where("`last_reported_at` <= ? OR `last_reported_at` IS NULL", now.Add(-5*time.Minute)).Count(&offlineServers).Error
+	err = query.Model(&node.Server{}).Where("last_reported_at <= ? OR last_reported_at IS NULL", now.Add(-5*time.Minute)).Count(&offlineServers).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("[QueryServerTotalDataLogic] Count offline servers error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count offline servers error: %v", err)
@@ -270,7 +270,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 
 		var dailyLogs []log.SystemLog
 		err = query.Model(&log.SystemLog{}).
-			Where("`date` IN ? AND `type` = ?", dates, log.TypeTrafficStat).
+			Where("date IN ? AND type = ?", dates, log.TypeTrafficStat).
 			Find(&dailyLogs).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			l.Errorw("[QueryServerTotalDataLogic] Batch query daily traffic stats error", logger.Field("error", err.Error()))

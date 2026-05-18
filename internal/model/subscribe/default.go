@@ -43,7 +43,7 @@ type (
 func newSubscribeModel(db *gorm.DB, c *redis.Client) *defaultSubscribeModel {
 	return &defaultSubscribeModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`subscribe`",
+		table:      "subscribe",
 	}
 }
 
@@ -104,7 +104,7 @@ func (m *defaultSubscribeModel) FindOne(ctx context.Context, id int64) (*Subscri
 	SubscribeIdKey := fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, id)
 	var resp Subscribe
 	err := m.QueryCtx(ctx, &resp, SubscribeIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Where("`id` = ?", id).First(&resp).Error
+		return conn.Model(&Subscribe{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:

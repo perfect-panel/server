@@ -83,13 +83,13 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 
 		if params.Search != "" {
 			s := "%" + params.Search + "%"
-			query = query.Where("`name` LIKE ? OR `description` LIKE ?", s, s)
+			query = query.Where("name LIKE ? OR description LIKE ?", s, s)
 		}
 		if params.Show {
-			query = query.Where("`show` = true")
+			query = query.Where("show = true")
 		}
 		if params.Sell {
-			query = query.Where("`sell` = true")
+			query = query.Where("sell = true")
 		}
 
 		if len(params.Ids) > 0 {

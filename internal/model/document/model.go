@@ -52,7 +52,7 @@ func (m *customDocumentModel) GetDocumentListByAll(ctx context.Context) (int64, 
 	var total int64
 	show := true
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Document{}).Where("`show` = ?", &show).Count(&total).Find(v).Error
+		return conn.Model(&Document{}).Where("show = ?", &show).Count(&total).Find(v).Error
 	})
 	return total, data, err
 }

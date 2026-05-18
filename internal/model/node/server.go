@@ -39,7 +39,7 @@ func (m *Server) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (m *Server) BeforeDelete(tx *gorm.DB) error {
-	if err := tx.Exec("UPDATE `servers` SET sort = sort - 1 WHERE sort > ?", m.Sort).Error; err != nil {
+	if err := tx.Exec("UPDATE servers SET sort = sort - 1 WHERE sort > ?", m.Sort).Error; err != nil {
 		return err
 	}
 	return nil
@@ -181,7 +181,7 @@ func reorderSortWithServer(tx *gorm.DB) error {
 	}
 	for i, server := range servers {
 		if server.Sort != i+1 {
-			if err := tx.Exec("UPDATE `servers` SET sort = ? WHERE id = ?", i+1, server.Id).Error; err != nil {
+			if err := tx.Exec("UPDATE servers SET sort = ? WHERE id = ?", i+1, server.Id).Error; err != nil {
 				return err
 			}
 		}

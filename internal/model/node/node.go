@@ -38,7 +38,7 @@ func (n *Node) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (n *Node) BeforeDelete(tx *gorm.DB) error {
-	if err := tx.Exec("UPDATE `nodes` SET sort = sort - 1 WHERE sort > ?", n.Sort).Error; err != nil {
+	if err := tx.Exec("UPDATE nodes SET sort = sort - 1 WHERE sort > ?", n.Sort).Error; err != nil {
 		return err
 	}
 	return nil
@@ -73,7 +73,7 @@ func reorderSortWithNode(tx *gorm.DB) error {
 	}
 	for i, node := range nodes {
 		if node.Sort != i+1 {
-			if err := tx.Exec("UPDATE `nodes` SET sort = ? WHERE id = ?", i+1, node.Id).Error; err != nil {
+			if err := tx.Exec("UPDATE nodes SET sort = ? WHERE id = ?", i+1, node.Id).Error; err != nil {
 				return err
 			}
 		}

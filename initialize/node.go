@@ -54,7 +54,7 @@ func Node(ctx *svc.ServiceContext) {
 	ctx.Config.Node = c
 
 	// Manager initialization
-	if ctx.DB.Model(&system.System{}).Where("`key` = ?", "NodeMultiplierConfig").Find(&system.System{}).RowsAffected == 0 {
+	if ctx.DB.Model(&system.System{}).Where("key = ?", "NodeMultiplierConfig").Find(&system.System{}).RowsAffected == 0 {
 		if err := ctx.DB.Model(&system.System{}).Create(&system.System{
 			Key:      "NodeMultiplierConfig",
 			Value:    "[]",
