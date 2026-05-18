@@ -81,13 +81,20 @@
                     </div>
                 </div>
 
-                <!-- MySQL 数据库设置 -->
+                <!-- 数据库设置 -->
                 <div class="space-y-4">
                     <div class="flex justify-between items-center">
-                        <h2 id="mysqlInfoTitle" class="font-bold text-xl">MySQL Database Setup</h2>
-                        <button type="button" onclick="testConnection('mysql')" id="testMySQLButton" class="h-10 px-4 py-2 border rounded-md text-sm font-medium bg-background hover:bg-accent hover:text-accent-foreground">Test MySQL Connection</button>
+                        <h2 id="mysqlInfoTitle" class="font-bold text-xl">Database Setup</h2>
+                        <button type="button" onclick="testConnection('database')" id="testMySQLButton" class="h-10 px-4 py-2 border rounded-md text-sm font-medium bg-background hover:bg-accent hover:text-accent-foreground">Test Database Connection</button>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="databaseDriver" id="labelDatabaseDriver" class="text-sm font-medium">Database Type</label>
+                            <select id="databaseDriver" name="databaseDriver" required class="input-field mt-1 block w-full rounded-md border px-3 py-2" onchange="updateDatabaseDefaults()">
+                                <option value="mysql">MySQL</option>
+                                <option value="postgres">PostgreSQL</option>
+                            </select>
+                        </div>
                         <div>
                             <label for="mysqlHost" id="labelMysqlHost" class="text-sm font-medium">Database Host</label>
                             <input type="text" id="mysqlHost" name="mysqlHost" required class="input-field mt-1 block w-full rounded-md border px-3 py-2" value="localhost" placeholder="Enter database host" data-placeholder-en="Enter database host" data-placeholder-zh="请输入数据库主机">
@@ -196,10 +203,11 @@
             title: 'Welcome to PPanel Setup',
             description: "Let's get your PPanel application up and running. Please provide the necessary information below.",
             adminInfoTitle: 'Administrator Details',
-            mysqlInfoTitle: 'MySQL Database Setup',
+            mysqlInfoTitle: 'Database Setup',
             redisInfoTitle: 'Redis Cache Setup',
             adminEmail: 'Administrator Email',
             adminPassword: 'Administrator Password',
+            databaseDriver: 'Database Type',
             mysqlHost: 'Database Host',
             mysqlPort: 'Database Port',
             mysqlUser: 'Database User',
@@ -210,7 +218,7 @@
             redisPassword: 'Redis Password',
             submit: 'Start Initialization',
             switchLang: '中文',
-            testMySQLConnection: 'Test MySQL Connection',
+            testMySQLConnection: 'Test Database Connection',
             testRedisConnection: 'Test Redis Connection',
             connectionSuccess: 'Connection Successful',
             connectionError: 'Connection Failed',
@@ -221,8 +229,8 @@
             installationCompleteTitle: 'Installation Complete',
             installationCompleteMessage: 'You can now close this page.',
             proceedButton: 'Go to Application',
-            mysqlConnectionSuccess: 'Successfully connected to the MySQL database.',
-            mysqlConnectionError: 'Failed to connect to the MySQL database. Please check your settings.',
+            mysqlConnectionSuccess: 'Successfully connected to the database.',
+            mysqlConnectionError: 'Failed to connect to the database. Please check your settings.',
             redisConnectionSuccess: 'Successfully connected to the Redis server.',
             redisConnectionError: 'Failed to connect to the Redis server. Please check your settings.',
             alreadyInitializedTitle: 'Already Initialized',
@@ -235,10 +243,11 @@
             title: '欢迎使用 PPanel 设置向导',
             description: '让我们一起启动您的 PPanel 应用程序。请提供以下必要信息。',
             adminInfoTitle: '管理员详情',
-            mysqlInfoTitle: 'MySQL 数据库设置',
+            mysqlInfoTitle: '数据库设置',
             redisInfoTitle: 'Redis 缓存设置',
             adminEmail: '管理员邮箱',
             adminPassword: '管理员密码',
+            databaseDriver: '数据库类型',
             mysqlHost: '数据库主机',
             mysqlPort: '数据库端口',
             mysqlUser: '数据库用户',
@@ -249,7 +258,7 @@
             redisPassword: 'Redis 密码',
             submit: '开始初始化',
             switchLang: 'English',
-            testMySQLConnection: '测试 MySQL 连接',
+            testMySQLConnection: '测试数据库连接',
             testRedisConnection: '测试 Redis 连接',
             connectionSuccess: '连接成功',
             connectionError: '连接失败',
@@ -260,8 +269,8 @@
             installationCompleteTitle: '安装完成',
             installationCompleteMessage: '您现在可以关闭此页面。',
             proceedButton: '前往应用程序',
-            mysqlConnectionSuccess: '成功连接到 MySQL 数据库。',
-            mysqlConnectionError: '无法连接到 MySQL 数据库。请检查您的设置。',
+            mysqlConnectionSuccess: '成功连接到数据库。',
+            mysqlConnectionError: '无法连接到数据库。请检查您的设置。',
             redisConnectionSuccess: '成功连接到 Redis 服务器。',
             redisConnectionError: '无法连接到 Redis 服务器。请检查您的设置。',
             alreadyInitializedTitle: '已初始化',
@@ -285,6 +294,7 @@
         document.getElementById('redisInfoTitle').textContent = t.redisInfoTitle;
         document.getElementById('labelAdminEmail').textContent = t.adminEmail;
         document.getElementById('labelAdminPassword').textContent = t.adminPassword;
+        document.getElementById('labelDatabaseDriver').textContent = t.databaseDriver;
         document.getElementById('labelMysqlHost').textContent = t.mysqlHost;
         document.getElementById('labelMysqlPort').textContent = t.mysqlPort;
         document.getElementById('labelMysqlUser').textContent = t.mysqlUser;
@@ -326,15 +336,16 @@
         const t = translations[currentLang];
         let data = {};
         let url = '';
-        if (type === 'mysql') {
+        if (type === 'database') {
             data = {
+                driver: document.getElementById('databaseDriver').value,
                 host: document.getElementById('mysqlHost').value,
                 port: document.getElementById('mysqlPort').value,
                 user: document.getElementById('mysqlUser').value,
                 password: document.getElementById('mysqlPassword').value,
                 database: document.getElementById('mysqlDatabase').value,
             };
-            url = '/init/mysql/test';
+            url = '/init/database/test';
         } else if (type === 'redis') {
             data = {
                 host: document.getElementById('redisHost').value,
@@ -355,15 +366,36 @@
             .then(result => {
                 console.log(result);
                 if (result.code === 200 && result.status) {
-                    showDialog(t.connectionSuccess, result.msg || (type === 'mysql' ? t.mysqlConnectionSuccess : t.redisConnectionSuccess));
+                    showDialog(t.connectionSuccess, result.msg || (type === 'database' ? t.mysqlConnectionSuccess : t.redisConnectionSuccess));
                 } else {
-                    showDialog(t.connectionError, result.msg || (type === 'mysql' ? t.mysqlConnectionError : t.redisConnectionError));
+                    showDialog(t.connectionError, result.msg || (type === 'database' ? t.mysqlConnectionError : t.redisConnectionError));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 showDialog(t.connectionError, t.initializationErrorMessage);
             });
+    }
+
+    function updateDatabaseDefaults() {
+        const driver = document.getElementById('databaseDriver').value;
+        const port = document.getElementById('mysqlPort');
+        const user = document.getElementById('mysqlUser');
+        if (driver === 'postgres') {
+            if (port.value === '3306' || port.value === '') {
+                port.value = '5432';
+            }
+            if (user.value === 'root' || user.value === '') {
+                user.value = 'postgres';
+            }
+            return;
+        }
+        if (port.value === '5432' || port.value === '') {
+            port.value = '3306';
+        }
+        if (user.value === 'postgres' || user.value === '') {
+            user.value = 'root';
+        }
     }
 
     function handleSubmit(event) {

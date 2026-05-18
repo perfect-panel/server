@@ -44,7 +44,7 @@ func (l *UpdateCurrencyConfigLogic) UpdateCurrencyConfig(req *types.CurrencyConf
 			// Get the field value to string
 			fieldValue := tool.ConvertValueToString(v.Field(i))
 			// Update the invite config
-			err = db.Model(&system.System{}).Where("`category` = 'currency' and `key` = ?", fieldName).Update("value", fieldValue).Error
+			err = db.Model(&system.System{}).Where("category = 'currency' and key = ?", fieldName).Update("value", fieldValue).Error
 			if err != nil {
 				break
 			}

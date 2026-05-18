@@ -15,7 +15,8 @@ type Config struct {
 	TLS           TLS             `yaml:"TLS"`
 	JwtAuth       JwtAuth         `yaml:"JwtAuth"`
 	Logger        logger.LogConf  `yaml:"Logger"`
-	MySQL         orm.Config      `yaml:"MySQL"`
+	Database      orm.Config      `yaml:"Database"`
+	MySQL         *orm.Config     `yaml:"MySQL,omitempty"` // Deprecated: use Database.
 	Redis         RedisConfig     `yaml:"Redis"`
 	Site          SiteConfig      `yaml:"Site"`
 	Node          NodeConfig      `yaml:"Node"`
@@ -190,14 +191,49 @@ func (n *NodeOutbound) Marshal() ([]byte, error) {
 }
 
 type File struct {
-	Host    string         `yaml:"Host" default:"0.0.0.0"`
-	Port    int            `yaml:"Port" default:"8080"`
-	TLS     TLS            `yaml:"TLS"`
-	Debug   bool           `yaml:"Debug" default:"true"`
-	JwtAuth JwtAuth        `yaml:"JwtAuth"`
-	Logger  logger.LogConf `yaml:"Logger"`
-	MySQL   orm.Config     `yaml:"MySQL"`
-	Redis   RedisConfig    `yaml:"Redis"`
+	Host     string         `yaml:"Host" default:"0.0.0.0"`
+	Port     int            `yaml:"Port" default:"8080"`
+	TLS      TLS            `yaml:"TLS"`
+	Debug    bool           `yaml:"Debug" default:"true"`
+	JwtAuth  JwtAuth        `yaml:"JwtAuth"`
+	Logger   logger.LogConf `yaml:"Logger"`
+	Database orm.Config     `yaml:"Database"`
+	MySQL    *orm.Config    `yaml:"MySQL,omitempty"` // Deprecated: use Database.
+	Redis    RedisConfig    `yaml:"Redis"`
+}
+
+func (c Config) DatabaseConfig() orm.Config {
+	if hasDatabaseConfig(c.Database) {
+		return c.Database
+	}
+	if c.MySQL != nil {
+		return *c.MySQL
+	}
+	return c.Database
+}
+
+func (c *Config) SetDatabaseConfig(cfg orm.Config) {
+	c.Database = cfg
+	c.MySQL = nil
+}
+
+func (f File) DatabaseConfig() orm.Config {
+	if hasDatabaseConfig(f.Database) {
+		return f.Database
+	}
+	if f.MySQL != nil {
+		return *f.MySQL
+	}
+	return f.Database
+}
+
+func (f *File) SetDatabaseConfig(cfg orm.Config) {
+	f.Database = cfg
+	f.MySQL = nil
+}
+
+func hasDatabaseConfig(cfg orm.Config) bool {
+	return cfg.Addr != "" || cfg.Dbname != "" || cfg.Username != "" || cfg.Password != ""
 }
 
 type InviteConfig struct {

@@ -40,7 +40,7 @@ type (
 func newTicketModel(db *gorm.DB, c *redis.Client) *defaultTicketModel {
 	return &defaultTicketModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`ticket`",
+		table:      "ticket",
 	}
 }
 
@@ -76,7 +76,7 @@ func (m *defaultTicketModel) FindOne(ctx context.Context, id int64) (*Ticket, er
 	var resp Ticket
 	err := m.QueryCtx(ctx, &resp, TicketIdKey, func(conn *gorm.DB, v interface{}) error {
 
-		return conn.Model(&Ticket{}).Where("`id` = ?", id).First(&resp).Error
+		return conn.Model(&Ticket{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:

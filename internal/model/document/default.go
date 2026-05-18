@@ -40,7 +40,7 @@ type (
 func newDocumentModel(db *gorm.DB, c *redis.Client) *defaultDocumentModel {
 	return &defaultDocumentModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`document`",
+		table:      "document",
 	}
 }
 
@@ -75,7 +75,7 @@ func (m *defaultDocumentModel) FindOne(ctx context.Context, id int64) (*Document
 	DocumentIdKey := fmt.Sprintf("%s%v", cacheDocumentIdPrefix, id)
 	var resp Document
 	err := m.QueryCtx(ctx, &resp, DocumentIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Document{}).Where("`id` = ?", id).First(&resp).Error
+		return conn.Model(&Document{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:

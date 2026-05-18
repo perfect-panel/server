@@ -32,7 +32,7 @@ func (l *DeleteSubscribeLogic) DeleteSubscribe(req *types.DeleteSubscribeRequest
 	// Check if the subscribe exists
 	var total int64
 	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		return db.Model(&user.Subscribe{}).Where("subscribe_id = ? AND `status` = ?", req.Id, 1).Count(&total).Find(&user.Subscribe{}).Error
+		return db.Model(&user.Subscribe{}).Where("subscribe_id = ? AND status = ?", req.Id, 1).Count(&total).Find(&user.Subscribe{}).Error
 	})
 	if err != nil {
 		l.Logger.Error("[DeleteSubscribeLogic] check subscribe failed: ", logger.Field("error", err.Error()))

@@ -102,7 +102,7 @@ func initConfig(c *config.Config) bool {
 	// load config
 	conf.MustLoad(startConfigPath, c)
 	//  check custom config
-	if startConfigPath != "etc/ppanel.yaml" && c.MySQL.Addr == "" {
+	if startConfigPath != "etc/ppanel.yaml" && c.DatabaseConfig().Addr == "" {
 		return true
 	}
 	// check access secret
@@ -117,7 +117,7 @@ func initConfig(c *config.Config) bool {
 		if cfg == nil {
 			return true
 		} else {
-			c.MySQL = *cfg
+			c.SetDatabaseConfig(*cfg)
 		}
 
 		// Get environment variables
@@ -135,13 +135,13 @@ func initConfig(c *config.Config) bool {
 		}
 		// save yaml file
 		newConfig := config.File{
-			Host:    c.Host,
-			Port:    c.Port,
-			Debug:   c.Debug,
-			JwtAuth: c.JwtAuth,
-			Logger:  c.Logger,
-			MySQL:   c.MySQL,
-			Redis:   c.Redis,
+			Host:     c.Host,
+			Port:     c.Port,
+			Debug:    c.Debug,
+			JwtAuth:  c.JwtAuth,
+			Logger:   c.Logger,
+			Database: c.DatabaseConfig(),
+			Redis:    c.Redis,
 		}
 		fileData, err := yaml.Marshal(newConfig)
 		if err != nil {

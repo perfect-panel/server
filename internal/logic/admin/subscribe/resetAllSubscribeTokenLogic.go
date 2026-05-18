@@ -34,7 +34,7 @@ func (l *ResetAllSubscribeTokenLogic) ResetAllSubscribeToken() (resp *types.Rese
 	var list []*user.Subscribe
 	tx := l.svcCtx.DB.WithContext(l.ctx).Begin()
 	// select all active and Finished subscriptions
-	if err = tx.Model(&user.Subscribe{}).Where("`status` IN ?", []int64{1, 2}).Find(&list).Error; err != nil {
+	if err = tx.Model(&user.Subscribe{}).Where("status IN ?", []int64{1, 2}).Find(&list).Error; err != nil {
 		logger.Errorf("[ResetAllSubscribeToken] Failed to fetch subscribe list: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Failed to fetch subscribe list: %v", err.Error())
 	}

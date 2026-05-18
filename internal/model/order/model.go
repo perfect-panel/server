@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/payment"
@@ -143,8 +144,8 @@ func (m *customOrderModel) QueryMonthlyOrders(ctx context.Context, date time.Tim
 			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, firstDay, lastDay, "balance").
 			Select(
 				"SUM(amount) as amount_total, " +
-					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
-					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
+					"SUM(CASE WHEN is_new THEN amount ELSE 0 END) as new_order_amount, " +
+					"SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) as renewal_order_amount",
 			).
 			Scan(v).Error
 	})
@@ -161,8 +162,8 @@ func (m *customOrderModel) QueryDateOrders(ctx context.Context, date time.Time) 
 			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, start, end, "balance").
 			Select(
 				"SUM(amount) as amount_total, " +
-					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
-					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
+					"SUM(CASE WHEN is_new THEN amount ELSE 0 END) as new_order_amount, " +
+					"SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) as renewal_order_amount",
 			).
 			Scan(v).Error
 	})
@@ -176,8 +177,8 @@ func (m *customOrderModel) QueryTotalOrders(ctx context.Context) (OrdersTotal, e
 		return conn.Model(&Order{}).
 			Select(`
 				SUM(amount) AS amount_total,
-				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
-				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
+				SUM(CASE WHEN is_new THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) AS renewal_order_amount
 			`).
 			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
 			Scan(&result).Error
@@ -198,8 +199,8 @@ func (m *customOrderModel) QueryMonthlyUserCounts(ctx context.Context, date time
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
 			Select(`
-				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
-				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+				COUNT(DISTINCT CASE WHEN is_new THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN NOT is_new THEN user_id END) AS renewal_users
 			`).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, firstDay, nextMonth, "balance").
@@ -219,8 +220,8 @@ func (m *customOrderModel) QueryDateUserCounts(ctx context.Context, date time.Ti
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
 			Select(`
-				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
-				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+				COUNT(DISTINCT CASE WHEN is_new THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN NOT is_new THEN user_id END) AS renewal_users
 			`).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, start, nextDay, "balance").
@@ -236,8 +237,8 @@ func (m *customOrderModel) QueryTotalUserCounts(ctx context.Context) (int64, int
 		return conn.Model(&Order{}).
 			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
 			Select(`
-				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
-				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+				COUNT(DISTINCT CASE WHEN is_new THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN NOT is_new THEN user_id END) AS renewal_users
 			`).
 			Scan(&counts).Error
 	})
@@ -264,17 +265,18 @@ func (m *customOrderModel) QueryDailyOrdersList(ctx context.Context, date time.T
 		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
 		// 第二天 00:00:00
 		nextDay := date.AddDate(0, 0, 1).Truncate(24 * time.Hour)
+		dateExpr := dateBucketExpr(conn, "created_at", "day")
 
 		return conn.Model(&Order{}).
-			Select(`
-				DATE_FORMAT(created_at, '%Y-%m-%d') AS date,
+			Select(fmt.Sprintf(`
+				%s AS date,
 				SUM(amount) AS amount_total,
-				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
-				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
-			`).
+				SUM(CASE WHEN is_new THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) AS renewal_order_amount
+			`, dateExpr)).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, firstDay, nextDay, "balance").
-			Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
+			Group(dateExpr).
 			Order("date ASC").
 			Scan(v).Error
 	})
@@ -290,19 +292,33 @@ func (m *customOrderModel) QueryMonthlyOrdersList(ctx context.Context, date time
 		start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).AddDate(0, -5, 0)
 		// 下个月月初
 		end := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).AddDate(0, 1, 0)
+		dateExpr := dateBucketExpr(conn, "created_at", "month")
 
 		return conn.Model(&Order{}).
-			Select(`
-				DATE_FORMAT(created_at, '%Y-%m') AS date,
+			Select(fmt.Sprintf(`
+				%s AS date,
 				SUM(amount) AS amount_total,
-				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
-				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
-			`).
+				SUM(CASE WHEN is_new THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) AS renewal_order_amount
+			`, dateExpr)).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, start, end, "balance").
-			Group("DATE_FORMAT(created_at, '%Y-%m')").
+			Group(dateExpr).
 			Order("date ASC").
 			Scan(v).Error
 	})
 	return results, err
+}
+
+func dateBucketExpr(db *gorm.DB, column, bucket string) string {
+	if db.Dialector.Name() == "postgres" {
+		if bucket == "month" {
+			return fmt.Sprintf("TO_CHAR(%s, 'YYYY-MM')", column)
+		}
+		return fmt.Sprintf("TO_CHAR(%s, 'YYYY-MM-DD')", column)
+	}
+	if bucket == "month" {
+		return fmt.Sprintf("DATE_FORMAT(%s, '%%Y-%%m')", column)
+	}
+	return fmt.Sprintf("DATE_FORMAT(%s, '%%Y-%%m-%%d')", column)
 }

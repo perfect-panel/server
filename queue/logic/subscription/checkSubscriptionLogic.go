@@ -75,7 +75,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 	// Check subscription expire
 	err = l.svc.UserModel.Transaction(ctx, func(db *gorm.DB) error {
 		var list []*user.Subscribe
-		err = db.Model(&user.Subscribe{}).Where("`status` IN (0, 1) AND `expire_time` < ? AND `expire_time` != ? and `finished_at` IS NULL", time.Now(), time.UnixMilli(0)).Find(&list).Error
+		err = db.Model(&user.Subscribe{}).Where("status IN (0, 1) AND expire_time < ? AND expire_time != ? and finished_at IS NULL", time.Now(), time.UnixMilli(0)).Find(&list).Error
 		if err != nil {
 			logger.Error("[Check Subscription] Find subscribe failed", logger.Field("error", err.Error()))
 			return err

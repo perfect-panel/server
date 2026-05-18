@@ -2,6 +2,7 @@ package marketing
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -39,16 +40,18 @@ func (l *CreateBatchSendEmailTaskLogic) CreateBatchSendEmailTask(req *types.Crea
 
 	// 通用查询器（含 user JOIN + 注册时间范围过滤）
 	baseQuery := func() *gorm.DB {
+		userID := user.UserColumn(tx, "id")
+		userCreatedAt := user.UserColumn(tx, "created_at")
 		query := tx.Model(&user.AuthMethods{}).
 			Select("auth_identifier").
-			Joins("JOIN user ON user.id = user_auth_methods.user_id").
+			Joins(fmt.Sprintf("JOIN %s ON %s = user_auth_methods.user_id", user.UserTableName(tx), userID)).
 			Where("auth_type = ?", "email")
 
 		if req.RegisterStartTime != 0 {
-			query = query.Where("user.created_at >= ?", time.UnixMilli(req.RegisterStartTime))
+			query = query.Where(userCreatedAt+" >= ?", time.UnixMilli(req.RegisterStartTime))
 		}
 		if req.RegisterEndTime != 0 {
-			query = query.Where("user.created_at <= ?", time.UnixMilli(req.RegisterEndTime))
+			query = query.Where(userCreatedAt+" <= ?", time.UnixMilli(req.RegisterEndTime))
 		}
 		return query
 	}
@@ -63,17 +66,17 @@ func (l *CreateBatchSendEmailTaskLogic) CreateBatchSendEmailTask(req *types.Crea
 
 	case task.ScopeActive:
 		query = baseQuery().
-			Joins("JOIN user_subscribe ON user.id = user_subscribe.user_id").
+			Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
 			Where("user_subscribe.status IN ?", []int64{1, 2})
 
 	case task.ScopeExpired:
 		query = baseQuery().
-			Joins("JOIN user_subscribe ON user.id = user_subscribe.user_id").
+			Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
 			Where("user_subscribe.status = ?", 3)
 
 	case task.ScopeNone:
 		query = baseQuery().
-			Joins("LEFT JOIN user_subscribe ON user.id = user_subscribe.user_id").
+			Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
 			Where("user_subscribe.user_id IS NULL")
 	default:
 

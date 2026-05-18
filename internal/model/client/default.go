@@ -48,14 +48,14 @@ func (m *DefaultSubscribeApplicationModel) Update(ctx context.Context, data *Sub
 	if _, err := m.FindOne(ctx, data.Id); err != nil {
 		return err
 	}
-	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Where("`id` = ?", data.Id).Save(data).Error; err != nil {
+	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Where("id = ?", data.Id).Save(data).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 func (m *DefaultSubscribeApplicationModel) Delete(ctx context.Context, id int64) error {
-	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Where("`id` = ?", id).Delete(&SubscribeApplication{}).Error; err != nil {
+	if err := m.WithContext(ctx).Model(&SubscribeApplication{}).Where("id = ?", id).Delete(&SubscribeApplication{}).Error; err != nil {
 		return err
 	}
 	return nil

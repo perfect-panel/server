@@ -30,10 +30,10 @@ func (m *customAdsModel) GetAdsListByPage(ctx context.Context, page, size int, f
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		conn = conn.Model(&Ads{})
 		if filter.Status != nil {
-			conn = conn.Where("`status` = ?", *filter.Status)
+			conn = conn.Where("status = ?", *filter.Status)
 		}
 		if filter.Search != "" {
-			conn = conn.Where("`title` LIKE ? OR `content` LIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
+			conn = conn.Where("title LIKE ? OR content LIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
 		}
 		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
 	})

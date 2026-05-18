@@ -42,7 +42,7 @@ type (
 func newUserModel(db *gorm.DB, c *redis.Client) *defaultUserModel {
 	return &defaultUserModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`user`",
+		table:      "user",
 	}
 }
 
@@ -70,10 +70,10 @@ func (m *defaultUserModel) FindOneByEmail(ctx context.Context, email string) (*U
 	key := fmt.Sprintf("%s%v", cacheUserEmailPrefix, email)
 	err := m.QueryCtx(ctx, &user, key, func(conn *gorm.DB, v interface{}) error {
 		var data AuthMethods
-		if err := conn.Model(&AuthMethods{}).Where("`auth_type` = 'email' AND `auth_identifier` = ?", email).First(&data).Error; err != nil {
+		if err := conn.Model(&AuthMethods{}).Where("auth_type = 'email' AND auth_identifier = ?", email).First(&data).Error; err != nil {
 			return err
 		}
-		return conn.Model(&User{}).Unscoped().Where("`id` = ?", data.UserId).Preload("UserDevices").Preload("AuthMethods").First(v).Error
+		return conn.Model(&User{}).Unscoped().Where("id = ?", data.UserId).Preload("UserDevices").Preload("AuthMethods").First(v).Error
 	})
 	return &user, err
 }
@@ -92,7 +92,7 @@ func (m *defaultUserModel) FindOne(ctx context.Context, id int64) (*User, error)
 	userIdKey := fmt.Sprintf("%s%v", cacheUserIdPrefix, id)
 	var resp User
 	err := m.QueryCtx(ctx, &resp, userIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&User{}).Unscoped().Where("`id` = ?", id).Preload("UserDevices").Preload("AuthMethods").First(&resp).Error
+		return conn.Model(&User{}).Unscoped().Where("id = ?", id).Preload("UserDevices").Preload("AuthMethods").First(&resp).Error
 	})
 	return &resp, err
 }
@@ -133,7 +133,7 @@ func (m *defaultUserModel) Delete(ctx context.Context, id int64, tx ...*gorm.DB)
 			db = tx[0]
 		}
 		// Soft deletion of user information without any processing of other information (Determine whether to allow login/subscription based on the user's deletion status)
-		if err := db.Model(&User{}).Where("`id` = ?", id).Delete(&User{}).Error; err != nil {
+		if err := db.Model(&User{}).Where("id = ?", id).Delete(&User{}).Error; err != nil {
 			return err
 		}
 

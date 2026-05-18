@@ -35,19 +35,19 @@ func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest
 	var subs []*user.Subscribe
 	query := l.svcCtx.DB.WithContext(l.ctx).Model(&user.Subscribe{})
 	if len(req.Subscribers) > 0 {
-		query = query.Where("`subscribe_id` IN ?", req.Subscribers)
+		query = query.Where("subscribe_id IN ?", req.Subscribers)
 	}
 
 	if req.IsActive != nil && *req.IsActive {
-		query = query.Where("`status` IN ?", []int64{0, 1, 2}) // 0: Pending 1: Active 2: Finished
+		query = query.Where("status IN ?", []int64{0, 1, 2}) // 0: Pending 1: Active 2: Finished
 	}
 	if req.StartTime != 0 {
 		start := time.UnixMilli(req.StartTime)
-		query = query.Where("`start_time` <= ?", start)
+		query = query.Where("start_time <= ?", start)
 	}
 	if req.EndTime != 0 {
 		end := time.UnixMilli(req.EndTime)
-		query = query.Where("`expire_time` >= ?", end)
+		query = query.Where("expire_time >= ?", end)
 	}
 
 	if err := query.Find(&subs).Error; err != nil {

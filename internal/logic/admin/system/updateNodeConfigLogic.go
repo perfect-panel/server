@@ -45,7 +45,7 @@ func (l *UpdateNodeConfigLogic) UpdateNodeConfig(req *types.NodeConfig) error {
 
 			fieldValue = tool.ConvertValueToString(v.Field(i))
 			// Update the server config
-			err = db.Model(&system.System{}).Where("`category` = 'server' and `key` = ?", fieldName).Update("value", fieldValue).Error
+			err = db.Model(&system.System{}).Where("category = 'server' and key = ?", fieldName).Update("value", fieldValue).Error
 			if err != nil {
 				break
 			}

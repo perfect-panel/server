@@ -30,19 +30,19 @@ func (l *QueryQuotaTaskPreCountLogic) QueryQuotaTaskPreCount(req *types.QueryQuo
 	var count int64
 
 	if len(req.Subscribers) > 0 {
-		tx = tx.Where("`subscribe_id` IN ?", req.Subscribers)
+		tx = tx.Where("subscribe_id IN ?", req.Subscribers)
 	}
 
 	if req.IsActive != nil && *req.IsActive {
-		tx = tx.Where("`status` IN ?", []int64{0, 1, 2}) // 0: Pending 1: Active 2: Finished
+		tx = tx.Where("status IN ?", []int64{0, 1, 2}) // 0: Pending 1: Active 2: Finished
 	}
 	if req.StartTime != 0 {
 		start := time.UnixMilli(req.StartTime)
-		tx = tx.Where("`start_time` <= ?", start)
+		tx = tx.Where("start_time <= ?", start)
 	}
 	if req.EndTime != 0 {
 		end := time.UnixMilli(req.EndTime)
-		tx = tx.Where("`expire_time` >= ?", end)
+		tx = tx.Where("expire_time >= ?", end)
 	}
 	if err = tx.Count(&count).Error; err != nil {
 		l.Errorf("[QueryQuotaTaskPreCount] count error: %v", err.Error())

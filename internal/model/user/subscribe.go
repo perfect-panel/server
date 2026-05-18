@@ -21,7 +21,7 @@ func (m *defaultUserModel) QueryActiveSubscriptions(ctx context.Context, subscri
 	var result []SubscriptionCount
 	err := m.QueryNoCacheCtx(ctx, &result, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Subscribe{}).
-			Where("subscribe_id IN ? AND `status` IN ?", subscribeId, []int64{1, 0}).
+			Where("subscribe_id IN ? AND status IN ?", subscribeId, []int64{1, 0}).
 			Select("subscribe_id, COUNT(id) as total").
 			Group("subscribe_id").
 			Scan(&result).
@@ -60,13 +60,13 @@ func (m *defaultUserModel) FindOneSubscribe(ctx context.Context, id int64) (*Sub
 func (m *defaultUserModel) FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error) {
 	var data []*Subscribe
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		err := conn.Model(&Subscribe{}).Where("subscribe_id = ? AND `status` IN ?", subscribeId, []int64{1, 0}).Find(v).Error
+		err := conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status IN ?", subscribeId, []int64{1, 0}).Find(v).Error
 
 		if err != nil {
 			return err
 		}
 		// update user subscribe status
-		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND `status` = ?", subscribeId, 0).Update("status", 1).Error
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status = ?", subscribeId, 0).Update("status", 1).Error
 	})
 	return data, err
 }
@@ -81,12 +81,12 @@ func (m *defaultUserModel) QueryUserSubscribe(ctx context.Context, userId int64,
 		// 获取当前时间向前推 7 天
 		sevenDaysAgo := time.Now().Add(-7 * 24 * time.Hour)
 		// 基础条件查询
-		conn = conn.Model(&Subscribe{}).Where("`user_id` = ?", userId)
+		conn = conn.Model(&Subscribe{}).Where("user_id = ?", userId)
 		if len(status) > 0 {
-			conn = conn.Where("`status` IN ?", status)
+			conn = conn.Where("status IN ?", status)
 		}
 		// 订阅过期时间大于当前时间或者订阅结束时间大于当前时间
-		return conn.Where("`expire_time` > ? OR `finished_at` >= ? OR `expire_time` = ?", now, sevenDaysAgo, time.UnixMilli(0)).
+		return conn.Where("expire_time > ? OR finished_at >= ? OR expire_time = ?", now, sevenDaysAgo, time.UnixMilli(0)).
 			Preload("Subscribe").
 			Find(&list).Error
 	})

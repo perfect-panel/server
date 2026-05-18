@@ -37,6 +37,17 @@ func (*User) TableName() string {
 	return "user"
 }
 
+func UserTableName(db *gorm.DB) string {
+	if db != nil && db.Dialector.Name() == "postgres" {
+		return `"user"`
+	}
+	return "user"
+}
+
+func UserColumn(db *gorm.DB, column string) string {
+	return UserTableName(db) + "." + column
+}
+
 type Subscribe struct {
 	Id          int64      `gorm:"primaryKey"`
 	UserId      int64      `gorm:"index:idx_user_id;not null;comment:User ID"`

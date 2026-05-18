@@ -28,7 +28,7 @@ func NewQueryQuotaTaskStatusLogic(ctx context.Context, svcCtx *svc.ServiceContex
 
 func (l *QueryQuotaTaskStatusLogic) QueryQuotaTaskStatus(req *types.QueryQuotaTaskStatusRequest) (resp *types.QueryQuotaTaskStatusResponse, err error) {
 	var data *task.Task
-	err = l.svcCtx.DB.Model(&task.Task{}).Where("id = ? AND `type` = ?", req.Id, task.TypeQuota).First(&data).Error
+	err = l.svcCtx.DB.Model(&task.Task{}).Where("id = ? AND type = ?", req.Id, task.TypeQuota).First(&data).Error
 	if err != nil {
 		l.Errorf("[QueryQuotaTaskStatus] failed to get quota task: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " failed to get quota task: %v", err.Error())

@@ -130,30 +130,32 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 	var list []*User
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
+		userTable := UserTableName(conn)
+		userIdColumn := UserColumn(conn, "id")
 		if filter != nil {
 			if filter.UserId != nil {
-				conn = conn.Where("user.id =?", *filter.UserId)
+				conn = conn.Where(userIdColumn+" =?", *filter.UserId)
 			}
 			if filter.Search != "" {
-				conn = conn.Joins("LEFT JOIN user_auth_methods ON user.id = user_auth_methods.user_id").
-					Where("user_auth_methods.auth_identifier LIKE ?", "%"+filter.Search+"%").Or("user.refer_code like ?", "%"+filter.Search+"%")
+				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_auth_methods ON %s = user_auth_methods.user_id", userIdColumn)).
+					Where("user_auth_methods.auth_identifier LIKE ?", "%"+filter.Search+"%").Or(UserColumn(conn, "refer_code")+" like ?", "%"+filter.Search+"%")
 			}
 			if filter.UserSubscribeId != nil {
-				conn = conn.Joins("LEFT JOIN user_subscribe ON user.id = user_subscribe.user_id").
-					Where("user_subscribe.id =? and `status` IN (0,1)", *filter.UserSubscribeId)
+				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userIdColumn)).
+					Where("user_subscribe.id =? and status IN (0,1)", *filter.UserSubscribeId)
 			}
 			if filter.SubscribeId != nil {
-				conn = conn.Joins("LEFT JOIN user_subscribe ON user.id = user_subscribe.user_id").
-					Where("user_subscribe.subscribe_id =? and `status` IN (0,1)", *filter.SubscribeId)
+				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userIdColumn)).
+					Where("user_subscribe.subscribe_id =? and status IN (0,1)", *filter.SubscribeId)
 			}
 			if filter.Order != "" {
-				conn = conn.Order(fmt.Sprintf("user.id %s", filter.Order))
+				conn = conn.Order(fmt.Sprintf("%s %s", userIdColumn, filter.Order))
 			}
 			if filter.Unscoped {
 				conn = conn.Unscoped()
 			}
 		}
-		return conn.Model(&User{}).Group("user.id").Count(&total).Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error
+		return conn.Model(&User{}).Group(userTable + ".id").Count(&total).Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error
 	})
 	return list, total, err
 }
@@ -261,30 +263,33 @@ func (m *customUserModel) QueryDailyUserStatisticsList(ctx context.Context, date
 
 	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
 		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+		orderDateExpr := userDateBucketExpr(conn, "created_at", "day")
+		userCreatedAt := UserColumn(conn, "created_at")
+		userDateExpr := userDateBucketExpr(conn, userCreatedAt, "day")
 
 		// 子查询：统计每天的新用户订单数量
 		newOrderSub := conn.Model(&order.Order{}).
-			Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(DISTINCT user_id) AS new_order_users").
-			Where("is_new = 1 AND created_at BETWEEN ? AND ? AND status IN ?", firstDay, date, []int64{2, 5}).
-			Group("DATE_FORMAT(created_at, '%Y-%m-%d')")
+			Select(fmt.Sprintf("%s AS date, COUNT(DISTINCT user_id) AS new_order_users", orderDateExpr)).
+			Where("is_new = ? AND created_at BETWEEN ? AND ? AND status IN ?", true, firstDay, date, []int64{2, 5}).
+			Group(orderDateExpr)
 
 		// 子查询：统计每天的续费订单数量
 		renewalOrderSub := conn.Model(&order.Order{}).
-			Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(DISTINCT user_id) AS renewal_order_users").
-			Where("is_new = 0 AND created_at BETWEEN ? AND ? AND status IN ?", firstDay, date, []int64{2, 5}).
-			Group("DATE_FORMAT(created_at, '%Y-%m-%d')")
+			Select(fmt.Sprintf("%s AS date, COUNT(DISTINCT user_id) AS renewal_order_users", orderDateExpr)).
+			Where("is_new = ? AND created_at BETWEEN ? AND ? AND status IN ?", false, firstDay, date, []int64{2, 5}).
+			Group(orderDateExpr)
 
 		return conn.Model(&User{}).
-			Select(`
-                DATE_FORMAT(user.created_at, '%Y-%m-%d') AS date,
+			Select(fmt.Sprintf(`
+                %s AS date,
                 COUNT(*) AS register,
-                IFNULL(MAX(n.new_order_users), 0) AS new_order_users,
-                IFNULL(MAX(r.renewal_order_users), 0) AS renewal_order_users
-            `).
-			Joins("LEFT JOIN (?) AS n ON DATE_FORMAT(user.created_at, '%Y-%m-%d') = n.date", newOrderSub).
-			Joins("LEFT JOIN (?) AS r ON DATE_FORMAT(user.created_at, '%Y-%m-%d') = r.date", renewalOrderSub).
-			Where("user.created_at BETWEEN ? AND ?", firstDay, date).
-			Group("DATE_FORMAT(user.created_at, '%Y-%m-%d')").
+                COALESCE(MAX(n.new_order_users), 0) AS new_order_users,
+                COALESCE(MAX(r.renewal_order_users), 0) AS renewal_order_users
+            `, userDateExpr)).
+			Joins("LEFT JOIN (?) AS n ON "+userDateExpr+" = n.date", newOrderSub).
+			Joins("LEFT JOIN (?) AS r ON "+userDateExpr+" = r.date", renewalOrderSub).
+			Where(userCreatedAt+" BETWEEN ? AND ?", firstDay, date).
+			Group(userDateExpr).
 			Order("date ASC").
 			Scan(v).Error
 	})
@@ -299,33 +304,49 @@ func (m *customUserModel) QueryMonthlyUserStatisticsList(ctx context.Context, da
 	err := m.QueryNoCacheCtx(ctx, &results, func(conn *gorm.DB, v interface{}) error {
 		// 获取 6 个月前的日期
 		sixMonthsAgo := date.AddDate(0, -5, 0)
+		orderDateExpr := userDateBucketExpr(conn, "created_at", "month")
+		userCreatedAt := UserColumn(conn, "created_at")
+		userDateExpr := userDateBucketExpr(conn, userCreatedAt, "month")
 
 		// 子查询：每月新订单用户数量
 		newOrderSub := conn.Model(&order.Order{}).
-			Select("DATE_FORMAT(created_at, '%Y-%m') AS date, COUNT(DISTINCT user_id) AS new_order_users").
-			Where("is_new = 1 AND created_at >= ? AND status IN ?", sixMonthsAgo, []int64{2, 5}).
-			Group("DATE_FORMAT(created_at, '%Y-%m')")
+			Select(fmt.Sprintf("%s AS date, COUNT(DISTINCT user_id) AS new_order_users", orderDateExpr)).
+			Where("is_new = ? AND created_at >= ? AND status IN ?", true, sixMonthsAgo, []int64{2, 5}).
+			Group(orderDateExpr)
 
-		// 子查询：每月续费订单用户数量
+		// 子查询：每月续费订单数量
 		renewalOrderSub := conn.Model(&order.Order{}).
-			Select("DATE_FORMAT(created_at, '%Y-%m') AS date, COUNT(DISTINCT user_id) AS renewal_order_users").
-			Where("is_new = 0 AND created_at >= ? AND status IN ?", sixMonthsAgo, []int64{2, 5}).
-			Group("DATE_FORMAT(created_at, '%Y-%m')")
+			Select(fmt.Sprintf("%s AS date, COUNT(DISTINCT user_id) AS renewal_order_users", orderDateExpr)).
+			Where("is_new = ? AND created_at >= ? AND status IN ?", false, sixMonthsAgo, []int64{2, 5}).
+			Group(orderDateExpr)
 
 		return conn.Model(&User{}).
-			Select(`
-				DATE_FORMAT(user.created_at, '%Y-%m') AS date,
+			Select(fmt.Sprintf(`
+				%s AS date,
 				COUNT(*) AS register,
-				IFNULL(MAX(n.new_order_users), 0) AS new_order_users,
-				IFNULL(MAX(r.renewal_order_users), 0) AS renewal_order_users
-			`).
-			Joins("LEFT JOIN (?) AS n ON DATE_FORMAT(user.created_at, '%Y-%m') = n.date", newOrderSub).
-			Joins("LEFT JOIN (?) AS r ON DATE_FORMAT(user.created_at, '%Y-%m') = r.date", renewalOrderSub).
-			Where("user.created_at >= ?", sixMonthsAgo).
-			Group("DATE_FORMAT(user.created_at, '%Y-%m')").
+				COALESCE(MAX(n.new_order_users), 0) AS new_order_users,
+				COALESCE(MAX(r.renewal_order_users), 0) AS renewal_order_users
+			`, userDateExpr)).
+			Joins("LEFT JOIN (?) AS n ON "+userDateExpr+" = n.date", newOrderSub).
+			Joins("LEFT JOIN (?) AS r ON "+userDateExpr+" = r.date", renewalOrderSub).
+			Where(userCreatedAt+" >= ?", sixMonthsAgo).
+			Group(userDateExpr).
 			Order("date ASC").
 			Scan(v).Error
 	})
 
 	return results, err
+}
+
+func userDateBucketExpr(db *gorm.DB, column, bucket string) string {
+	if db.Dialector.Name() == "postgres" {
+		if bucket == "month" {
+			return fmt.Sprintf("TO_CHAR(%s, 'YYYY-MM')", column)
+		}
+		return fmt.Sprintf("TO_CHAR(%s, 'YYYY-MM-DD')", column)
+	}
+	if bucket == "month" {
+		return fmt.Sprintf("DATE_FORMAT(%s, '%%Y-%%m')", column)
+	}
+	return fmt.Sprintf("DATE_FORMAT(%s, '%%Y-%%m-%%d')", column)
 }

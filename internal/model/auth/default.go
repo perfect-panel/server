@@ -41,7 +41,7 @@ type (
 func newAuthModel(db *gorm.DB, c *redis.Client) *defaultAuthModel {
 	return &defaultAuthModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`auth_config`",
+		table:      "auth_config",
 	}
 }
 
@@ -78,7 +78,7 @@ func (m *defaultAuthModel) FindOne(ctx context.Context, id int64) (*Auth, error)
 	AuthIdKey := fmt.Sprintf("%s%v", cacheAuthIdPrefix, id)
 	var resp Auth
 	err := m.QueryCtx(ctx, &resp, AuthIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Auth{}).Where("`id` = ?", id).First(&resp).Error
+		return conn.Model(&Auth{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:
