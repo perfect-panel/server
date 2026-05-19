@@ -96,6 +96,9 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	}
 	users := make([]types.ServerUser, 0)
 	for _, sub := range subs {
+		if err := l.svcCtx.UserModel.ActivatePendingSubscribesBySubscribeId(l.ctx, sub.Id); err != nil {
+			return nil, err
+		}
 		data, err := l.svcCtx.UserModel.FindUsersSubscribeBySubscribeId(l.ctx, sub.Id)
 		if err != nil {
 			return nil, err
