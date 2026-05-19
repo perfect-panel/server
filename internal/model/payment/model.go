@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -59,7 +60,7 @@ func (m *customPaymentModel) FindListByPage(ctx context.Context, page, size int,
 				conn = conn.Where("platform = ?", req.Mark)
 			}
 			if req.Search != "" {
-				conn = conn.Where("name LIKE ?", "%"+req.Search+"%")
+				conn = conn.Scopes(orm.PrefixLike([]string{"name"}, req.Search))
 			}
 		}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/pkg/orm"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -139,9 +140,9 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 				conn = conn.Where(userIdColumn+" =?", *filter.UserId)
 			}
 			if filter.Search != "" {
-				search := "%" + filter.Search + "%"
+				search := orm.LikePrefixPattern(filter.Search)
 				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_auth_methods ON %s = user_auth_methods.user_id", userIdColumn)).
-					Where("(user_auth_methods.auth_identifier LIKE ? OR "+UserColumn(conn, "refer_code")+" LIKE ?)", search, search)
+					Where("(user_auth_methods.auth_identifier LIKE ? ESCAPE '\\' OR "+UserColumn(conn, "refer_code")+" LIKE ? ESCAPE '\\')", search, search)
 			}
 			joinedUserSubscribe := false
 			if filter.UserSubscribeId != nil {

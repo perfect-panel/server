@@ -30,7 +30,7 @@ func (m *customCouponModel) QueryCouponListByPage(ctx context.Context, page, siz
 			db = db.Scopes(orm.CommaSeparatedContains("subscribe", []string{strconv.FormatInt(subscribe, 10)}))
 		}
 		if search != "" {
-			db = db.Where("name like ? or code like ?", "%"+search+"%", "%"+search+"%")
+			db = db.Scopes(orm.PrefixLike([]string{"name", "code"}, search))
 		}
 		return db.Count(&total).Limit(size).Offset((page - 1) * size).Find(v).Error
 	})

@@ -83,8 +83,7 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 		query := conn.Model(&Subscribe{})
 
 		if params.Search != "" {
-			s := "%" + params.Search + "%"
-			query = query.Where("name LIKE ? OR description LIKE ?", s, s)
+			query = query.Scopes(orm.ContainsLike([]string{"name", "description"}, params.Search))
 		}
 		if params.Show {
 			query = query.Where("show = true")

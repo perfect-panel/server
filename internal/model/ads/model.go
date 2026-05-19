@@ -3,6 +3,7 @@ package ads
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -33,7 +34,7 @@ func (m *customAdsModel) GetAdsListByPage(ctx context.Context, page, size int, f
 			conn = conn.Where("status = ?", *filter.Status)
 		}
 		if filter.Search != "" {
-			conn = conn.Where("title LIKE ? OR content LIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
+			conn = conn.Scopes(orm.ContainsLike([]string{"title", "content"}, filter.Search))
 		}
 		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
 	})

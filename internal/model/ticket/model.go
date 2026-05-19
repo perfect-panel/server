@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -69,7 +70,7 @@ func (m *customTicketModel) QueryTicketList(ctx context.Context, page, size int,
 			query = query.Where("status != ?", 4)
 		}
 		if search != "" {
-			query = query.Where("title like ? or description like ?", "%"+search+"%", "%"+search+"%")
+			query = query.Scopes(orm.ContainsLike([]string{"title", "description"}, search))
 		}
 		return query.Count(&total).Order("id desc").Limit(size).Offset((page - 1) * size).Find(v).Error
 	})

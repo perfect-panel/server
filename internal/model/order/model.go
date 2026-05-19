@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/pkg/orm"
 
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/redis/go-redis/v9"
@@ -93,7 +94,7 @@ func (m *customOrderModel) QueryOrderListByPage(ctx context.Context, page, size 
 			conn = conn.Where("subscribe_id = ?", subscribe)
 		}
 		if search != "" {
-			conn = conn.Where("order_no like ? or trade_no like ? or coupon like ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+			conn = conn.Scopes(orm.PrefixLike([]string{"order_no", "trade_no", "coupon"}, search))
 		}
 		return conn.Order("id desc").Preload("Subscribe").Preload("Payment").Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
 	})

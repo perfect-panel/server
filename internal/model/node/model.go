@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -55,8 +56,7 @@ func (m *customServerModel) FilterServerList(ctx context.Context, params *Filter
 		}
 	}
 	if params.Search != "" {
-		s := "%" + params.Search + "%"
-		query = query.Where("name LIKE ? OR address LIKE ?", s, s)
+		query = query.Scopes(orm.PrefixLike([]string{"name", "address"}, params.Search))
 	}
 	if len(params.Ids) > 0 {
 		query = query.Where("id IN ?", params.Ids)
@@ -83,8 +83,15 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 		}
 	}
 	if params.Search != "" {
-		s := "%" + params.Search + "%"
-		query = query.Where("name LIKE ? OR address LIKE ? OR tags LIKE ? OR "+orm.TextColumnExpr(query, "port")+" LIKE ?", s, s, s, s)
+		pattern := orm.LikePrefixPattern(params.Search)
+		condition := "(name LIKE ? ESCAPE '\\' OR address LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\'"
+		args := []interface{}{pattern, pattern, pattern}
+		if port, err := strconv.ParseUint(params.Search, 10, 16); err == nil {
+			condition += " OR port = ?"
+			args = append(args, uint16(port))
+		}
+		condition += ")"
+		query = query.Where(condition, args...)
 	}
 	if len(params.NodeId) > 0 {
 		query = query.Where("id IN ?", params.NodeId)

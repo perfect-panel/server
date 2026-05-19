@@ -40,7 +40,7 @@ func (m *customDocumentModel) QueryDocumentList(ctx context.Context, page, size 
 			db = db.Scopes(orm.CommaSeparatedContains("tags", []string{tag}))
 		}
 		if search != "" {
-			db = db.Where("title LIKE ? OR content LIKE ?", "%"+search+"%", "%"+search+"%")
+			db = db.Scopes(orm.ContainsLike([]string{"title", "content"}, search))
 		}
 		return db.Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
 	})
