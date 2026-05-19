@@ -9,17 +9,17 @@ if (!webhookUrl || !webhookSecret) {
   process.exit(1);
 }
 
-const context = JSON.parse(readFileSync(".automation/context.json", "utf8"));
+const context = JSON.parse(readFileSync(".automation/context.json", "utf8")) as unknown;
 
 const payload = {
   routeId: "perfect-panel-server-triage",
   eventType: "triage.issue",
-  repo: "perfect-panel/server",
+  repo: process.env.GITHUB_REPOSITORY ?? "perfect-panel/server",
   source: "github-actions",
   trigger: {
-    kind: process.env.GITHUB_EVENT_NAME || "unknown",
-    eventName: process.env.GITHUB_EVENT_NAME || "unknown",
-    eventAction: process.env.GITHUB_EVENT_ACTION || "",
+    kind: process.env.GITHUB_EVENT_NAME ?? "unknown",
+    eventName: process.env.GITHUB_EVENT_NAME ?? "unknown",
+    eventAction: process.env.GITHUB_EVENT_ACTION ?? "",
   },
   context,
 };

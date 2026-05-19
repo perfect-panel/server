@@ -29,7 +29,7 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node scripts/triage-context.mjs
+        run: bun scripts/triage-context.ts
 
       - name: Send webhook to bridge
         env:
@@ -37,4 +37,4 @@ jobs:
           BRIDGE_WEBHOOK_SECRET: ${{ secrets.BRIDGE_WEBHOOK_SECRET }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_EVENT_ACTION: ${{ github.event.action || '' }}
-        run: node scripts/triage-webhook.mjs
+        run: bun scripts/triage-webhook.ts
