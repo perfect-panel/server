@@ -6,6 +6,7 @@ import (
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type customDocumentLogicModel interface {
@@ -51,9 +52,11 @@ func (m *customDocumentModel) QueryDocumentList(ctx context.Context, page, size 
 func (m *customDocumentModel) GetDocumentListByAll(ctx context.Context) (int64, []*Document, error) {
 	var data []*Document
 	var total int64
-	show := true
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Document{}).Where("show = ?", &show).Count(&total).Find(v).Error
+		return conn.Model(&Document{}).Where(clause.Eq{
+			Column: clause.Column{Name: "show"},
+			Value:  true,
+		}).Count(&total).Find(v).Error
 	})
 	return total, data, err
 }

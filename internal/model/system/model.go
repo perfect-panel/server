@@ -132,14 +132,16 @@ func (m *customSystemModel) GetCurrencyConfig(ctx context.Context) ([]*System, e
 
 func (m *customSystemModel) UpdateNodeMultiplierConfig(ctx context.Context, config string) error {
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
-		return conn.Model(&System{}).Where("category = ? AND key = ?", "server", "NodeMultiplierConfig").Update("value", config).Error
+		return conn.Model(&System{}).
+			Scopes(WhereCategoryKey("server", "NodeMultiplierConfig")).
+			Update("value", config).Error
 	})
 }
 
 func (m *customSystemModel) FindNodeMultiplierConfig(ctx context.Context) (*System, error) {
 	var data System
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Where("category = ? AND key = ?", "server", "NodeMultiplierConfig").Find(v).Error
+		return conn.Scopes(WhereCategoryKey("server", "NodeMultiplierConfig")).Find(v).Error
 	})
 	return &data, err
 }

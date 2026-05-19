@@ -41,7 +41,9 @@ func (l *UpdateSiteConfigLogic) UpdateSiteConfig(req *types.SiteConfig) error {
 			fieldName := t.Field(i).Name
 			// Get the field value
 			fieldValue := v.Field(i)
-			err = db.Model(&system.System{}).Where("category = 'site' and key = ?", fieldName).Update("value", fieldValue.String()).Error
+			err = db.Model(&system.System{}).
+				Scopes(system.WhereCategoryKey("site", fieldName)).
+				Update("value", fieldValue.String()).Error
 			if err != nil {
 				break
 			}

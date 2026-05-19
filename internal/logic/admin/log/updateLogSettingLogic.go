@@ -42,7 +42,9 @@ func (l *UpdateLogSettingLogic) UpdateLogSetting(req *types.LogSetting) error {
 			// Get the field value to string
 			fieldValue := tool.ConvertValueToString(v.Field(i))
 			// Update the server config
-			err = db.Model(&system.System{}).Where("category = 'log' and key = ?", fieldName).Update("value", fieldValue).Error
+			err = db.Model(&system.System{}).
+				Scopes(system.WhereCategoryKey("log", fieldName)).
+				Update("value", fieldValue).Error
 			if err != nil {
 				break
 			}

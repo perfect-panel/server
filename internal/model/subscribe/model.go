@@ -7,6 +7,7 @@ import (
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type FilterParams struct {
@@ -86,7 +87,10 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 			query = query.Scopes(orm.ContainsLike([]string{"name", "description"}, params.Search))
 		}
 		if params.Show {
-			query = query.Where("show = true")
+			query = query.Where(clause.Eq{
+				Column: clause.Column{Name: "show"},
+				Value:  true,
+			})
 		}
 		if params.Sell {
 			query = query.Where("sell = true")

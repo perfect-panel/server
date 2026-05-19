@@ -42,7 +42,9 @@ func (l *UpdateSubscribeConfigLogic) UpdateSubscribeConfig(req *types.SubscribeC
 			// Get the field value to string
 			fieldValue := tool.ConvertValueToString(v.Field(i))
 			// Update the site config
-			err = db.Model(&system.System{}).Where("category = 'subscribe' and key = ?", fieldName).Update("value", fieldValue).Error
+			err = db.Model(&system.System{}).
+				Scopes(system.WhereCategoryKey("subscribe", fieldName)).
+				Update("value", fieldValue).Error
 			if err != nil {
 				break
 			}

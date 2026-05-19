@@ -6,6 +6,7 @@ import (
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type customAnnouncementLogicModel interface {
@@ -33,7 +34,10 @@ func (m *customAnnouncementModel) GetAnnouncementListByPage(ctx context.Context,
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		conn = conn.Model(&Announcement{})
 		if filter.Show != nil {
-			conn = conn.Where("show = ?", *filter.Show)
+			conn = conn.Where(clause.Eq{
+				Column: clause.Column{Name: "show"},
+				Value:  *filter.Show,
+			})
 		}
 		if filter.Pinned != nil {
 			conn = conn.Where("pinned = ?", *filter.Pinned)
