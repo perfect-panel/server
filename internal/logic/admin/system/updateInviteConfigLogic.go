@@ -44,7 +44,9 @@ func (l *UpdateInviteConfigLogic) UpdateInviteConfig(req *types.InviteConfig) er
 			// Get the field value to string
 			fieldValue := tool.ConvertValueToString(v.Field(i))
 			// Update the invite config
-			err = db.Model(&system.System{}).Where("category = 'invite' and key = ?", fieldName).Update("value", fieldValue).Error
+			err = db.Model(&system.System{}).
+				Scopes(system.WhereCategoryKey("invite", fieldName)).
+				Update("value", fieldValue).Error
 			if err != nil {
 				break
 			}

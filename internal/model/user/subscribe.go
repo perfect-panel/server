@@ -60,15 +60,28 @@ func (m *defaultUserModel) FindOneSubscribe(ctx context.Context, id int64) (*Sub
 func (m *defaultUserModel) FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error) {
 	var data []*Subscribe
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		err := conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status IN ?", subscribeId, []int64{1, 0}).Find(v).Error
-
-		if err != nil {
-			return err
-		}
-		// update user subscribe status
-		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status = ?", subscribeId, 0).Update("status", 1).Error
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status IN ?", subscribeId, []int64{1, 0}).Find(v).Error
 	})
 	return data, err
+}
+
+func (m *defaultUserModel) ActivatePendingSubscribesBySubscribeId(ctx context.Context, subscribeId int64) error {
+	var pending []*Subscribe
+	err := m.QueryNoCacheCtx(ctx, &pending, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status = ?", subscribeId, 0).Find(v).Error
+	})
+	if err != nil || len(pending) == 0 {
+		return err
+	}
+
+	cacheKeys := make([]string, 0)
+	for _, sub := range pending {
+		cacheKeys = append(cacheKeys, sub.GetCacheKeys()...)
+	}
+
+	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status = ?", subscribeId, 0).Update("status", 1).Error
+	}, cacheKeys...)
 }
 
 // QueryUserSubscribe returns a list of records that meet the conditions.
@@ -97,8 +110,9 @@ func (m *defaultUserModel) QueryUserSubscribe(ctx context.Context, userId int64,
 func (m *defaultUserModel) FindOneUserSubscribe(ctx context.Context, id int64) (subscribeDetails *SubscribeDetails, err error) {
 	//TODO cache
 	//key := fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, userId)
+	subscribeDetails = new(SubscribeDetails)
 	err = m.QueryNoCacheCtx(ctx, subscribeDetails, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Preload("Subscribe").Where("id = ?", id).First(&subscribeDetails).Error
+		return conn.Model(&Subscribe{}).Preload("Subscribe").Where("id = ?", id).First(v).Error
 	})
 	return
 }

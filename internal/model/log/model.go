@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"gorm.io/gorm"
 )
 
@@ -53,7 +54,7 @@ func (m *customSystemLogModel) FilterSystemLog(ctx context.Context, filter *Filt
 		tx = tx.Where("object_id = ?", filter.ObjectID)
 	}
 	if filter.Search != "" {
-		tx = tx.Where("content LIKE ?", "%"+filter.Search+"%")
+		tx = tx.Scopes(orm.ContainsLike([]string{"content"}, filter.Search))
 	}
 
 	var total int64

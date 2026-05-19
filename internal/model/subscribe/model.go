@@ -3,9 +3,11 @@ package subscribe
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type FilterParams struct {
@@ -82,11 +84,13 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 		query := conn.Model(&Subscribe{})
 
 		if params.Search != "" {
-			s := "%" + params.Search + "%"
-			query = query.Where("name LIKE ? OR description LIKE ?", s, s)
+			query = query.Scopes(orm.ContainsLike([]string{"name", "description"}, params.Search))
 		}
 		if params.Show {
-			query = query.Where("show = true")
+			query = query.Where(clause.Eq{
+				Column: clause.Column{Name: "show"},
+				Value:  true,
+			})
 		}
 		if params.Sell {
 			query = query.Where("sell = true")
@@ -142,15 +146,5 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 }
 
 func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if len(values) == 0 {
-			return db
-		}
-
-		query := db.Where("1=0")
-		for _, v := range values {
-			query = query.Or("FIND_IN_SET(?, "+field+")", v)
-		}
-		return query
-	}
+	return orm.CommaSeparatedContains(field, values)
 }

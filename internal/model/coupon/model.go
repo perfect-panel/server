@@ -2,7 +2,9 @@ package coupon
 
 import (
 	"context"
+	"strconv"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -25,10 +27,10 @@ func (m *customCouponModel) QueryCouponListByPage(ctx context.Context, page, siz
 	err = m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		db := conn.Model(&Coupon{})
 		if subscribe != 0 {
-			db = db.Where("FIND_IN_SET(?, subscribe)", subscribe)
+			db = db.Scopes(orm.CommaSeparatedContains("subscribe", []string{strconv.FormatInt(subscribe, 10)}))
 		}
 		if search != "" {
-			db = db.Where("name like ? or code like ?", "%"+search+"%", "%"+search+"%")
+			db = db.Scopes(orm.PrefixLike([]string{"name", "code"}, search))
 		}
 		return db.Count(&total).Limit(size).Offset((page - 1) * size).Find(v).Error
 	})

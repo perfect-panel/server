@@ -61,7 +61,7 @@ func (m *defaultSystemModel) FindOneByKey(ctx context.Context, key string) (*Sys
 	system := new(System)
 	cacheKey := fmt.Sprintf("%s%v", cacheSystemKeyPrefix, key)
 	err := m.QueryCtx(ctx, system, cacheKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&System{}).Where("key = ?", key).First(v).Error
+		return conn.Model(&System{}).Scopes(WhereKey(key)).First(v).Error
 	})
 	return system, err
 }

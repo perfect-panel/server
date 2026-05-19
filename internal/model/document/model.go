@@ -3,8 +3,10 @@ package document
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type customDocumentLogicModel interface {
@@ -36,10 +38,10 @@ func (m *customDocumentModel) QueryDocumentList(ctx context.Context, page, size 
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
 		db := conn.Model(&Document{})
 		if tag != "" {
-			db = db.Where("FIND_IN_SET(?, tags)", tag)
+			db = db.Scopes(orm.CommaSeparatedContains("tags", []string{tag}))
 		}
 		if search != "" {
-			db = db.Where("title LIKE ? OR content LIKE ?", "%"+search+"%", "%"+search+"%")
+			db = db.Scopes(orm.ContainsLike([]string{"title", "content"}, search))
 		}
 		return db.Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
 	})
@@ -50,9 +52,11 @@ func (m *customDocumentModel) QueryDocumentList(ctx context.Context, page, size 
 func (m *customDocumentModel) GetDocumentListByAll(ctx context.Context) (int64, []*Document, error) {
 	var data []*Document
 	var total int64
-	show := true
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Document{}).Where("show = ?", &show).Count(&total).Find(v).Error
+		return conn.Model(&Document{}).Where(clause.Eq{
+			Column: clause.Column{Name: "show"},
+			Value:  true,
+		}).Count(&total).Find(v).Error
 	})
 	return total, data, err
 }
