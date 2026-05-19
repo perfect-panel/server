@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/order"
@@ -137,19 +138,27 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 				conn = conn.Where(userIdColumn+" =?", *filter.UserId)
 			}
 			if filter.Search != "" {
+				search := "%" + filter.Search + "%"
 				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_auth_methods ON %s = user_auth_methods.user_id", userIdColumn)).
-					Where("user_auth_methods.auth_identifier LIKE ?", "%"+filter.Search+"%").Or(UserColumn(conn, "refer_code")+" like ?", "%"+filter.Search+"%")
+					Where("(user_auth_methods.auth_identifier LIKE ? OR "+UserColumn(conn, "refer_code")+" LIKE ?)", search, search)
 			}
+			joinedUserSubscribe := false
 			if filter.UserSubscribeId != nil {
 				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userIdColumn)).
-					Where("user_subscribe.id =? and status IN (0,1)", *filter.UserSubscribeId)
+					Where("user_subscribe.id = ? AND user_subscribe.status IN ?", *filter.UserSubscribeId, []int64{0, 1})
+				joinedUserSubscribe = true
 			}
 			if filter.SubscribeId != nil {
-				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userIdColumn)).
-					Where("user_subscribe.subscribe_id =? and status IN (0,1)", *filter.SubscribeId)
+				if !joinedUserSubscribe {
+					conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userIdColumn))
+				}
+				conn = conn.Where("user_subscribe.subscribe_id = ? AND user_subscribe.status IN ?", *filter.SubscribeId, []int64{0, 1})
 			}
 			if filter.Order != "" {
-				conn = conn.Order(fmt.Sprintf("%s %s", userIdColumn, filter.Order))
+				switch strings.ToUpper(filter.Order) {
+				case "ASC", "DESC":
+					conn = conn.Order(fmt.Sprintf("%s %s", userIdColumn, strings.ToUpper(filter.Order)))
+				}
 			}
 			if filter.Unscoped {
 				conn = conn.Unscoped()
@@ -162,6 +171,9 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 
 // BatchDeleteUser deletes multiple records by primary key.
 func (m *customUserModel) BatchDeleteUser(ctx context.Context, ids []int64, tx ...*gorm.DB) error {
+	if len(ids) == 0 {
+		return nil
+	}
 	var users []*User
 	err := m.QueryNoCacheCtx(ctx, &users, func(conn *gorm.DB, v interface{}) error {
 		if len(tx) > 0 {
@@ -173,6 +185,9 @@ func (m *customUserModel) BatchDeleteUser(ctx context.Context, ids []int64, tx .
 		return err
 	}
 	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
 		return conn.Where("id in ?", ids).Delete(&User{}).Error
 	}, m.batchGetCacheKeys(users...)...)
 }
@@ -203,20 +218,20 @@ func (m *customUserModel) UpdateUserSubscribeWithTraffic(ctx context.Context, id
 
 func (m *customUserModel) QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error) {
 	var total int64
-	start := date.Truncate(24 * time.Hour)
-	end := start.Add(24 * time.Hour).Add(-time.Second)
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	end := start.AddDate(0, 0, 1)
 	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&User{}).Where("created_at > ? and created_at < ?", start, end).Count(&total).Error
+		return conn.Model(&User{}).Where("created_at >= ? AND created_at < ?", start, end).Count(&total).Error
 	})
 	return total, err
 }
 
 func (m *customUserModel) QueryResisterUserTotalByMonthly(ctx context.Context, date time.Time) (int64, error) {
 	var total int64
-	start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.Local)
-	end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+	end := start.AddDate(0, 1, 0)
 	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&User{}).Where("created_at > ? and created_at < ?", start, end).Count(&total).Error
+		return conn.Model(&User{}).Where("created_at >= ? AND created_at < ?", start, end).Count(&total).Error
 	})
 	return total, err
 }

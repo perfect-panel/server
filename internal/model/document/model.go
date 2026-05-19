@@ -3,6 +3,7 @@ package document
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -36,7 +37,7 @@ func (m *customDocumentModel) QueryDocumentList(ctx context.Context, page, size 
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
 		db := conn.Model(&Document{})
 		if tag != "" {
-			db = db.Where("FIND_IN_SET(?, tags)", tag)
+			db = db.Scopes(orm.CommaSeparatedContains("tags", []string{tag}))
 		}
 		if search != "" {
 			db = db.Where("title LIKE ? OR content LIKE ?", "%"+search+"%", "%"+search+"%")

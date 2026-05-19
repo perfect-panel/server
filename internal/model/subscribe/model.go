@@ -3,6 +3,7 @@ package subscribe
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -142,15 +143,5 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 }
 
 func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if len(values) == 0 {
-			return db
-		}
-
-		query := db.Where("1=0")
-		for _, v := range values {
-			query = query.Or("FIND_IN_SET(?, "+field+")", v)
-		}
-		return query
-	}
+	return orm.CommaSeparatedContains(field, values)
 }

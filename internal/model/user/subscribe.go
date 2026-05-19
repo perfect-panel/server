@@ -97,8 +97,9 @@ func (m *defaultUserModel) QueryUserSubscribe(ctx context.Context, userId int64,
 func (m *defaultUserModel) FindOneUserSubscribe(ctx context.Context, id int64) (subscribeDetails *SubscribeDetails, err error) {
 	//TODO cache
 	//key := fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, userId)
+	subscribeDetails = new(SubscribeDetails)
 	err = m.QueryNoCacheCtx(ctx, subscribeDetails, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Preload("Subscribe").Where("id = ?", id).First(&subscribeDetails).Error
+		return conn.Model(&Subscribe{}).Preload("Subscribe").Where("id = ?", id).First(v).Error
 	})
 	return
 }
