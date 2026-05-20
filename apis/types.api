@@ -372,6 +372,7 @@ type (
 		FeeMode     uint   `json:"fee_mode"`
 		FeePercent  int64  `json:"fee_percent"`
 		FeeAmount   int64  `json:"fee_amount"`
+		Sort        int64  `json:"sort"`
 	}
 	PaymentConfig {
 		Id          int64       `json:"id" validate:"required"`
@@ -384,6 +385,7 @@ type (
 		FeeMode     uint        `json:"fee_mode"`
 		FeePercent  int64       `json:"fee_percent,omitempty"`
 		FeeAmount   int64       `json:"fee_amount,omitempty"`
+		Sort        int64       `json:"sort,omitempty"`
 		Enable      *bool       `json:"enable" validate:"required"`
 	}
 	PaymentMethodDetail {
@@ -397,6 +399,7 @@ type (
 		FeeMode     uint        `json:"fee_mode"`
 		FeePercent  int64       `json:"fee_percent"`
 		FeeAmount   int64       `json:"fee_amount"`
+		Sort        int64       `json:"sort"`
 		Enable      bool        `json:"enable"`
 		NotifyURL   string      `json:"notify_url"`
 	}
