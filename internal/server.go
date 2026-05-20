@@ -12,8 +12,8 @@ import (
 
 	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/report"
-	"github.com/perfect-panel/server/internal/transport/fiberserver"
 	"github.com/perfect-panel/server/internal/transport/ginserver"
+	"github.com/perfect-panel/server/internal/transport/hertzserver"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/pkg/proc"
@@ -23,7 +23,7 @@ import (
 )
 
 type Service struct {
-	server *http.Server
+	server transportServer
 	svc    *svc.ServiceContext
 }
 
@@ -33,14 +33,63 @@ func NewService(svc *svc.ServiceContext) *Service {
 	}
 }
 
-func newHTTPHandler(svc *svc.ServiceContext) http.Handler {
-	initialize.StartInitSystemConfig(svc)
+type transportServer interface {
+	Start()
+	Shutdown(ctx context.Context) error
+}
 
+type ginTransportServer struct {
+	server     *http.Server
+	tlsEnabled bool
+	certFile   string
+	keyFile    string
+}
+
+func (s *ginTransportServer) Start() {
+	var err error
+	if s.tlsEnabled {
+		err = s.server.ListenAndServeTLS(s.certFile, s.keyFile)
+	} else {
+		err = s.server.ListenAndServe()
+	}
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Errorf("server start error: %s", err.Error())
+	}
+}
+
+func (s *ginTransportServer) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
+}
+
+func newTransportServer(svc *svc.ServiceContext, addr string) transportServer {
 	switch strings.ToLower(svc.Config.Transport.Driver) {
-	case "fiber":
-		return fiberserver.NewHTTPHandler(svc, ginserver.New(svc))
+	case "hertz":
+		var tlsConfig *tls.Config
+		if svc.Config.TLS.Enable {
+			cert, err := tls.LoadX509KeyPair(svc.Config.TLS.CertFile, svc.Config.TLS.KeyFile)
+			if err != nil {
+				logger.Errorf("load tls certificate error: %s", err.Error())
+				return nil
+			}
+			tlsConfig = &tls.Config{
+				MinVersion:   tls.VersionTLS12,
+				Certificates: []tls.Certificate{cert},
+			}
+		}
+		return hertzserver.New(svc, addr, tlsConfig, ginserver.New(svc))
 	default:
-		return ginserver.New(svc)
+		return &ginTransportServer{
+			server: &http.Server{
+				Addr:    addr,
+				Handler: ginserver.New(svc),
+				TLSConfig: &tls.Config{
+					MinVersion: tls.VersionTLS12,
+				},
+			},
+			tlsEnabled: svc.Config.TLS.Enable,
+			certFile:   svc.Config.TLS.CertFile,
+			keyFile:    svc.Config.TLS.KeyFile,
+		}
 	}
 }
 
@@ -49,8 +98,6 @@ func (m *Service) Start() {
 		panic("config file path is nil")
 	}
 
-	// init service
-	r := newHTTPHandler(m.svc)
 	// get server port
 	port := m.svc.Config.Port
 	host := m.svc.Config.Host
@@ -74,12 +121,10 @@ func (m *Service) Start() {
 	}
 
 	serverAddr := fmt.Sprintf("%v:%d", host, port)
-	m.server = &http.Server{
-		Addr:    serverAddr,
-		Handler: r,
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-		},
+	initialize.StartInitSystemConfig(m.svc)
+	m.server = newTransportServer(m.svc, serverAddr)
+	if m.server == nil {
+		return
 	}
 	trace.StartAgent(trace.Config{
 		Name:    "ppanel",
@@ -91,15 +136,7 @@ func (m *Service) Start() {
 	})
 	m.svc.Restart = m.Restart
 	logger.Infof("server start at %v", serverAddr)
-	if m.svc.Config.TLS.Enable {
-		if err := m.server.ListenAndServeTLS(m.svc.Config.TLS.CertFile, m.svc.Config.TLS.KeyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Errorf("server start error: %s", err.Error())
-		}
-	} else {
-		if err := m.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Errorf("server start error: %s", err.Error())
-		}
-	}
+	m.server.Start()
 }
 
 func (m *Service) Stop() {
