@@ -1280,6 +1280,27 @@ type NodeOutbound struct {
 	Rules    []string `json:"rules"`
 }
 
+type ServerNodeConfigValues struct {
+	IPStrategy string         `json:"ip_strategy"`
+	DNS        []NodeDNS      `json:"dns"`
+	Block      []string       `json:"block"`
+	Outbound   []NodeOutbound `json:"outbound"`
+}
+
+type ServerNodeConfigOverride struct {
+	InheritIPStrategy bool   `json:"inherit_ip_strategy"`
+	IPStrategy        string `json:"ip_strategy"`
+
+	InheritDNS bool      `json:"inherit_dns"`
+	DNS        []NodeDNS `json:"dns"`
+
+	InheritBlock bool     `json:"inherit_block"`
+	Block        []string `json:"block"`
+
+	InheritOutbound bool           `json:"inherit_outbound"`
+	Outbound        []NodeOutbound `json:"outbound"`
+}
+
 type NodeRelay struct {
 	Host   string `json:"host"`
 	Port   int    `json:"port"`
@@ -1677,6 +1698,21 @@ type QueryServerConfigResponse struct {
 	Outbound               []NodeOutbound `json:"outbound"`
 	Protocols              []Protocol     `json:"protocols"`
 	Total                  int64          `json:"total"`
+}
+
+type GetServerNodeConfigRequest struct {
+	ServerID int64 `form:"server_id" validate:"required"`
+}
+
+type GetServerNodeConfigResponse struct {
+	Global    ServerNodeConfigValues   `json:"global"`
+	Override  ServerNodeConfigOverride `json:"override"`
+	Effective ServerNodeConfigValues   `json:"effective"`
+}
+
+type UpdateServerNodeConfigRequest struct {
+	ServerID int64 `json:"server_id" validate:"required"`
+	ServerNodeConfigOverride
 }
 
 type QuerySubscribeGroupListResponse struct {

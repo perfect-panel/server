@@ -2,11 +2,14 @@ package server
 
 import (
 	"context"
+	"errors"
 
+	"github.com/perfect-panel/server/internal/logic/nodeconfig"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
+	"gorm.io/gorm"
 )
 
 type QueryServerProtocolConfigLogic struct {
@@ -66,36 +69,25 @@ func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.Qu
 		protocols = filtered
 	}
 
-	var dns []types.NodeDNS
-	if len(l.svcCtx.Config.Node.DNS) > 0 {
-		for _, d := range l.svcCtx.Config.Node.DNS {
-			dns = append(dns, types.NodeDNS{
-				Proto:   d.Proto,
-				Address: d.Address,
-				Domains: d.Domains,
-			})
-		}
+	nodeValues := nodeconfig.GlobalValues(l.svcCtx.Config.Node)
+	override, err := l.svcCtx.Store.Node().FindServerConfigOverride(l.ctx, req.ServerID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		l.Errorf("[GetServerProtocols] FindServerConfigOverride Error: %s", err.Error())
+		return nil, err
 	}
-	var outbound []types.NodeOutbound
-	if len(l.svcCtx.Config.Node.Outbound) > 0 {
-		for _, o := range l.svcCtx.Config.Node.Outbound {
-			outbound = append(outbound, types.NodeOutbound{
-				Name:     o.Name,
-				Protocol: o.Protocol,
-				Address:  o.Address,
-				Port:     o.Port,
-				Password: o.Password,
-				Rules:    o.Rules,
-			})
+	if err == nil {
+		if err = nodeconfig.ApplyOverride(&nodeValues, override); err != nil {
+			l.Errorf("[GetServerProtocols] ApplyOverride Error: %s", err.Error())
+			return nil, err
 		}
 	}
 
 	return &types.QueryServerConfigResponse{
 		TrafficReportThreshold: l.svcCtx.Config.Node.TrafficReportThreshold,
-		IPStrategy:             l.svcCtx.Config.Node.IPStrategy,
-		DNS:                    dns,
-		Block:                  l.svcCtx.Config.Node.Block,
-		Outbound:               outbound,
+		IPStrategy:             nodeValues.IPStrategy,
+		DNS:                    nodeValues.DNS,
+		Block:                  nodeValues.Block,
+		Outbound:               nodeValues.Outbound,
 		Protocols:              protocols,
 		Total:                  int64(len(protocols)),
 	}, nil

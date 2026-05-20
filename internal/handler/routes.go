@@ -328,6 +328,12 @@ func RegisterHandlers(router *hertzx.Engine, serverCtx *svc.ServiceContext) {
 		// Query all node tags
 		adminServerGroupRouter.GET("/node/tags", adminServer.QueryNodeTagHandler(serverCtx))
 
+		// Get Server Node Config
+		adminServerGroupRouter.GET("/node_config", adminServer.GetServerNodeConfigHandler(serverCtx))
+
+		// Update Server Node Config
+		adminServerGroupRouter.POST("/node_config/update", adminServer.UpdateServerNodeConfigHandler(serverCtx))
+
 		// Update Node
 		adminServerGroupRouter.POST("/node/update", adminServer.UpdateNodeHandler(serverCtx))
 
