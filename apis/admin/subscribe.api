@@ -46,7 +46,7 @@ type (
 		SpeedLimit        int64               `json:"speed_limit"`
 		DeviceLimit       int64               `json:"device_limit"`
 		Quota             int64               `json:"quota"`
-		Nodes             []int64             `json:"nodes"`
+		Nodes             []string            `json:"nodes"`
 		NodeTags          []string            `json:"node_tags"`
 		Show              *bool               `json:"show"`
 		Sell              *bool               `json:"sell"`
@@ -70,7 +70,7 @@ type (
 		SpeedLimit        int64               `json:"speed_limit"`
 		DeviceLimit       int64               `json:"device_limit"`
 		Quota             int64               `json:"quota"`
-		Nodes             []int64             `json:"nodes"`
+		Nodes             []string            `json:"nodes"`
 		NodeTags          []string            `json:"node_tags"`
 		Show              *bool               `json:"show"`
 		Sell              *bool               `json:"sell"`
@@ -167,4 +167,3 @@ service ppanel {
 	@handler ResetAllSubscribeToken
 	post /reset_all_token returns (ResetAllSubscribeTokenResponse)
 }
-

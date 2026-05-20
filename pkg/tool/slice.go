@@ -11,19 +11,19 @@ import (
 func Int64SliceToStringSlice(slice []int64) []string {
 	stringSlice := make([]string, len(slice))
 	for i, num := range slice {
-		stringSlice[i] = strconv.Itoa(int(num))
+		stringSlice[i] = strconv.FormatInt(num, 10)
 	}
 	return stringSlice
 }
 func StringSliceToInt64Slice(slice []string) []int64 {
 	int64Slice := make([]int64, len(slice))
 	for i, str := range slice {
-		num, err := strconv.Atoi(str)
+		num, err := strconv.ParseInt(strings.TrimSpace(str), 10, 64)
 		if err != nil {
 			fmt.Println("Error converting string to int:", err)
 			continue
 		}
-		int64Slice[i] = int64(num)
+		int64Slice[i] = num
 	}
 	return int64Slice
 }

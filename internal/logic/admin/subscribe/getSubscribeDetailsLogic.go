@@ -42,7 +42,7 @@ func (l *GetSubscribeDetailsLogic) GetSubscribeDetails(req *types.GetSubscribeDe
 			l.Logger.Error("[GetSubscribeDetailsLogic] JSON unmarshal failed: ", logger.Field("error", err.Error()), logger.Field("discount", sub.Discount))
 		}
 	}
-	resp.Nodes = tool.StringToInt64Slice(sub.Nodes)
+	resp.Nodes = types.StringInt64Slice(tool.StringToInt64Slice(sub.Nodes))
 	resp.NodeTags = strings.Split(sub.NodeTags, ",")
 	return resp, nil
 }

@@ -401,7 +401,7 @@ type CreateSubscribeRequest struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              *bool               `json:"show"`
 	Sell              *bool               `json:"sell"`
@@ -522,7 +522,7 @@ type DeleteUserDeivceRequest struct {
 }
 
 type DeleteUserSubscribeRequest struct {
-	UserSubscribeId int64 `json:"user_subscribe_id"`
+	UserSubscribeId int64 `json:"user_subscribe_id,string"`
 }
 
 type DeviceAuthticateConfig struct {
@@ -2129,7 +2129,7 @@ type Subscribe struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              bool                `json:"show"`
 	Sell              bool                `json:"sell"`
@@ -2514,7 +2514,7 @@ type UpdateSubscribeRequest struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              *bool               `json:"show"`
 	Sell              *bool               `json:"sell"`
