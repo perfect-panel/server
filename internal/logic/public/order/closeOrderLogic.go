@@ -6,12 +6,11 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/pkg/payment/stripe"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -34,8 +33,9 @@ func NewCloseOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CloseO
 }
 
 func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
+	store := l.svcCtx.Store
 	// Find order information by order number
-	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, req.OrderNo)
+	orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, req.OrderNo)
 	if err != nil {
 		l.Errorw("[CloseOrder] Find order info failed",
 			logger.Field("error", err.Error()),
@@ -52,7 +52,7 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 		return nil
 	}
 
-	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, orderInfo.SubscribeId)
+	sub, err := store.Subscribe().FindOne(l.ctx, orderInfo.SubscribeId)
 	if err != nil {
 		l.Errorw("[CloseOrder] Find subscribe info failed",
 			logger.Field("error", err.Error()),
@@ -61,9 +61,9 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 		return nil
 	}
 
-	err = l.svcCtx.DB.Transaction(func(tx *gorm.DB) error {
+	err = store.InTx(l.ctx, func(txStore repository.Store) error {
 		// update order status
-		err := tx.Model(&order.Order{}).Where("order_no = ?", req.OrderNo).Update("status", 3).Error
+		err := txStore.Order().UpdateOrderStatus(l.ctx, req.OrderNo, 3)
 		if err != nil {
 			l.Errorw("[CloseOrder] Update order status failed",
 				logger.Field("error", err.Error()),
@@ -73,7 +73,7 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 		}
 		// If User ID is 0, it means that the order is a guest order and does not need to be refunded, the order can be deleted directly
 		if orderInfo.UserId == 0 {
-			err = tx.Model(&order.Order{}).Where("order_no = ?", req.OrderNo).Delete(&order.Order{}).Error
+			err = txStore.Order().Delete(l.ctx, orderInfo.Id)
 			if err != nil {
 				l.Errorw("[CloseOrder] Delete order failed",
 					logger.Field("error", err.Error()),
@@ -85,7 +85,7 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 		}
 		// refund deduction amount to user deduction balance
 		if orderInfo.GiftAmount > 0 {
-			userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, orderInfo.UserId)
+			userInfo, err := txStore.User().FindOne(l.ctx, orderInfo.UserId)
 			if err != nil {
 				l.Errorw("[CloseOrder] Find user info failed",
 					logger.Field("error", err.Error()),
@@ -94,7 +94,8 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 				return err
 			}
 			deduction := userInfo.GiftAmount + orderInfo.GiftAmount
-			err = tx.Model(&user.User{}).Where("id = ?", orderInfo.UserId).Update("gift_amount", deduction).Error
+			userInfo.GiftAmount = deduction
+			err = txStore.User().Update(l.ctx, userInfo)
 			if err != nil {
 				l.Errorw("[CloseOrder] Refund deduction amount failed",
 					logger.Field("error", err.Error()),
@@ -116,13 +117,13 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 			}
 			content, _ := giftLog.Marshal()
 
-			err = tx.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			err = txStore.Log().Insert(l.ctx, &log.SystemLog{
 				Id:       0,
 				Type:     log.TypeGift.Uint8(),
 				Date:     time.Now().Format(time.DateOnly),
 				ObjectID: userInfo.Id,
 				Content:  string(content),
-			}).Error
+			})
 			if err != nil {
 				l.Errorw("[CloseOrder] Record cancellation refund log failed",
 					logger.Field("error", err.Error()),
@@ -131,12 +132,11 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 				)
 				return err
 			}
-			// update user cache
-			return l.svcCtx.UserModel.UpdateUserCache(l.ctx, userInfo)
+			return nil
 		}
 		if sub.Inventory != -1 {
 			sub.Inventory++
-			if e := l.svcCtx.SubscribeModel.Update(l.ctx, sub, tx); e != nil {
+			if e := txStore.Subscribe().Update(l.ctx, sub); e != nil {
 				l.Errorw("[CloseOrder] Restore subscribe inventory failed",
 					logger.Field("error", e.Error()),
 					logger.Field("subscribeId", sub.Id),
@@ -158,7 +158,7 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 //
 //nolint:unused
 func (l *CloseOrderLogic) confirmationPayment(order *order.Order) bool {
-	paymentConfig, err := l.svcCtx.PaymentModel.FindOne(l.ctx, order.PaymentId)
+	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, order.PaymentId)
 	if err != nil {
 		l.Errorw("[CloseOrder] Find payment config failed", logger.Field("error", err.Error()), logger.Field("paymentMark", order.Method))
 		return false

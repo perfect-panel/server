@@ -35,7 +35,7 @@ func (l *QueryOrderListLogic) QueryOrderList(req *types.QueryOrderListRequest) (
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	total, data, err := l.svcCtx.OrderModel.QueryOrderListByPage(l.ctx, req.Page, req.Size, 0, u.Id, 0, "")
+	total, data, err := l.svcCtx.Store.Order().QueryOrderListByPage(l.ctx, req.Page, req.Size, 0, u.Id, 0, "")
 	if err != nil {
 		l.Errorw("[QueryOrderListLogic] Query order list failed", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query order list failed")
