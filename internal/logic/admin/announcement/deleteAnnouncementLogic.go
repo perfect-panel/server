@@ -26,7 +26,7 @@ func NewDeleteAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *DeleteAnnouncementLogic) DeleteAnnouncement(req *types.DeleteAnnouncementRequest) error {
-	if err := l.svcCtx.AnnouncementModel.Delete(l.ctx, req.Id); err != nil {
+	if err := l.svcCtx.Store.Announcement().Delete(l.ctx, req.Id); err != nil {
 		l.Errorw("[DeleteAnnouncement] Database Error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete announcement failed: %v", err.Error())
 	}

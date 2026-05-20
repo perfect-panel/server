@@ -26,7 +26,7 @@ func NewDeleteDocumentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *De
 }
 
 func (l *DeleteDocumentLogic) DeleteDocument(req *types.DeleteDocumentRequest) error {
-	if err := l.svcCtx.DocumentModel.Delete(l.ctx, req.Id); err != nil {
+	if err := l.svcCtx.Store.Document().Delete(l.ctx, req.Id); err != nil {
 		l.Errorw("[DeleteDocument] Database Error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "failed to delete document: %v", err.Error())
 	}

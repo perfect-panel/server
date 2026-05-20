@@ -47,7 +47,7 @@ func (l *CreateSubscribeApplicationLogic) CreateSubscribeApplication(req *types.
 		DownloadLink:      string(linkData),
 	}
 
-	err = l.svcCtx.ClientModel.Insert(l.ctx, data)
+	err = l.svcCtx.Store.Client().Insert(l.ctx, data)
 	if err != nil {
 		l.Errorf("Failed to create subscribe application: %v", err)
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create subscribe application")

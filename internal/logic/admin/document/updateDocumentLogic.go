@@ -28,7 +28,7 @@ func NewUpdateDocumentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Up
 }
 
 func (l *UpdateDocumentLogic) UpdateDocument(req *types.UpdateDocumentRequest) error {
-	if err := l.svcCtx.DocumentModel.Update(l.ctx, &document.Document{
+	if err := l.svcCtx.Store.Document().Update(l.ctx, &document.Document{
 		Id:      req.Id,
 		Title:   req.Title,
 		Content: req.Content,

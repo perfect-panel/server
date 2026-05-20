@@ -29,7 +29,7 @@ func NewGetAnnouncementListLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *GetAnnouncementListLogic) GetAnnouncementList(req *types.GetAnnouncementListRequest) (resp *types.GetAnnouncementListResponse, err error) {
-	total, list, err := l.svcCtx.AnnouncementModel.GetAnnouncementListByPage(l.ctx, int(req.Page), int(req.Size), announcement.Filter{
+	total, list, err := l.svcCtx.Store.Announcement().GetAnnouncementListByPage(l.ctx, int(req.Page), int(req.Size), announcement.Filter{
 		Show:   req.Show,
 		Pinned: req.Pinned,
 		Popup:  req.Popup,

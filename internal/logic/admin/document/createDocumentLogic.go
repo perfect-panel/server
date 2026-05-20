@@ -28,7 +28,7 @@ func NewCreateDocumentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Cr
 }
 
 func (l *CreateDocumentLogic) CreateDocument(req *types.CreateDocumentRequest) error {
-	if err := l.svcCtx.DocumentModel.Insert(l.ctx, &document.Document{
+	if err := l.svcCtx.Store.Document().Insert(l.ctx, &document.Document{
 		Title:   req.Title,
 		Content: req.Content,
 		Tags:    strings.Join(req.Tags, ","),

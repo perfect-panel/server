@@ -28,7 +28,7 @@ func NewUpdateAdsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateA
 }
 
 func (l *UpdateAdsLogic) UpdateAds(req *types.UpdateAdsRequest) error {
-	data, err := l.svcCtx.AdsModel.FindOne(l.ctx, req.Id)
+	data, err := l.svcCtx.Store.Ads().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("find ads error", logger.Field("error", err.Error()), logger.Field("id", req.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find ads error: %v", err.Error())
@@ -36,7 +36,7 @@ func (l *UpdateAdsLogic) UpdateAds(req *types.UpdateAdsRequest) error {
 	tool.DeepCopy(data, req)
 	data.StartTime = time.UnixMilli(req.StartTime)
 	data.EndTime = time.UnixMilli(req.EndTime)
-	if err := l.svcCtx.AdsModel.Update(l.ctx, data); err != nil {
+	if err := l.svcCtx.Store.Ads().Update(l.ctx, data); err != nil {
 		l.Errorw("update ads error", logger.Field("error", err.Error()), logger.Field("req", req))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update ads error: %v", err.Error())
 	}
