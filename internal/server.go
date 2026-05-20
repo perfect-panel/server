@@ -10,17 +10,12 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/report"
+	"github.com/perfect-panel/server/internal/transport/ginserver"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/pkg/proc"
 	"github.com/perfect-panel/server/pkg/trace"
 
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
-	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/handler"
-	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
 )
 
@@ -35,41 +30,13 @@ func NewService(svc *svc.ServiceContext) *Service {
 	}
 }
 
-func initServer(svc *svc.ServiceContext) *gin.Engine {
-
-	// start init system config
-	initialize.StartInitSystemConfig(svc)
-	// init gin server
-	r := gin.Default()
-	r.RemoteIPHeaders = []string{"X-Original-Forwarded-For", "X-Forwarded-For", "X-Real-IP"}
-	// init session
-	sessionStore, err := redis.NewStore(10, "tcp", svc.Config.Redis.Host, svc.Config.Redis.Pass, []byte(svc.Config.JwtAuth.AccessSecret))
-	if err != nil {
-		logger.Errorw("init session error", logger.Field("error", err.Error()))
-		panic(err)
-	}
-	r.Use(sessions.Sessions("ppanel", sessionStore))
-	// use cors middleware
-	r.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, gin.Recovery())
-
-	// register handlers
-	handler.RegisterHandlers(r, svc)
-	// register subscribe handler
-	handler.RegisterSubscribeHandlers(r, svc)
-	// register telegram handler
-	handler.RegisterTelegramHandlers(r, svc)
-	// register notify handler
-	handler.RegisterNotifyHandlers(r, svc)
-	return r
-}
-
 func (m *Service) Start() {
 	if m.svc == nil {
 		panic("config file path is nil")
 	}
 
 	// init service
-	r := initServer(m.svc)
+	r := ginserver.New(m.svc)
 	// get server port
 	port := m.svc.Config.Port
 	host := m.svc.Config.Host
