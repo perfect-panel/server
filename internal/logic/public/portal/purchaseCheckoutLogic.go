@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/report"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/exchangeRate"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/user"
 	queueType "github.com/perfect-panel/server/queue/types"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
@@ -53,7 +53,7 @@ func NewPurchaseCheckoutLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest) (resp *types.CheckoutOrderResponse, err error) {
 
 	// Validate and retrieve order information
-	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, req.OrderNo)
+	orderInfo, err := l.svcCtx.Store.Order().FindOneByOrderNo(l.ctx, req.OrderNo)
 	if err != nil {
 		l.Logger.Error("[PurchaseCheckout] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OrderNo))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", req.OrderNo)
@@ -66,7 +66,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 	}
 
 	// Retrieve payment method configuration
-	paymentConfig, err := l.svcCtx.PaymentModel.FindOne(l.ctx, orderInfo.PaymentId)
+	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, orderInfo.PaymentId)
 	if err != nil {
 		l.Logger.Error("[PurchaseCheckout] Database query error", logger.Field("error", err.Error()), logger.Field("payment", orderInfo.Method))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %v", err.Error())
@@ -127,7 +127,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 		}
 
 		// Retrieve user information for balance validation
-		userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, orderInfo.UserId)
+		userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, orderInfo.UserId)
 		if err != nil {
 			l.Errorw("[PurchaseCheckout] FindOne User error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOne error: %s", err.Error())
@@ -251,7 +251,7 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 
 	// Save Stripe trade number to order for tracking
 	info.TradeNo = result.TradeNo
-	err = l.svcCtx.OrderModel.Update(l.ctx, info)
+	err = l.svcCtx.Store.Order().Update(l.ctx, info)
 	if err != nil {
 		l.Errorw("[PurchaseCheckout] Update order error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Update error: %s", err.Error())
@@ -412,7 +412,6 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 // balancePayment processes balance payment with gift amount priority logic
 // It prioritizes using gift amount first, then regular balance, and creates proper audit logs
 func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) error {
-	var userInfo user.User
 	var err error
 	if o.Amount == 0 {
 		// No payment required for zero-amount orders
@@ -421,7 +420,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			logger.Field("orderNo", o.OrderNo),
 			logger.Field("userId", u.Id),
 		)
-		err = l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2)
+		err = l.svcCtx.Store.Order().UpdateOrderStatus(l.ctx, o.OrderNo, 2)
 		if err != nil {
 			l.Errorw("[PurchaseCheckout] Update order status error",
 				logger.Field("error", err.Error()),
@@ -432,9 +431,9 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		goto activation
 	}
 
-	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		// Retrieve latest user information with row-level locking
-		err := db.Model(&user.User{}).Where("id = ?", u.Id).First(&userInfo).Error
+	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+		// Retrieve latest user information inside the transaction.
+		userInfo, err := store.User().FindOne(l.ctx, u.Id)
 		if err != nil {
 			return err
 		}
@@ -465,7 +464,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		userInfo.Balance -= balanceUsed
 
 		// Save updated user information
-		err = l.svcCtx.UserModel.Update(l.ctx, &userInfo)
+		err = store.User().Update(l.ctx, userInfo)
 		if err != nil {
 			return err
 		}
@@ -481,12 +480,12 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			}
 			content, _ := giftLog.Marshal()
 
-			err = db.Create(&log.SystemLog{
+			err = store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				ObjectID: userInfo.Id,
 				Date:     time.Now().Format(time.DateOnly),
 				Content:  string(content),
-			}).Error
+			})
 			if err != nil {
 				return err
 			}
@@ -502,12 +501,12 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := balanceLog.Marshal()
-			err = db.Create(&log.SystemLog{
+			err = store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeBalance.Uint8(),
 				ObjectID: userInfo.Id,
 				Date:     time.Now().Format(time.DateOnly),
 				Content:  string(content),
-			}).Error
+			})
 			if err != nil {
 				return err
 			}
@@ -515,13 +514,13 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 
 		// Store gift amount used in order for potential refund tracking
 		o.GiftAmount = giftUsed
-		err = l.svcCtx.OrderModel.Update(l.ctx, o, db)
+		err = store.Order().Update(l.ctx, o)
 		if err != nil {
 			return err
 		}
 
 		// Mark order as paid (status = 2)
-		return l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2, db)
+		return store.Order().UpdateOrderStatus(l.ctx, o.OrderNo, 2)
 	})
 
 	if err != nil {

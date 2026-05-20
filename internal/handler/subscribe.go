@@ -54,7 +54,7 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 			clientUserAgents := tool.RemoveDuplicateElements(strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")...)
 
 			// query client list
-			clients, err := svcCtx.ClientModel.List(c.Request.Context())
+			clients, err := svcCtx.Store.Client().List(c.Request.Context())
 			if err != nil {
 				logger.Errorw("[PanDomainMiddleware] Query client list failed", logger.Field("error", err.Error()))
 			}

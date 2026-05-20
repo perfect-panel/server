@@ -139,7 +139,7 @@ func (l *SendEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) erro
 		return nil
 	}
 
-	if err = l.svcCtx.LogModel.Insert(ctx, &log.SystemLog{
+	if err = l.svcCtx.Store.Log().Insert(ctx, &log.SystemLog{
 		Type:     log.TypeEmailMessage.Uint8(),
 		Date:     time.Now().Format("2006-01-02"),
 		ObjectID: 0,

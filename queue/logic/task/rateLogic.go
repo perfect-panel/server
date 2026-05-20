@@ -22,7 +22,7 @@ func NewRateLogic(svcCtx *svc.ServiceContext) *RateLogic {
 
 func (l *RateLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 	// Retrieve system currency configuration
-	currency, err := l.svcCtx.SystemModel.GetCurrencyConfig(ctx)
+	currency, err := l.svcCtx.Store.System().GetCurrencyConfig(ctx)
 	if err != nil {
 		logger.Errorw("[PurchaseCheckout] GetCurrencyConfig error", logger.Field("error", err.Error()))
 		return err

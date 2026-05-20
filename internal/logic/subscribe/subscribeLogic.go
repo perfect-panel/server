@@ -40,7 +40,7 @@ func NewSubscribeLogic(ctx *gin.Context, svc *svc.ServiceContext) *SubscribeLogi
 
 func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.SubscribeResponse, err error) {
 	// query client list
-	clients, err := l.svc.ClientModel.List(l.ctx.Request.Context())
+	clients, err := l.svc.Store.Client().List(l.ctx.Request.Context())
 	if err != nil {
 		l.Errorw("[SubscribeLogic] Query client list failed", logger.Field("error", err.Error()))
 		return nil, err
@@ -84,7 +84,7 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		l.logSubscribeActivity(subscribeStatus, userSubscribe, req)
 	}()
 	// find subscribe info
-	subscribeInfo, err := l.svc.SubscribeModel.FindOne(l.ctx.Request.Context(), userSubscribe.SubscribeId)
+	subscribeInfo, err := l.svc.Store.Subscribe().FindOne(l.ctx.Request.Context(), userSubscribe.SubscribeId)
 	if err != nil {
 		l.Errorw("[SubscribeLogic] Find subscribe info failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSubscribe.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Find subscribe info failed: %v", err.Error())
@@ -165,7 +165,7 @@ func (l *SubscribeLogic) getSubscribeV2URL() string {
 
 // getUserSubscribe 是本次修改的核心部分
 func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
-	userSub, err := l.svc.UserModel.FindOneSubscribeByToken(l.ctx.Request.Context(), token)
+	userSub, err := l.svc.Store.User().FindOneSubscribeByToken(l.ctx.Request.Context(), token)
 	if err != nil {
 		l.Infow("[Generate Subscribe]find subscribe error: %v", logger.Field("error", err.Error()), logger.Field("token", token))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
@@ -205,7 +205,7 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 
 	content, _ := subscribeLog.Marshal()
 
-	err := l.svc.LogModel.Insert(l.ctx.Request.Context(), &log.SystemLog{
+	err := l.svc.Store.Log().Insert(l.ctx.Request.Context(), &log.SystemLog{
 		Type:     log.TypeSubscribe.Uint8(),
 		ObjectID: userSub.UserId, // log user id
 		Date:     time.Now().Format(time.DateOnly),
@@ -221,7 +221,7 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, erro
 		return l.createExpiredServers(), nil
 	}
 
-	subDetails, err := l.svc.SubscribeModel.FindOne(l.ctx.Request.Context(), userSub.SubscribeId)
+	subDetails, err := l.svc.Store.Subscribe().FindOne(l.ctx.Request.Context(), userSub.SubscribeId)
 	if err != nil {
 		l.Errorw("[Generate Subscribe]find subscribe details error: %v", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe details error: %v", err.Error())
@@ -237,7 +237,7 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, erro
 	}
 	enable := true
 	var nodes []*node.Node
-	_, nodes, err = l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
+	_, nodes, err = l.svc.Store.Node().FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
 		Page:    1,
 		Size:    1000,
 		NodeId:  nodeIds,

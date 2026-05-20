@@ -101,3 +101,22 @@ func (m *customUserModel) InsertDevice(ctx context.Context, data *Device, tx ...
 		return conn.Create(data).Error
 	})
 }
+
+func (m *customUserModel) FindDeviceOnlineRecord(ctx context.Context, userId int64, startTime, endTime string) (*DeviceOnlineRecord, error) {
+	var record DeviceOnlineRecord
+	err := m.QueryNoCacheCtx(ctx, &record, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&DeviceOnlineRecord{}).
+			Where("user_id = ? AND create_at >= ? AND create_at < ?", userId, startTime, endTime).
+			First(&record).Error
+	})
+	return &record, err
+}
+
+func (m *customUserModel) InsertDeviceOnlineRecord(ctx context.Context, data *DeviceOnlineRecord, tx ...*gorm.DB) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
+		return conn.Create(data).Error
+	})
+}

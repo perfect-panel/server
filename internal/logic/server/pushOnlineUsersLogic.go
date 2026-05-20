@@ -40,7 +40,7 @@ func (l *PushOnlineUsersLogic) PushOnlineUsers(req *types.OnlineUsersRequest) er
 	}
 
 	// Find server info
-	_, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
+	_, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		l.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
 		return fmt.Errorf("server not found: %w", err)
@@ -57,13 +57,13 @@ func (l *PushOnlineUsersLogic) PushOnlineUsers(req *types.OnlineUsersRequest) er
 			onlineUsers[user.SID] = []string{user.IP}
 		}
 	}
-	err = l.svcCtx.NodeModel.UpdateOnlineUserSubscribe(l.ctx, req.ServerId, req.Protocol, onlineUsers)
+	err = l.svcCtx.Store.Node().UpdateOnlineUserSubscribe(l.ctx, req.ServerId, req.Protocol, onlineUsers)
 	if err != nil {
 		l.Errorw("[PushOnlineUsers] cache operation error", logger.Field("error", err))
 		return err
 	}
 
-	err = l.svcCtx.NodeModel.UpdateOnlineUserSubscribeGlobal(l.ctx, onlineUsers)
+	err = l.svcCtx.Store.Node().UpdateOnlineUserSubscribeGlobal(l.ctx, onlineUsers)
 
 	if err != nil {
 		l.Errorw("[PushOnlineUsers] cache operation error", logger.Field("error", err))

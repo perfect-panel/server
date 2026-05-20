@@ -21,7 +21,7 @@ func NewDeviceManager(srv *ServiceContext) *device.DeviceManager {
 
 	//设备离线处理
 	manager.OnDeviceOffline = func(userID int64, deviceID, session string, createAt time.Time) {
-		oneDevice, err := srv.UserModel.FindOneDeviceByIdentifier(ctx, deviceID)
+		oneDevice, err := srv.Store.User().FindOneDeviceByIdentifier(ctx, deviceID)
 		if err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				logger.Errorw("failed to find device", logger.Field("error", err.Error()), logger.Field("device_id", deviceID))
@@ -31,7 +31,7 @@ func NewDeviceManager(srv *ServiceContext) *device.DeviceManager {
 
 		//更新设备状态为离线
 		oneDevice.Online = false
-		err = srv.UserModel.UpdateDevice(ctx, oneDevice)
+		err = srv.Store.User().UpdateDevice(ctx, oneDevice)
 		if err != nil {
 			logger.Errorw("[DeviceManager] failed to update device", logger.Field("error", err.Error()), logger.Field("device_id", deviceID))
 		}
@@ -50,8 +50,8 @@ func NewDeviceManager(srv *ServiceContext) *device.DeviceManager {
 		}
 
 		//获取设备昨日在线记录
-		var onlineRecord user.DeviceOnlineRecord
-		if err := srv.DB.Model(&onlineRecord).Where("user_id = ? and create_at >= ? and  create_at < ?", userID, startTime, endTime).First(&onlineRecord).Error; err != nil {
+		onlineRecord, err := srv.Store.User().FindDeviceOnlineRecord(ctx, userID, startTime, endTime)
+		if err != nil {
 			//昨日未在线，连续在线天数为1
 			deviceOnlineRecord.DurationDays = 1
 		} else {
@@ -59,14 +59,14 @@ func NewDeviceManager(srv *ServiceContext) *device.DeviceManager {
 			deviceOnlineRecord.DurationDays = onlineRecord.DurationDays + 1
 		}
 
-		if err := srv.DB.Create(&deviceOnlineRecord).Error; err != nil {
+		if err := srv.Store.User().InsertDeviceOnlineRecord(ctx, &deviceOnlineRecord); err != nil {
 			logger.Errorw("[DeviceOnlineRecord] failed to DeviceOnlineRecord", logger.Field("error", err.Error()), logger.Field("device_id", deviceID))
 		}
 	}
 
 	//设备上线处理
 	manager.OnDeviceOnline = func(userID int64, deviceID, session string) {
-		oneDevice, err := srv.UserModel.FindOneDeviceByIdentifier(ctx, deviceID)
+		oneDevice, err := srv.Store.User().FindOneDeviceByIdentifier(ctx, deviceID)
 		if err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				logger.Errorw("failed to find device", logger.Field("error", err.Error()), logger.Field("device_id", deviceID))
@@ -74,7 +74,7 @@ func NewDeviceManager(srv *ServiceContext) *device.DeviceManager {
 			return
 		}
 		oneDevice.Online = true
-		err = srv.UserModel.UpdateDevice(ctx, oneDevice)
+		err = srv.Store.User().UpdateDevice(ctx, oneDevice)
 		if err != nil {
 			logger.Errorw("[DeviceManager] failed to update device", logger.Field("error", err.Error()), logger.Field("device_id", deviceID))
 			return

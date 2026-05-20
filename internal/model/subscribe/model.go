@@ -36,6 +36,7 @@ type customSubscribeLogicModel interface {
 	FilterList(ctx context.Context, params *FilterParams) (int64, []*Subscribe, error)
 	ClearCache(ctx context.Context, id ...int64) error
 	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
+	QueryResetCycleSubscribeIds(ctx context.Context, resetCycle int) ([]int64, error)
 	UpdateSort(ctx context.Context, data []*Subscribe) error
 	QueryGroupList(ctx context.Context) (int64, []*Group, error)
 	CreateGroup(ctx context.Context, data *Group) error
@@ -57,6 +58,14 @@ func (m *customSubscribeModel) QuerySubscribeMinSortByIds(ctx context.Context, i
 		return conn.Model(&Subscribe{}).Where("id IN ?", ids).Select("COALESCE(MIN(sort), 0)").Scan(v).Error
 	})
 	return minSort, err
+}
+
+func (m *customSubscribeModel) QueryResetCycleSubscribeIds(ctx context.Context, resetCycle int) ([]int64, error) {
+	var ids []int64
+	err := m.QueryNoCacheCtx(ctx, &ids, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Subscribe{}).Select("id").Where("reset_cycle = ?", resetCycle).Find(&ids).Error
+	})
+	return ids, err
 }
 
 func (m *customSubscribeModel) ClearCache(ctx context.Context, ids ...int64) error {

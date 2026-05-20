@@ -24,7 +24,7 @@ func NotifyMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		config, err := svc.PaymentModel.FindOneByPaymentToken(ctx, params.Token)
+		config, err := svc.Store.Payment().FindOneByPaymentToken(ctx, params.Token)
 		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			c.Abort()

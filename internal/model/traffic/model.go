@@ -20,6 +20,7 @@ type customTrafficLogicModel interface {
 	QueryUserTrafficRanking(ctx context.Context, start, end time.Time) ([]UserTrafficRanking, error)
 	QueryTrafficLogPageList(ctx context.Context, userId, subscribeId int64, page, size int) ([]*TrafficLog, int64, error)
 	QueryTrafficLogDetails(ctx context.Context, filter *TrafficLogDetailsFilter) ([]*TrafficLog, int64, error)
+	DeleteBefore(ctx context.Context, end time.Time) error
 }
 
 type TrafficLogDetailsFilter struct {
@@ -199,4 +200,8 @@ func (m *customTrafficModel) QueryTrafficLogDetails(ctx context.Context, filter 
 		Offset((filter.Page - 1) * filter.Size).
 		Find(&list).Error
 	return list, total, err
+}
+
+func (m *customTrafficModel) DeleteBefore(ctx context.Context, end time.Time) error {
+	return m.Conn.WithContext(ctx).Model(&TrafficLog{}).Where("timestamp <= ?", end).Delete(&TrafficLog{}).Error
 }

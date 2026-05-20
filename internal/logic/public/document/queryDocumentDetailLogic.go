@@ -28,7 +28,7 @@ func NewQueryDocumentDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext
 
 func (l *QueryDocumentDetailLogic) QueryDocumentDetail(req *types.QueryDocumentDetailRequest) (resp *types.Document, err error) {
 	// find document
-	data, err := l.svcCtx.DocumentModel.FindOne(l.ctx, req.Id)
+	data, err := l.svcCtx.Store.Document().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[QueryDocumentDetailLogic] FindOne error", logger.Field("id", req.Id), logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOne error: %s", err.Error())

@@ -29,7 +29,7 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 				var allow = false
 
 				// query client list
-				clients, err := svc.ClientModel.List(c.Request.Context())
+				clients, err := svc.Store.Client().List(c.Request.Context())
 				if err != nil {
 					logger.Errorw("[PanDomainMiddleware] Query client list failed", logger.Field("error", err.Error()))
 				}

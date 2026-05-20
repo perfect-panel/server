@@ -22,7 +22,7 @@ import (
 
 func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*types.TelegramConfig, error) {
 
-	data, err := svcCtx.AuthModel.FindOneByMethod(ctx, "telegram")
+	data, err := svcCtx.Store.Auth().FindOneByMethod(ctx, "telegram")
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get Telegram config failed: %v", err.Error())
 	}
@@ -75,7 +75,16 @@ func SendAdminMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, text string,
 		}
 	}
 	if !f {
-		svcCtx.DB.Model(&user.User{}).Where("is_admin = true").Pluck("telegram", &adminTelegram)
+		admins, err := svcCtx.Store.User().QueryAdminUsers(ctx)
+		if err != nil {
+			logger.WithContext(ctx).Error("[SendAdminMessage] query admin users failed", logger.Field("error", err.Error()))
+			return
+		}
+		for _, admin := range admins {
+			if telegram, ok := findTelegram(admin); ok {
+				adminTelegram = append(adminTelegram, telegram)
+			}
+		}
 		val, _ := json.Marshal(adminTelegram)
 		_ = svcCtx.Redis.Set(ctx, "TelegramConfig", string(val), time.Duration(3600)*time.Second).Err()
 	}
@@ -94,7 +103,7 @@ func SendAdminMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, text string,
 }
 
 func SetWebhook(ctx *gin.Context, svcCtx *svc.ServiceContext) error {
-	configs, _ := svcCtx.SystemModel.GetSiteConfig(ctx)
+	configs, _ := svcCtx.Store.System().GetSiteConfig(ctx)
 	cfg := &types.SiteConfig{}
 	tool.SystemConfigSliceReflectToStruct(configs, cfg)
 	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "setWebhook"), nil)

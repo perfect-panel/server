@@ -14,7 +14,7 @@ import (
 
 func Mobile(ctx *svc.ServiceContext) {
 	logger.Debug("Mobile config initialization")
-	method, err := ctx.AuthModel.FindOneByMethod(context.Background(), "mobile")
+	method, err := ctx.Store.Auth().FindOneByMethod(context.Background(), "mobile")
 	if err != nil {
 		panic(err)
 	}

@@ -90,13 +90,13 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 			return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed!", req.Message.Chat.ID)
 		}
 
-		method, err := l.svcCtx.UserModel.FindUserAuthMethodByPlatform(l.ctx, userId, "telegram")
+		method, err := l.svcCtx.Store.User().FindUserAuthMethodByPlatform(l.ctx, userId, "telegram")
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			l.Errorw("TelegramLogic start FindUserAuthMethodByPlatform Error: ", logger.Field("error", err.Error()), logger.Field("userId", userId))
 			return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed!", req.Message.Chat.ID)
 		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			if err := l.svcCtx.UserModel.InsertUserAuthMethods(l.ctx, &user.AuthMethods{
+			if err := l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, &user.AuthMethods{
 				UserId:         userId,
 				AuthType:       "telegram",
 				AuthIdentifier: strconv.FormatInt(req.Message.Chat.ID, 10),
@@ -109,13 +109,13 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 			}
 		} else {
 			method.AuthIdentifier = strconv.FormatInt(req.Message.Chat.ID, 10)
-			if err := l.svcCtx.UserModel.InsertUserAuthMethods(l.ctx, method); err != nil {
+			if err := l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, method); err != nil {
 				l.Errorw("TelegramLogic start UpdateUserAuthMethod Error: ", logger.Field("error", err.Error()), logger.Field("userId", userId))
 				return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed!", req.Message.Chat.ID)
 			}
 		}
 		// update user info to redis
-		err = l.svcCtx.UserModel.UpdateUserCache(l.ctx, &user.User{
+		err = l.svcCtx.Store.User().UpdateUserCache(l.ctx, &user.User{
 			Id: userId,
 		})
 		if err != nil {

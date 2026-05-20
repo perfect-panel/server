@@ -26,7 +26,7 @@ func NewQueryServerProtocolConfigLogic(ctx context.Context, svcCtx *svc.ServiceC
 
 func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.QueryServerConfigRequest) (resp *types.QueryServerConfigResponse, err error) {
 	// find server
-	data, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerID)
+	data, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerID)
 	if err != nil {
 		l.Errorf("[GetServerProtocols] FindOneServer Error: %s", err.Error())
 		return nil, err

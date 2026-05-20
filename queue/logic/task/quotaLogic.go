@@ -11,10 +11,10 @@ import (
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
-	"gorm.io/gorm"
 )
 
 const (
@@ -80,13 +80,13 @@ func (l *QuotaTaskLogic) ProcessTask(ctx context.Context, t *asynq.Task) error {
 			userIds = append(userIds, sub.UserId)
 		}
 		userIds = tool.RemoveDuplicateElements(userIds...)
-		var users []*user.User
-		if err = l.svcCtx.DB.WithContext(ctx).Model(&user.User{}).Where("id IN ?", userIds).Find(&users).Error; err != nil {
+		users, err := l.svcCtx.Store.User().FindUsersByIds(ctx, userIds)
+		if err != nil {
 			logger.WithContext(ctx).Error("[QuotaTaskLogic.ProcessTask] find users error",
 				logger.Field("error", err.Error()),
 				logger.Field("userIDs", userIds))
 		}
-		err = l.svcCtx.UserModel.ClearUserCache(ctx, users...)
+		err = l.svcCtx.Store.User().ClearUserCache(ctx, users...)
 		if err != nil {
 			logger.WithContext(ctx).Error("[QuotaTaskLogic.ProcessTask] clear user cache error",
 				logger.Field("error", err.Error()),
@@ -95,7 +95,7 @@ func (l *QuotaTaskLogic) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	}
 
 	// 清理用户订阅缓存
-	err = l.svcCtx.UserModel.ClearSubscribeCache(ctx, subscribes...)
+	err = l.svcCtx.Store.User().ClearSubscribeCache(ctx, subscribes...)
 	if err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.ProcessTask] clear subscribe cache error",
 			logger.Field("error", err.Error()))
@@ -122,8 +122,8 @@ func (l *QuotaTaskLogic) parseTaskID(ctx context.Context, payload []byte) (int64
 }
 
 func (l *QuotaTaskLogic) getTaskInfo(ctx context.Context, taskID int64) (*task.Task, error) {
-	var taskInfo *task.Task
-	if err := l.svcCtx.DB.WithContext(ctx).Model(&task.Task{}).Where("id = ?", taskID).First(&taskInfo).Error; err != nil {
+	taskInfo, err := l.svcCtx.Store.Task().FindOne(ctx, taskID)
+	if err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.getTaskInfo] find task error",
 			logger.Field("error", err.Error()),
 			logger.Field("taskID", taskID),
@@ -153,8 +153,8 @@ func (l *QuotaTaskLogic) parseTaskData(ctx context.Context, taskInfo *task.Task)
 }
 
 func (l *QuotaTaskLogic) getSubscribes(ctx context.Context, subscriberIDs []int64) ([]*user.Subscribe, error) {
-	var subscribes []*user.Subscribe
-	if err := l.svcCtx.DB.WithContext(ctx).Model(&user.Subscribe{}).Where("id IN ?", subscriberIDs).Find(&subscribes).Error; err != nil {
+	subscribes, err := l.svcCtx.Store.User().FindSubscribesByIds(ctx, subscriberIDs)
+	if err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.getSubscribes] find subscribes error",
 			logger.Field("error", err.Error()),
 			logger.Field("subscribers", subscriberIDs),
@@ -165,71 +165,52 @@ func (l *QuotaTaskLogic) getSubscribes(ctx context.Context, subscriberIDs []int6
 }
 
 func (l *QuotaTaskLogic) processSubscribes(ctx context.Context, subscribes []*user.Subscribe, content task.QuotaContent, taskInfo *task.Task) error {
-	tx := l.svcCtx.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] transaction panic",
-				logger.Field("panic", r),
+	return l.svcCtx.Store.InTx(ctx, func(store repository.Store) error {
+		var errors []ErrorInfo
+		now := time.Now()
+
+		for _, sub := range subscribes {
+			if err := l.processSubscription(ctx, store, sub, content, now, &errors); err != nil {
+				return err
+			}
+		}
+
+		// 根据错误情况决定任务状态
+		status := int8(2) // Completed
+		if len(errors) > 0 {
+			logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] some subscriptions failed",
+				logger.Field("total", len(subscribes)),
+				logger.Field("failed", len(errors)),
 			)
+			// 如果所有订阅都失败，标记为失败状态
+			if len(errors) == len(subscribes) {
+				status = 3 // Failed
+			}
+			errs, err := json.Marshal(errors)
+			if err != nil {
+				logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] marshal errors failed",
+					logger.Field("error", err.Error()),
+				)
+				return err
+			}
+			taskInfo.Errors = string(errs)
 		}
-	}()
 
-	var errors []ErrorInfo
-	now := time.Now()
-
-	for _, sub := range subscribes {
-		if err := l.processSubscription(tx, sub, content, now, &errors); err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	// 根据错误情况决定任务状态
-	status := int8(2) // Completed
-	if len(errors) > 0 {
-		logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] some subscriptions failed",
-			logger.Field("total", len(subscribes)),
-			logger.Field("failed", len(errors)),
-		)
-		// 如果所有订阅都失败，标记为失败状态
-		if len(errors) == len(subscribes) {
-			status = 3 // Failed
-		}
-		errs, err := json.Marshal(errors)
-		if err != nil {
-			logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] marshal errors failed",
+		taskInfo.Current = uint64(len(subscribes))
+		taskInfo.Status = status
+		if err := store.Task().Update(ctx, taskInfo); err != nil {
+			logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] update task status error",
 				logger.Field("error", err.Error()),
+				logger.Field("taskID", taskInfo.Id),
 			)
-			tx.Rollback()
 			return err
 		}
-		taskInfo.Errors = string(errs)
-	}
 
-	taskInfo.Current = uint64(len(subscribes))
-	taskInfo.Status = status
-	err := tx.Where("id = ?", taskInfo.Id).Save(taskInfo).Error
-	if err != nil {
-		logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] update task status error",
-			logger.Field("error", err.Error()),
-			logger.Field("taskID", taskInfo.Id),
-		)
-		tx.Rollback()
-		return err
-	}
-
-	if err = tx.Commit().Error; err != nil {
-		logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] commit transaction error",
-			logger.Field("error", err.Error()),
-		)
-		return err
-	}
-
-	return nil
+		return nil
+	})
 }
 
-func (l *QuotaTaskLogic) processSubscription(tx *gorm.DB, sub *user.Subscribe, content task.QuotaContent, now time.Time, errors *[]ErrorInfo) error {
+func (l *QuotaTaskLogic) processSubscription(ctx context.Context, store repository.Store, sub *user.Subscribe, content task.QuotaContent, now time.Time, errors *[]ErrorInfo) error {
 	// 验证订阅数据
 	if sub == nil {
 		*errors = append(*errors, ErrorInfo{
@@ -262,7 +243,7 @@ func (l *QuotaTaskLogic) processSubscription(tx *gorm.DB, sub *user.Subscribe, c
 		sub.Download = 0
 		sub.Upload = 0
 		updated = true
-		if err := l.createResetTrafficLog(tx, sub.Id, sub.UserId, now); err != nil {
+		if err := l.createResetTrafficLog(ctx, store, sub.Id, sub.UserId, now); err != nil {
 			// 记录错误但不阻断整个任务,日志失败不影响主流程
 			*errors = append(*errors, ErrorInfo{
 				UserSubscribeId: sub.Id,
@@ -273,14 +254,14 @@ func (l *QuotaTaskLogic) processSubscription(tx *gorm.DB, sub *user.Subscribe, c
 
 	// 处理赠送金
 	if content.GiftValue != 0 {
-		if err := l.processGift(tx, sub, content, now, errors); err != nil {
+		if err := l.processGift(ctx, store, sub, content, now, errors); err != nil {
 			return err
 		}
 	}
 
 	// 只有在有更新时才保存订阅信息
 	if updated {
-		if err := tx.Where("id = ?", sub.Id).Save(sub).Error; err != nil {
+		if err := store.User().UpdateSubscribe(ctx, sub); err != nil {
 			*errors = append(*errors, ErrorInfo{
 				UserSubscribeId: sub.Id,
 				Error:           "update subscription error: " + err.Error(),
@@ -292,7 +273,7 @@ func (l *QuotaTaskLogic) processSubscription(tx *gorm.DB, sub *user.Subscribe, c
 	return nil
 }
 
-func (l *QuotaTaskLogic) processGift(tx *gorm.DB, sub *user.Subscribe, content task.QuotaContent, now time.Time, errors *[]ErrorInfo) error {
+func (l *QuotaTaskLogic) processGift(ctx context.Context, store repository.Store, sub *user.Subscribe, content task.QuotaContent, now time.Time, errors *[]ErrorInfo) error {
 	// 验证赠送类型
 	if content.GiftType != 1 && content.GiftType != 2 {
 		*errors = append(*errors, ErrorInfo{
@@ -302,8 +283,8 @@ func (l *QuotaTaskLogic) processGift(tx *gorm.DB, sub *user.Subscribe, content t
 		return nil
 	}
 
-	var userInfo user.User
-	if err := tx.Model(&user.User{}).Where("id = ?", sub.UserId).First(&userInfo).Error; err != nil {
+	userInfo, err := store.User().FindOne(ctx, sub.UserId)
+	if err != nil {
 		*errors = append(*errors, ErrorInfo{
 			UserSubscribeId: sub.Id,
 			Error:           "find user error: " + err.Error(),
@@ -317,7 +298,7 @@ func (l *QuotaTaskLogic) processGift(tx *gorm.DB, sub *user.Subscribe, content t
 		giftAmount = int64(content.GiftValue)
 	case 2:
 		// 获取订阅对应的套餐信息
-		subscribeInfo, err := l.svcCtx.SubscribeModel.FindOne(context.Background(), sub.SubscribeId)
+		subscribeInfo, err := store.Subscribe().FindOne(ctx, sub.SubscribeId)
 		if err != nil {
 			*errors = append(*errors, ErrorInfo{
 				UserSubscribeId: sub.Id,
@@ -333,7 +314,7 @@ func (l *QuotaTaskLogic) processGift(tx *gorm.DB, sub *user.Subscribe, content t
 	if giftAmount > 0 {
 		userInfo.GiftAmount += giftAmount
 		// 使用Update而不是Save，更精确地更新单个字段
-		if err := tx.Model(&user.User{}).Where("id = ?", sub.UserId).Update("gift_amount", userInfo.GiftAmount).Error; err != nil {
+		if err := store.User().Update(ctx, userInfo); err != nil {
 			*errors = append(*errors, ErrorInfo{
 				UserSubscribeId: sub.Id,
 				Error:           "update user gift amount error: " + err.Error(),
@@ -341,14 +322,14 @@ func (l *QuotaTaskLogic) processGift(tx *gorm.DB, sub *user.Subscribe, content t
 			return nil
 		}
 
-		if err := l.createGiftLog(tx, sub.Id, userInfo.Id, giftAmount, userInfo.GiftAmount, now); err != nil {
+		if err := l.createGiftLog(ctx, store, sub.Id, userInfo.Id, giftAmount, userInfo.GiftAmount, now); err != nil {
 			*errors = append(*errors, ErrorInfo{
 				UserSubscribeId: sub.Id,
 				Error:           "create gift log error: " + err.Error(),
 			})
 			// 回滚用户金额更新
 			userInfo.GiftAmount -= giftAmount
-			tx.Model(&user.User{}).Where("id = ?", sub.UserId).Update("gift_amount", userInfo.GiftAmount)
+			_ = store.User().Update(ctx, userInfo)
 			return nil
 		}
 	}
@@ -363,7 +344,7 @@ func (l *QuotaTaskLogic) getStartTime(sub *user.Subscribe, now time.Time) time.T
 	return sub.StartTime
 }
 
-func (l *QuotaTaskLogic) createGiftLog(tx *gorm.DB, subscribeId, userId, amount, balance int64, now time.Time) error {
+func (l *QuotaTaskLogic) createGiftLog(ctx context.Context, store repository.Store, subscribeId, userId, amount, balance int64, now time.Time) error {
 	giftLog := &log.Gift{
 		Type:        log.GiftTypeIncrease,
 		OrderNo:     "",
@@ -378,15 +359,15 @@ func (l *QuotaTaskLogic) createGiftLog(tx *gorm.DB, subscribeId, userId, amount,
 	if err != nil {
 		return fmt.Errorf("marshal gift log error: %v", err)
 	}
-	return tx.Model(&log.SystemLog{}).Create(&log.SystemLog{
+	return store.Log().Insert(ctx, &log.SystemLog{
 		Type:     log.TypeGift.Uint8(),
 		Content:  string(logString),
 		ObjectID: userId,
 		Date:     now.Format(time.DateOnly),
-	}).Error
+	})
 }
 
-func (l *QuotaTaskLogic) createResetTrafficLog(tx *gorm.DB, subscribeId, userId int64, now time.Time) error {
+func (l *QuotaTaskLogic) createResetTrafficLog(ctx context.Context, store repository.Store, subscribeId, userId int64, now time.Time) error {
 	trafficLog := &log.ResetSubscribe{
 		Type:      log.ResetSubscribeTypeQuota,
 		UserId:    userId,
@@ -398,10 +379,10 @@ func (l *QuotaTaskLogic) createResetTrafficLog(tx *gorm.DB, subscribeId, userId 
 	if err != nil {
 		return fmt.Errorf("marshal traffic log error: %v", err)
 	}
-	return tx.Model(&log.SystemLog{}).Create(&log.SystemLog{
+	return store.Log().Insert(ctx, &log.SystemLog{
 		Type:     log.TypeResetSubscribe.Uint8(),
 		Content:  string(logString),
 		ObjectID: subscribeId,
 		Date:     now.Format(time.DateOnly),
-	}).Error
+	})
 }

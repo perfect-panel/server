@@ -13,6 +13,7 @@ type Model interface {
 	FindOne(ctx context.Context, id int64) (*Task, error)
 	FindOneByType(ctx context.Context, id int64, typ Type) (*Task, error)
 	QueryTaskList(ctx context.Context, filter *Filter) (int64, []*Task, error)
+	Update(ctx context.Context, data *Task) error
 	UpdateStatus(ctx context.Context, id int64, status int8) error
 }
 
@@ -110,6 +111,10 @@ func (m *defaultTaskModel) QueryTaskList(ctx context.Context, filter *Filter) (i
 		Order("created_at DESC").
 		Find(&data).Error
 	return total, data, err
+}
+
+func (m *defaultTaskModel) Update(ctx context.Context, data *Task) error {
+	return m.db.WithContext(ctx).Where("id = ?", data.Id).Save(data).Error
 }
 
 func (m *defaultTaskModel) UpdateStatus(ctx context.Context, id int64, status int8) error {

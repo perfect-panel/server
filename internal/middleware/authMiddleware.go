@@ -67,7 +67,7 @@ func AuthMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			return
 		}
 
-		userInfo, err := svc.UserModel.FindOne(c, userId)
+		userInfo, err := svc.Store.User().FindOne(c, userId)
 		if err != nil {
 			logger.WithContext(c.Request.Context()).Debug("[AuthMiddleware] UserModel FindOne", logger.Field("error", err.Error()), logger.Field("userId", userId))
 			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Database Query Error"))

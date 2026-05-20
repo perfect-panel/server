@@ -50,12 +50,12 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		}
 		return resp, nil
 	}
-	server, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
+	server, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		return nil, err
 	}
 
-	_, nodes, err := l.svcCtx.NodeModel.FilterNodeList(l.ctx, &node.FilterNodeParams{
+	_, nodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
 		Page:     1,
 		Size:     1000,
 		ServerId: []int64{server.Id},
@@ -74,7 +74,7 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		}
 	}
 
-	_, subs, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+	_, subs, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
 		Page: 1,
 		Size: 9999,
 		Node: nodeIds,
@@ -96,10 +96,10 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	}
 	users := make([]types.ServerUser, 0)
 	for _, sub := range subs {
-		if err := l.svcCtx.UserModel.ActivatePendingSubscribesBySubscribeId(l.ctx, sub.Id); err != nil {
+		if err := l.svcCtx.Store.User().ActivatePendingSubscribesBySubscribeId(l.ctx, sub.Id); err != nil {
 			return nil, err
 		}
-		data, err := l.svcCtx.UserModel.FindUsersSubscribeBySubscribeId(l.ctx, sub.Id)
+		data, err := l.svcCtx.Store.User().FindUsersSubscribeBySubscribeId(l.ctx, sub.Id)
 		if err != nil {
 			return nil, err
 		}

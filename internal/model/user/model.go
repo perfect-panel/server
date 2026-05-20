@@ -82,12 +82,23 @@ type SubscribeFilter struct {
 
 type customUserLogicModel interface {
 	QueryPageList(ctx context.Context, page, size int, filter *UserFilterParams) ([]*User, int64, error)
+	FindUsersByIds(ctx context.Context, ids []int64) ([]*User, error)
+	CountAffiliates(ctx context.Context, refererId int64) (int64, error)
+	QueryAffiliateList(ctx context.Context, refererId int64, page, size int) ([]*User, int64, error)
 	FindOneByReferCode(ctx context.Context, referCode string) (*User, error)
 	BatchDeleteUser(ctx context.Context, ids []int64, tx ...*gorm.DB) error
 	InsertSubscribe(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error
 	FindOneSubscribeByToken(ctx context.Context, token string) (*Subscribe, error)
 	FindOneSubscribeByOrderId(ctx context.Context, orderId int64) (*Subscribe, error)
 	FindOneSubscribe(ctx context.Context, id int64) (*Subscribe, error)
+	FindSubscribesByIds(ctx context.Context, ids []int64) ([]*Subscribe, error)
+	QueryMonthlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
+	QueryFirstResetSubscribeIds(ctx context.Context, subscribeIds []int64) ([]int64, error)
+	QueryYearlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
+	ResetSubscribeTrafficByIds(ctx context.Context, ids []int64, tx ...*gorm.DB) error
+	FindTrafficExceededSubscribes(ctx context.Context) ([]*Subscribe, error)
+	FindExpiredSubscribes(ctx context.Context, now time.Time) ([]*Subscribe, error)
+	MarkSubscribesFinished(ctx context.Context, ids []int64, status uint8, finishedAt time.Time, tx ...*gorm.DB) error
 	UpdateSubscribe(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error
 	DeleteSubscribe(ctx context.Context, token string, tx ...*gorm.DB) error
 	DeleteSubscribeById(ctx context.Context, id int64, tx ...*gorm.DB) error
@@ -111,6 +122,8 @@ type customUserLogicModel interface {
 	InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	UpdateUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	DeleteUserAuthMethods(ctx context.Context, userId int64, platform string, tx ...*gorm.DB) error
+	UpdateUserAuthMethodOwner(ctx context.Context, authType, identifier string, userId int64, tx ...*gorm.DB) error
+	DeleteUserAuthMethodByIdentifier(ctx context.Context, authType, identifier string, tx ...*gorm.DB) error
 	UpsertUserAuthMethod(ctx context.Context, data *AuthMethods) error
 	FindUserAuthMethodByOpenID(ctx context.Context, method, openID string) (*AuthMethods, error)
 	FindUserAuthMethodByUserId(ctx context.Context, method string, userId int64) (*AuthMethods, error)
@@ -125,6 +138,9 @@ type customUserLogicModel interface {
 	FindOneDeviceByIdentifier(ctx context.Context, id string) (*Device, error)
 	DeleteDevice(ctx context.Context, id int64, tx ...*gorm.DB) error
 	InsertDevice(ctx context.Context, data *Device, tx ...*gorm.DB) error
+	FindDeviceOnlineRecord(ctx context.Context, userId int64, startTime, endTime string) (*DeviceOnlineRecord, error)
+	InsertDeviceOnlineRecord(ctx context.Context, data *DeviceOnlineRecord, tx ...*gorm.DB) error
+	InsertWithdrawal(ctx context.Context, data *Withdrawal, tx ...*gorm.DB) error
 
 	QuerySubscribeIdsByFilter(ctx context.Context, filter *SubscribeFilter) ([]int64, error)
 	CountSubscribesByFilter(ctx context.Context, filter *SubscribeFilter) (int64, error)

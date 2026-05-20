@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/pkg/logger"
-	"gorm.io/gorm"
 )
 
 var (
@@ -16,20 +16,20 @@ var (
 )
 
 type WorkerManager struct {
-	db      *gorm.DB                     // 数据库连接
+	tasks   task.Model                   // task repository
 	sender  Sender                       // 邮件发送器接口
 	mutex   sync.RWMutex                 // 读写互斥锁，确保线程安全
 	workers map[int64]*Worker            // 存储所有 Worker 实例
 	cancels map[int64]context.CancelFunc // 存储每个 Worker 的取消函数
 }
 
-func NewWorkerManager(db *gorm.DB, sender Sender) *WorkerManager {
+func NewWorkerManager(tasks task.Model, sender Sender) *WorkerManager {
 	if Manager != nil {
 		return Manager
 	}
 	once.Do(func() {
 		Manager = &WorkerManager{
-			db:      db,
+			tasks:   tasks,
 			workers: make(map[int64]*Worker),
 			cancels: make(map[int64]context.CancelFunc),
 			sender:  sender,
@@ -55,7 +55,7 @@ func (m *WorkerManager) AddWorker(id int64) {
 	defer m.mutex.Unlock()
 	if _, exists := m.workers[id]; !exists {
 		ctx, cancel := context.WithCancel(context.Background())
-		worker := NewWorker(ctx, id, m.db, m.sender)
+		worker := NewWorker(ctx, id, m.tasks, m.sender)
 		m.workers[id] = worker
 		m.cancels[id] = cancel
 		go worker.Start()

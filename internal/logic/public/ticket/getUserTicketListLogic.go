@@ -36,7 +36,7 @@ func (l *GetUserTicketListLogic) GetUserTicketList(req *types.GetUserTicketListR
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 	l.Logger.Debugf("Current user: %v", u.Id)
-	total, list, err := l.svcCtx.TicketModel.QueryTicketList(l.ctx, req.Page, req.Size, u.Id, req.Status, req.Search)
+	total, list, err := l.svcCtx.Store.Ticket().QueryTicketList(l.ctx, req.Page, req.Size, u.Id, req.Status, req.Search)
 	if err != nil {
 		l.Errorw("[GetUserTicketListLogic] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryTicketList error: %v", err)

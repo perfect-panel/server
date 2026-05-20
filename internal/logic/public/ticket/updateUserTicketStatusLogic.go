@@ -34,7 +34,7 @@ func (l *UpdateUserTicketStatusLogic) UpdateUserTicketStatus(req *types.UpdateUs
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	err := l.svcCtx.TicketModel.UpdateTicketStatus(l.ctx, req.Id, u.Id, *req.Status)
+	err := l.svcCtx.Store.Ticket().UpdateTicketStatus(l.ctx, req.Id, u.Id, *req.Status)
 	if err != nil {
 		l.Errorw("[UpdateUserTicketStatusLogic] Database Error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update ticket error: %v", err.Error())

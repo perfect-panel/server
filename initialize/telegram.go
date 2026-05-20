@@ -16,7 +16,7 @@ import (
 
 func Telegram(svc *svc.ServiceContext) {
 
-	method, err := svc.AuthModel.FindOneByMethod(context.Background(), "telegram")
+	method, err := svc.Store.Auth().FindOneByMethod(context.Background(), "telegram")
 	if err != nil {
 		logger.Errorf("[Init Telegram Config] Get Telegram Config Error: %s", err.Error())
 		return

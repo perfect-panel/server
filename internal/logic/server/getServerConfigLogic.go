@@ -51,7 +51,7 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 			return resp, nil
 		}
 	}
-	data, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
+	data, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		l.Errorw("[GetServerConfig] FindOne error", logger.Field("error", err.Error()))
 		return nil, err

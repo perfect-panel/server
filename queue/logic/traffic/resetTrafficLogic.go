@@ -4,21 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/queue/types"
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 )
 
 // ResetTrafficLogic handles traffic reset logic for different subscription cycles
@@ -186,10 +184,9 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 	now := time.Now()
 
-	err := l.svc.UserModel.Transaction(ctx, func(db *gorm.DB) error {
+	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
 		// Get all subscriptions that reset monthly based on start date
-		var resetMonthSubIds []int64
-		err := db.Model(&subscribe.Subscribe{}).Select("id").Where("reset_cycle = ?", 2).Find(&resetMonthSubIds).Error
+		resetMonthSubIds, err := store.Subscribe().QueryResetCycleSubscribeIds(ctx, 2)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query monthly subscriptions", logger.Field("error", err.Error()))
 			return err
@@ -201,25 +198,7 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 		}
 
 		// Query users for monthly reset based on subscription start date cycle
-		var monthlyResetUsers []int64
-
-		// Check if today is the last day of current month
-		isLastDayOfMonth := now.AddDate(0, 0, 1).Month() != now.Month()
-
-		query := db.Model(&user.Subscribe{}).Select("id").
-			Where("subscribe_id IN ?", resetMonthSubIds).
-			Where("status IN ?", []int64{1, 2}). // Only active subscriptions
-			Where(expireDateAtLeast(db, "month"))
-
-		if isLastDayOfMonth {
-			// Last day of month: handle subscription start dates >= today
-			query = query.Where(extractDatePart(db, "day")+" >= ?", now.Day())
-		} else {
-			// Normal case: exact day match
-			query = query.Where(extractDatePart(db, "day")+" = ?", now.Day())
-		}
-
-		err = query.Find(&monthlyResetUsers).Error
+		monthlyResetUsers, err := store.User().QueryMonthlyResetSubscribeIds(ctx, resetMonthSubIds, now)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query monthly reset users", logger.Field("error", err.Error()))
 			return err
@@ -230,20 +209,12 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 				logger.Field("count", len(monthlyResetUsers)),
 				logger.Field("userIds", monthlyResetUsers))
 
-			err = db.Model(&user.Subscribe{}).Where("id IN ?", monthlyResetUsers).
-				Updates(map[string]interface{}{
-					"upload":      0,
-					"download":    0,
-					"status":      1, // Ensure status is active
-					"finished_at": nil,
-				}).Error
-			if err != nil {
+			if err = store.User().ResetSubscribeTrafficByIds(ctx, monthlyResetUsers); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update monthly reset users", logger.Field("error", err.Error()))
 				return err
 			}
 			// Find user subscriptions for these users
-			var userSubs []*user.Subscribe
-			err = db.Model(&user.Subscribe{}).Where("id IN ?", monthlyResetUsers).Find(&userSubs).Error
+			userSubs, err := store.User().FindSubscribesByIds(ctx, monthlyResetUsers)
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
 				return err
@@ -254,7 +225,7 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 		} else {
 			logger.Infow("[ResetTraffic] No users found for monthly reset")
 		}
-		return l.svc.SubscribeModel.ClearCache(ctx, resetMonthSubIds...)
+		return store.Subscribe().ClearCache(ctx, resetMonthSubIds...)
 	})
 	if err != nil {
 		logger.Errorw("[ResetTraffic] Monthly reset transaction failed", logger.Field("error", err.Error()))
@@ -284,10 +255,9 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 		return nil
 	}
 
-	err := l.svc.UserModel.Transaction(ctx, func(db *gorm.DB) error {
+	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
 		// Get all subscriptions that reset on 1st of month
-		var reset1stSubIds []int64
-		err := db.Model(&subscribe.Subscribe{}).Select("id").Where("reset_cycle = ?", 1).Find(&reset1stSubIds).Error
+		reset1stSubIds, err := store.Subscribe().QueryResetCycleSubscribeIds(ctx, 1)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query 1st reset subscriptions", logger.Field("error", err.Error()))
 			return err
@@ -299,11 +269,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 		}
 
 		// Get all active users with these subscriptions
-		var users1stReset []int64
-		err = db.Model(&user.Subscribe{}).Select("id").
-			Where("subscribe_id IN ?", reset1stSubIds).
-			Where("status IN ?", []int64{1, 2}). // Only active subscriptions
-			Find(&users1stReset).Error
+		users1stReset, err := store.User().QueryFirstResetSubscribeIds(ctx, reset1stSubIds)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query 1st reset users", logger.Field("error", err.Error()))
 			return err
@@ -315,19 +281,11 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 				logger.Field("userIds", users1stReset))
 
 			// Reset upload and download traffic to zero
-			err = db.Model(&user.Subscribe{}).Where("id IN ?", users1stReset).
-				Updates(map[string]interface{}{
-					"upload":      0,
-					"download":    0,
-					"status":      1, // Ensure status is active
-					"finished_at": nil,
-				}).Error
-			if err != nil {
+			if err = store.User().ResetSubscribeTrafficByIds(ctx, users1stReset); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update 1st reset users", logger.Field("error", err.Error()))
 				return err
 			}
-			var userSubs []*user.Subscribe
-			err = db.Model(&user.Subscribe{}).Where("id IN ?", users1stReset).Find(&userSubs).Error
+			userSubs, err := store.User().FindSubscribesByIds(ctx, users1stReset)
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
 				return err
@@ -340,7 +298,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 			logger.Infow("[ResetTraffic] No users found for 1st reset")
 		}
 
-		return l.svc.SubscribeModel.ClearCache(ctx, reset1stSubIds...)
+		return store.Subscribe().ClearCache(ctx, reset1stSubIds...)
 	})
 
 	if err != nil {
@@ -356,10 +314,9 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 	now := time.Now()
 
-	err := l.svc.UserModel.Transaction(ctx, func(db *gorm.DB) error {
+	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
 		// Get all subscriptions that reset yearly
-		var resetYearSubIds []int64
-		err := db.Model(&subscribe.Subscribe{}).Select("id").Where("reset_cycle = ?", 3).Find(&resetYearSubIds).Error
+		resetYearSubIds, err := store.Subscribe().QueryResetCycleSubscribeIds(ctx, 3)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query yearly subscriptions", logger.Field("error", err.Error()))
 			return err
@@ -371,25 +328,7 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 		}
 
 		// Query users for yearly reset based on subscription start date anniversary
-		var usersYearReset []int64
-
-		// Check if today is February 28th (handle leap year case)
-		isLeapYearCase := now.Month() == 2 && now.Day() == 28
-
-		query := db.Model(&user.Subscribe{}).Select("id").
-			Where("subscribe_id IN ?", resetYearSubIds).
-			Where(extractDatePart(db, "month")+" = ?", int(now.Month())). // Same month
-			Where("status IN ?", []int64{1, 2}).                          // Only active subscriptions
-			Where(expireDateAtLeast(db, "year"))
-		if isLeapYearCase {
-			// February 28th: handle both Feb 28 and Feb 29 subscriptions
-			query = query.Where(extractDatePart(db, "day") + " IN (28, 29)")
-		} else {
-			// Normal case: exact day match
-			query = query.Where(extractDatePart(db, "day")+" = ?", now.Day())
-		}
-
-		err = query.Find(&usersYearReset).Error
+		usersYearReset, err := store.User().QueryYearlyResetSubscribeIds(ctx, resetYearSubIds, now)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Query yearly reset users failed", logger.Field("error", err.Error()))
 			return err
@@ -401,20 +340,12 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 				logger.Field("userIds", usersYearReset))
 
 			// Reset upload and download traffic to zero
-			err = db.Model(&user.Subscribe{}).Where("id IN ?", usersYearReset).
-				Updates(map[string]interface{}{
-					"upload":      0,
-					"download":    0,
-					"status":      1, // Ensure status is active
-					"finished_at": nil,
-				}).Error
-			if err != nil {
+			if err = store.User().ResetSubscribeTrafficByIds(ctx, usersYearReset); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update yearly reset users", logger.Field("error", err.Error()))
 				return err
 			}
 			// Find user subscriptions for these users
-			var userSubs []*user.Subscribe
-			err = db.Model(&user.Subscribe{}).Where("id IN ?", usersYearReset).Find(&userSubs).Error
+			userSubs, err := store.User().FindSubscribesByIds(ctx, usersYearReset)
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
 				return err
@@ -425,7 +356,7 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 		} else {
 			logger.Infow("[ResetTraffic] No users found for yearly reset")
 		}
-		err = l.svc.SubscribeModel.ClearCache(ctx, resetYearSubIds...)
+		err = store.Subscribe().ClearCache(ctx, resetYearSubIds...)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to clear yearly reset subscription cache", logger.Field("error", err.Error()))
 		}
@@ -582,7 +513,7 @@ func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscri
 
 		for _, sub := range list {
 			if sub.SubscribeId > 0 {
-				err := l.svc.UserModel.ClearSubscribeCache(ctx, sub)
+				err := l.svc.Store.User().ClearSubscribeCache(ctx, sub)
 				if err != nil {
 					logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
 						logger.Field("subscribeId", sub.SubscribeId),
@@ -597,7 +528,7 @@ func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscri
 		}
 
 		for sub, _ := range subs {
-			if err := l.svc.SubscribeModel.ClearCache(ctx, sub); err != nil {
+			if err := l.svc.Store.Subscribe().ClearCache(ctx, sub); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to clear subscription cache",
 					logger.Field("subscribeId", sub),
 					logger.Field("error", err.Error()),
@@ -615,36 +546,12 @@ func (l *ResetTrafficLogic) insertLog(ctx context.Context, subId, userId int64) 
 		Timestamp: time.Now().UnixMilli(),
 	}
 	content, _ := trafficLog.Marshal()
-	if err := l.svc.DB.WithContext(ctx).Model(&log.SystemLog{}).Create(&log.SystemLog{
+	if err := l.svc.Store.Log().Insert(ctx, &log.SystemLog{
 		Type:     log.TypeResetSubscribe.Uint8(),
 		ObjectID: subId,
 		Date:     time.Now().Format(time.DateOnly),
 		Content:  string(content),
-	}).Error; err != nil {
+	}); err != nil {
 		logger.Errorw("[ResetTraffic] Failed to create system log for subscription", logger.Field("error", err.Error()))
-	}
-}
-
-func extractDatePart(db *gorm.DB, part string) string {
-	if db.Dialector.Name() == "postgres" {
-		return fmt.Sprintf("EXTRACT(%s FROM expire_time)", part)
-	}
-	switch part {
-	case "month":
-		return "MONTH(expire_time)"
-	default:
-		return "DAY(expire_time)"
-	}
-}
-
-func expireDateAtLeast(db *gorm.DB, unit string) string {
-	if db.Dialector.Name() == "postgres" {
-		return fmt.Sprintf("DATE(expire_time) >= CURRENT_DATE + INTERVAL '1 %s'", unit)
-	}
-	switch unit {
-	case "year":
-		return "TIMESTAMPDIFF(YEAR, CURDATE(), DATE(expire_time)) >= 1"
-	default:
-		return "TIMESTAMPDIFF(MONTH, CURDATE(), DATE(expire_time)) >= 1"
 	}
 }

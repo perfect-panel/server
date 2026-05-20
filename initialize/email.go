@@ -15,7 +15,7 @@ import (
 // Email get email smtp config
 func Email(ctx *svc.ServiceContext) {
 	logger.Debug("Email config initialization")
-	method, err := ctx.AuthModel.FindOneByMethod(context.Background(), "email")
+	method, err := ctx.Store.Auth().FindOneByMethod(context.Background(), "email")
 	if err != nil {
 		panic(fmt.Sprintf("[Error] Initialization Failed to find email auth method: %v", err.Error()))
 	}
