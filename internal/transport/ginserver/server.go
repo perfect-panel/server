@@ -4,7 +4,6 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/handler"
 	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
@@ -12,8 +11,6 @@ import (
 )
 
 func New(svc *svc.ServiceContext) *gin.Engine {
-	initialize.StartInitSystemConfig(svc)
-
 	r := gin.Default()
 	r.RemoteIPHeaders = []string{"X-Original-Forwarded-For", "X-Forwarded-For", "X-Real-IP"}
 

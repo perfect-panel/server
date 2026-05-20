@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/transport/fiberserver"
 	"github.com/perfect-panel/server/internal/transport/ginserver"
@@ -33,9 +34,11 @@ func NewService(svc *svc.ServiceContext) *Service {
 }
 
 func newHTTPHandler(svc *svc.ServiceContext) http.Handler {
+	initialize.StartInitSystemConfig(svc)
+
 	switch strings.ToLower(svc.Config.Transport.Driver) {
 	case "fiber":
-		return fiberserver.NewHTTPHandler(svc)
+		return fiberserver.NewHTTPHandler(svc, ginserver.New(svc))
 	default:
 		return ginserver.New(svc)
 	}

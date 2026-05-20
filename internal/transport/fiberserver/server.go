@@ -8,7 +8,6 @@ import (
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
-	"github.com/perfect-panel/server/initialize"
 	serverlogic "github.com/perfect-panel/server/internal/logic/server"
 	subscribelogic "github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
@@ -20,20 +19,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-func New(svc *svc.ServiceContext) *fiber.App {
-	initialize.StartInitSystemConfig(svc)
-
+func New(svc *svc.ServiceContext, fallback ...http.Handler) *fiber.App {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
 	})
 
 	registerSubscribeHandlers(app, svc)
 	registerServerHandlers(app, svc)
+	if len(fallback) > 0 && fallback[0] != nil {
+		app.Use(adaptor.HTTPHandler(fallback[0]))
+	}
 	return app
 }
 
-func NewHTTPHandler(svc *svc.ServiceContext) http.Handler {
-	return adaptor.FiberApp(New(svc))
+func NewHTTPHandler(svc *svc.ServiceContext, fallback ...http.Handler) http.Handler {
+	return adaptor.FiberApp(New(svc, fallback...))
 }
 
 func registerSubscribeHandlers(app *fiber.App, svc *svc.ServiceContext) {
