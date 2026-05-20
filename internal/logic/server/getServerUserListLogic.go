@@ -1,14 +1,13 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/model/subscribe"
-
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -19,17 +18,25 @@ import (
 
 type GetServerUserListLogic struct {
 	logger.Logger
-	ctx    *gin.Context
-	svcCtx *svc.ServiceContext
+	ctx      context.Context
+	svcCtx   *svc.ServiceContext
+	request  RequestMeta
+	response ResponseMeta
 }
 
 // NewGetServerUserListLogic Get user list
-func NewGetServerUserListLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *GetServerUserListLogic {
+func NewGetServerUserListLogic(ctx context.Context, svcCtx *svc.ServiceContext, request RequestMeta) *GetServerUserListLogic {
 	return &GetServerUserListLogic{
-		Logger: logger.WithContext(ctx.Request.Context()),
-		ctx:    ctx,
-		svcCtx: svcCtx,
+		Logger:   logger.WithContext(ctx),
+		ctx:      ctx,
+		svcCtx:   svcCtx,
+		request:  request,
+		response: NewResponseMeta(),
 	}
+}
+
+func (l *GetServerUserListLogic) ResponseMeta() ResponseMeta {
+	return l.response
 }
 
 func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
@@ -39,10 +46,10 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		etag := tool.GenerateETag([]byte(cache))
 		resp = &types.GetServerUserListResponse{}
 		//  Check If-None-Match header
-		if match := l.ctx.GetHeader("If-None-Match"); match == etag {
+		if match := l.request.IfNoneMatch; match == etag {
 			return nil, xerr.StatusNotModified
 		}
-		l.ctx.Header("ETag", etag)
+		l.response.SetHeader("ETag", etag)
 		err = json.Unmarshal([]byte(cache), resp)
 		if err != nil {
 			l.Errorw("[ServerUserListCacheKey] json unmarshal error", logger.Field("error", err.Error()))
@@ -123,13 +130,13 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	}
 	val, _ := json.Marshal(resp)
 	etag := tool.GenerateETag(val)
-	l.ctx.Header("ETag", etag)
+	l.response.SetHeader("ETag", etag)
 	err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), -1).Err()
 	if err != nil {
 		l.Errorw("[ServerUserListCacheKey] redis set error", logger.Field("error", err.Error()))
 	}
 	//  Check If-None-Match header
-	if match := l.ctx.GetHeader("If-None-Match"); match == etag {
+	if match := l.request.IfNoneMatch; match == etag {
 		return nil, xerr.StatusNotModified
 	}
 	return resp, nil

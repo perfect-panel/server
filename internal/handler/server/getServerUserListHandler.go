@@ -22,8 +22,13 @@ func GetServerUserListHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 			return
 		}
 
-		l := server.NewGetServerUserListLogic(c, svcCtx)
+		l := server.NewGetServerUserListLogic(c.Request.Context(), svcCtx, server.RequestMeta{
+			IfNoneMatch: c.GetHeader("If-None-Match"),
+		})
 		resp, err := l.GetServerUserList(&req)
+		for key, value := range l.ResponseMeta().Headers {
+			c.Header(key, value)
+		}
 		if err != nil {
 			if errors.Is(err, xerr.StatusNotModified) {
 				c.String(304, "Not Modified")

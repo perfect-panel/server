@@ -1,13 +1,12 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/node"
-
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -17,17 +16,25 @@ import (
 
 type GetServerConfigLogic struct {
 	logger.Logger
-	ctx    *gin.Context
-	svcCtx *svc.ServiceContext
+	ctx      context.Context
+	svcCtx   *svc.ServiceContext
+	request  RequestMeta
+	response ResponseMeta
 }
 
 // NewGetServerConfigLogic Get server config
-func NewGetServerConfigLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *GetServerConfigLogic {
+func NewGetServerConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext, request RequestMeta) *GetServerConfigLogic {
 	return &GetServerConfigLogic{
-		Logger: logger.WithContext(ctx.Request.Context()),
-		ctx:    ctx,
-		svcCtx: svcCtx,
+		Logger:   logger.WithContext(ctx),
+		ctx:      ctx,
+		svcCtx:   svcCtx,
+		request:  request,
+		response: NewResponseMeta(),
 	}
+}
+
+func (l *GetServerConfigLogic) ResponseMeta() ResponseMeta {
+	return l.response
 }
 
 func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest) (resp *types.GetServerConfigResponse, err error) {
@@ -37,11 +44,11 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 		if cache != "" {
 			etag := tool.GenerateETag([]byte(cache))
 			//  Check If-None-Match header
-			match := l.ctx.GetHeader("If-None-Match")
+			match := l.request.IfNoneMatch
 			if match == etag {
 				return nil, xerr.StatusNotModified
 			}
-			l.ctx.Header("ETag", etag)
+			l.response.SetHeader("ETag", etag)
 			resp = &types.GetServerConfigResponse{}
 			err = json.Unmarshal([]byte(cache), resp)
 			if err != nil {
@@ -93,12 +100,12 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 		return nil, err
 	}
 	etag := tool.GenerateETag(c)
-	l.ctx.Header("ETag", etag)
+	l.response.SetHeader("ETag", etag)
 	if err = l.svcCtx.Redis.Set(l.ctx, cacheKey, c, -1).Err(); err != nil {
 		l.Errorw("[GetServerConfig] redis set error", logger.Field("error", err.Error()))
 	}
 	//  Check If-None-Match header
-	match := l.ctx.GetHeader("If-None-Match")
+	match := l.request.IfNoneMatch
 	if match == etag {
 		return nil, xerr.StatusNotModified
 	}

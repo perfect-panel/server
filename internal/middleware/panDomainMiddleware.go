@@ -8,8 +8,6 @@ import (
 	"github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/tool"
 )
 
 func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
@@ -20,35 +18,7 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			ua := c.GetHeader("User-Agent")
 
 			if svc.Config.Subscribe.UserAgentLimit {
-				if ua == "" {
-					c.String(http.StatusForbidden, "Access denied")
-					c.Abort()
-					return
-				}
-				browserKeywords := tool.RemoveDuplicateElements(strings.Split(svc.Config.Subscribe.UserAgentList, "\n")...)
-				var allow = false
-
-				// query client list
-				clients, err := svc.Store.Client().List(c.Request.Context())
-				if err != nil {
-					logger.Errorw("[PanDomainMiddleware] Query client list failed", logger.Field("error", err.Error()))
-				}
-				for _, item := range clients {
-					u := strings.ToLower(item.UserAgent)
-					u = strings.Trim(u, " ")
-					browserKeywords = append(browserKeywords, u)
-				}
-
-				for _, keyword := range browserKeywords {
-					keyword = strings.ToLower(strings.Trim(keyword, " "))
-					if keyword == "" {
-						continue
-					}
-					if strings.Contains(strings.ToLower(ua), keyword) {
-						allow = true
-					}
-				}
-				if !allow {
+				if !subscribe.IsUserAgentAllowed(c.Request.Context(), svc, ua) {
 					c.String(http.StatusForbidden, "Access denied")
 					c.Abort()
 					return
@@ -57,16 +27,31 @@ func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 
 			domain := c.Request.Host
 			domainArr := strings.Split(domain, ".")
+			if len(domainArr) < 2 {
+				c.String(http.StatusForbidden, "Access denied")
+				c.Abort()
+				return
+			}
 			domainFirst := domainArr[0]
 			request := types.SubscribeRequest{
 				Token: domainFirst,
 				Flag:  domainArr[1],
 				UA:    c.Request.Header.Get("User-Agent"),
 			}
-			l := subscribe.NewSubscribeLogic(c, svc)
+			l := subscribe.NewSubscribeLogic(c.Request.Context(), svc, subscribe.RequestMeta{
+				Host:       c.Request.Host,
+				RequestURI: c.Request.RequestURI,
+				UserAgent:  c.Request.UserAgent(),
+				ClientIP:   c.ClientIP(),
+			})
 			resp, err := l.Handler(&request)
 			if err != nil {
+				c.String(http.StatusInternalServerError, "Internal Server")
+				c.Abort()
 				return
+			}
+			for key, value := range resp.Headers {
+				c.Header(key, value)
 			}
 			c.Header("subscription-userinfo", resp.Header)
 			c.String(200, "%s", string(resp.Config))

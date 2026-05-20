@@ -46,46 +46,26 @@ func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 		}
 
 		if svcCtx.Config.Subscribe.UserAgentLimit {
-			if ua == "" {
-				c.String(http.StatusForbidden, "Access denied")
-				c.Abort()
-				return
-			}
-			clientUserAgents := tool.RemoveDuplicateElements(strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")...)
-
-			// query client list
-			clients, err := svcCtx.Store.Client().List(c.Request.Context())
-			if err != nil {
-				logger.Errorw("[PanDomainMiddleware] Query client list failed", logger.Field("error", err.Error()))
-			}
-			for _, item := range clients {
-				u := strings.ToLower(item.UserAgent)
-				u = strings.Trim(u, " ")
-				clientUserAgents = append(clientUserAgents, u)
-			}
-
-			var allow = false
-			for _, keyword := range clientUserAgents {
-				keyword = strings.Trim(keyword, " ")
-				if keyword == "" {
-					continue
-				}
-				if strings.Contains(strings.ToLower(ua), strings.ToLower(keyword)) {
-					allow = true
-				}
-			}
-			if !allow {
+			if !subscribe.IsUserAgentAllowed(c.Request.Context(), svcCtx, ua) {
 				c.String(http.StatusForbidden, "Access denied")
 				c.Abort()
 				return
 			}
 		}
 
-		l := subscribe.NewSubscribeLogic(c, svcCtx)
+		l := subscribe.NewSubscribeLogic(c.Request.Context(), svcCtx, subscribe.RequestMeta{
+			Host:       c.Request.Host,
+			RequestURI: c.Request.RequestURI,
+			UserAgent:  c.Request.UserAgent(),
+			ClientIP:   c.ClientIP(),
+		})
 		resp, err := l.Handler(&req)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Internal Server")
 			return
+		}
+		for key, value := range resp.Headers {
+			c.Header(key, value)
 		}
 		c.Header("subscription-userinfo", resp.Header)
 		c.String(200, "%s", string(resp.Config))

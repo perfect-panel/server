@@ -3,10 +3,9 @@ package middleware
 import (
 	"context"
 
-	"github.com/perfect-panel/server/pkg/constant"
-
 	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/constant"
 )
 
 type PaymentParams struct {
@@ -16,7 +15,6 @@ type PaymentParams struct {
 
 func NotifyMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
 		var params PaymentParams
 		// Get platform and token from uri
 		if err := c.ShouldBindUri(&params); err != nil {
@@ -24,15 +22,23 @@ func NotifyMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		config, err := svc.Store.Payment().FindOneByPaymentToken(ctx, params.Token)
+		ctx, err := PaymentNotifyContext(c.Request.Context(), svc, params.Token)
 		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
-		ctx = context.WithValue(ctx, constant.CtxKeyPlatform, config.Platform)
-		ctx = context.WithValue(ctx, constant.CtxKeyPayment, config)
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
+}
+
+func PaymentNotifyContext(ctx context.Context, svc *svc.ServiceContext, token string) (context.Context, error) {
+	config, err := svc.Store.Payment().FindOneByPaymentToken(ctx, token)
+	if err != nil {
+		return ctx, err
+	}
+	ctx = context.WithValue(ctx, constant.CtxKeyPlatform, config.Platform)
+	ctx = context.WithValue(ctx, constant.CtxKeyPayment, config)
+	return ctx, nil
 }
