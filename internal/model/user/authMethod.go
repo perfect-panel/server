@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"errors"
 
 	"github.com/perfect-panel/server/pkg/logger"
 	"gorm.io/gorm"
@@ -82,6 +83,18 @@ func (m *defaultUserModel) DeleteUserAuthMethods(ctx context.Context, userId int
 		}
 		return conn.Model(&AuthMethods{}).Where("user_id = ? AND auth_type = ?", userId, platform).Delete(&AuthMethods{}).Error
 	})
+}
+
+func (m *defaultUserModel) UpsertUserAuthMethod(ctx context.Context, data *AuthMethods) error {
+	current, err := m.FindUserAuthMethodByPlatform(ctx, data.UserId, data.AuthType)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return m.InsertUserAuthMethods(ctx, data)
+		}
+		return err
+	}
+	current.AuthIdentifier = data.AuthIdentifier
+	return m.UpdateUserAuthMethods(ctx, current)
 }
 
 func (m *defaultUserModel) FindUserAuthMethodByUserId(ctx context.Context, method string, userId int64) (*AuthMethods, error) {

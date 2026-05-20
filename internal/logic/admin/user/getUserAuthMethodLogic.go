@@ -27,7 +27,7 @@ func NewGetUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *GetUserAuthMethodLogic) GetUserAuthMethod(req *types.GetUserAuthMethodRequest) (resp *types.GetUserAuthMethodResponse, err error) {
-	methods, err := l.svcCtx.UserModel.FindUserAuthMethods(l.ctx, req.UserId)
+	methods, err := l.svcCtx.Store.User().FindUserAuthMethods(l.ctx, req.UserId)
 	if err != nil {
 		l.Errorw("[GetUserAuthMethodLogic] Get User Auth Method Error:", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get User Auth Method Error")

@@ -97,6 +97,7 @@ type customUserLogicModel interface {
 	InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	UpdateUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	DeleteUserAuthMethods(ctx context.Context, userId int64, platform string, tx ...*gorm.DB) error
+	UpsertUserAuthMethod(ctx context.Context, data *AuthMethods) error
 	FindUserAuthMethodByOpenID(ctx context.Context, method, openID string) (*AuthMethods, error)
 	FindUserAuthMethodByUserId(ctx context.Context, method string, userId int64) (*AuthMethods, error)
 	FindUserAuthMethodByPlatform(ctx context.Context, userId int64, platform string) (*AuthMethods, error)

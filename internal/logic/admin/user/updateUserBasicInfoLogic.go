@@ -31,7 +31,7 @@ func NewUpdateUserBasicInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasiceInfoRequest) error {
-	userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, req.UserId)
+	userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, req.UserId)
 	if err != nil {
 		l.Errorw("[UpdateUserBasicInfoLogic] Find User Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Find User Error")
@@ -54,7 +54,7 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 		}
 		content, _ := balanceLog.Marshal()
 
-		err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+		err = l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 			Type:     log.TypeBalance.Uint8(),
 			Date:     time.Now().Format(time.DateOnly),
 			ObjectID: userInfo.Id,
@@ -85,7 +85,7 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 			}
 			content, _ := giftLog.Marshal()
 			// Add gift amount change log
-			err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			err = l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				Date:     time.Now().Format(time.DateOnly),
 				ObjectID: userInfo.Id,
@@ -108,7 +108,7 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 		}
 
 		content, _ := commentLog.Marshal()
-		err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+		err = l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 			Type:     log.TypeCommission.Uint8(),
 			Date:     time.Now().Format(time.DateOnly),
 			ObjectID: userInfo.Id,
@@ -132,7 +132,7 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 		userInfo.Algo = "default"
 	}
 
-	err = l.svcCtx.UserModel.Update(l.ctx, userInfo)
+	err = l.svcCtx.Store.User().Update(l.ctx, userInfo)
 	if err != nil {
 		l.Errorw("[UpdateUserBasicInfoLogic] Update User Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Update User Error")

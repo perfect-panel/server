@@ -26,12 +26,12 @@ func NewUpdateUserDeviceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *UpdateUserDeviceLogic) UpdateUserDevice(req *types.UserDevice) error {
-	device, err := l.svcCtx.UserModel.FindOneDevice(l.ctx, req.Id)
+	device, err := l.svcCtx.Store.User().FindOneDevice(l.ctx, req.Id)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get Device  error: %v", err.Error())
 	}
 	device.Enabled = req.Enabled
-	err = l.svcCtx.UserModel.UpdateDevice(l.ctx, device)
+	err = l.svcCtx.Store.User().UpdateDevice(l.ctx, device)
 	if err != nil {
 		l.Logger.Error("[UpdateUserDeviceLogic] Update Device Error:", logger.Field("err", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update Device error: %v", err.Error())

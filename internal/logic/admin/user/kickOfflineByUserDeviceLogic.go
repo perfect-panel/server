@@ -26,13 +26,13 @@ func NewKickOfflineByUserDeviceLogic(ctx context.Context, svcCtx *svc.ServiceCon
 }
 
 func (l *KickOfflineByUserDeviceLogic) KickOfflineByUserDevice(req *types.KickOfflineRequest) error {
-	device, err := l.svcCtx.UserModel.FindOneDevice(l.ctx, req.Id)
+	device, err := l.svcCtx.Store.User().FindOneDevice(l.ctx, req.Id)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get Device  error: %v", err.Error())
 	}
 	l.svcCtx.DeviceManager.KickDevice(device.UserId, device.Identifier)
 	device.Online = false
-	err = l.svcCtx.UserModel.UpdateDevice(l.ctx, device)
+	err = l.svcCtx.Store.User().UpdateDevice(l.ctx, device)
 	if err != nil {
 		l.Logger.Error("[KickOfflineByUserDeviceLogic] Update Device Error:", logger.Field("err", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update Device error: %v", err.Error())
