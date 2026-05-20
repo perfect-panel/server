@@ -40,7 +40,7 @@ func (l *FilterSubscribeLogLogic) FilterSubscribeLog(req *types.FilterSubscribeL
 		params.Search = `"user_subscribe_id":` + strconv.FormatInt(req.UserSubscribeId, 10)
 	}
 
-	data, total, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, params)
+	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, params)
 	if err != nil {
 		l.Errorf("[FilterSubscribeLog] failed to filter system log: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log")

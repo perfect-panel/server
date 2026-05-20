@@ -86,7 +86,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 
 		need := endIdx - todayTotal
 		historyPage := (need + req.Size - 1) / req.Size // 算出需要的历史页数
-		historyData, historyTotal, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{
+		historyData, historyTotal, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 			Page: historyPage,
 			Size: need,
 			Type: log.TypeSubscribeTraffic.Uint8(),
@@ -126,7 +126,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 		}, nil
 	}
 	var data []*log.SystemLog
-	data, total, err = l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{
+	data, total, err = l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page: req.Page,
 		Size: req.Size,
 		Type: log.TypeSubscribeTraffic.Uint8(),
