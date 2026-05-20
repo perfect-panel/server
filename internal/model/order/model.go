@@ -51,6 +51,7 @@ type OrdersTotalWithDate struct {
 
 type customOrderLogicModel interface {
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
+	CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error)
 	QueryOrderListByPage(ctx context.Context, page, size int, status uint8, user, subscribe int64, search string) (int64, []*Details, error)
 	FindOneDetails(ctx context.Context, id int64) (*Details, error)
 	FindOneDetailsByOrderNo(ctx context.Context, orderNo string) (*Details, error)
@@ -76,6 +77,14 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 	return &customOrderModel{
 		defaultOrderModel: newOrderModel(conn, c),
 	}
+}
+
+func (m *customOrderModel) CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error) {
+	var count int64
+	err := m.QueryNoCacheCtx(ctx, &count, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Order{}).Where("user_id = ? AND coupon = ?", userID, coupon).Count(&count).Error
+	})
+	return count, err
 }
 
 // QueryOrderListByPage Query order list by page

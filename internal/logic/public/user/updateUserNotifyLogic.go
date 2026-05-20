@@ -41,7 +41,7 @@ func (l *UpdateUserNotifyLogic) UpdateUserNotify(req *types.UpdateUserNotifyRequ
 	u.EnableBalanceNotify = req.EnableBalanceNotify
 	u.EnableSubscribeNotify = req.EnableSubscribeNotify
 	u.EnableTradeNotify = req.EnableTradeNotify
-	if err := l.svcCtx.UserModel.Update(l.ctx, u); err != nil {
+	if err := l.svcCtx.Store.User().Update(l.ctx, u); err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "update user notify error: %v", err.Error())
 	}
 	return nil

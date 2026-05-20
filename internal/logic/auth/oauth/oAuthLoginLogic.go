@@ -58,7 +58,7 @@ func (l *OAuthLoginLogic) OAuthLogin(req *types.OAthLoginRequest) (resp *types.O
 }
 
 func (l *OAuthLoginLogic) google(req *types.OAthLoginRequest) (string, error) {
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "google")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "google")
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +88,7 @@ func (l *OAuthLoginLogic) facebook() (string, error) {
 	return "", nil
 }
 func (l *OAuthLoginLogic) apple(req *types.OAthLoginRequest) (string, error) {
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "apple")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "apple")
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +112,7 @@ func (l *OAuthLoginLogic) github() (string, error) {
 	return "", nil
 }
 func (l *OAuthLoginLogic) telegram(req *types.OAthLoginRequest) (string, error) {
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "telegram")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "telegram")
 	if err != nil {
 		return "", err
 	}

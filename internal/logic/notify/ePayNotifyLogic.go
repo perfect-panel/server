@@ -1,49 +1,57 @@
 package notify
 
 import (
+	"context"
 	"encoding/json"
-
-	"github.com/perfect-panel/server/pkg/constant"
-
-	"github.com/perfect-panel/server/pkg/xerr"
-	"github.com/pkg/errors"
-
-	"github.com/gin-gonic/gin"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/payment"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment/epay"
+	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/pkg/errors"
 
 	queueType "github.com/perfect-panel/server/queue/types"
 )
 
 type EPayNotifyLogic struct {
 	logger.Logger
-	ctx    *gin.Context
+	ctx    context.Context
 	svcCtx *svc.ServiceContext
+	meta   EPayNotifyMeta
+}
+
+type EPayNotifyMeta struct {
+	Method string
+	Params map[string]string
 }
 
 // EPay notify
-func NewEPayNotifyLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *EPayNotifyLogic {
+func NewEPayNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext, meta EPayNotifyMeta) *EPayNotifyLogic {
+	if meta.Params == nil {
+		meta.Params = make(map[string]string)
+	}
 	return &EPayNotifyLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
 		svcCtx: svcCtx,
+		meta:   meta,
 	}
 }
 
 func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
+	store := l.svcCtx.Store
 	// Find payment config
-	data, ok := l.ctx.Request.Context().Value(constant.CtxKeyPayment).(*payment.Payment)
+	data, ok := l.ctx.Value(constant.CtxKeyPayment).(*payment.Payment)
 	if !ok {
 		l.Logger.Error("[EPayNotify] Payment not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "payment config not found")
 	}
 
-	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, req.OutTradeNo)
+	orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, req.OutTradeNo)
 	if err != nil {
 		l.Logger.Error("[EPayNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OutTradeNo))
 		return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", req.OutTradeNo)
@@ -55,25 +63,12 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 		return err
 	}
 
-	// Verify sign: must include all parameters from both Query and Body (Form)
-	if err := l.ctx.Request.ParseForm(); err != nil {
-		l.Logger.Errorw("[EPayNotify] ParseForm failed", logger.Field("error", err.Error()))
-	}
-
-	params := make(map[string]string)
-	// Collect GET and POST parameters
-	for k, v := range l.ctx.Request.Form {
-		if len(v) > 0 {
-			params[k] = v[0]
-		}
-	}
-
 	client := epay.NewClient(config.Pid, config.Url, config.Key, config.Type)
-	if !client.VerifySign(params) && !l.svcCtx.Config.Debug {
+	if !client.VerifySign(l.meta.Params) && !l.svcCtx.Config.Debug {
 		l.Logger.Error("[EPayNotify] Verify sign failed",
 			logger.Field("orderNo", req.OutTradeNo),
-			logger.Field("receivedParams", params),
-			logger.Field("method", l.ctx.Request.Method),
+			logger.Field("receivedParams", l.meta.Params),
+			logger.Field("method", l.meta.Method),
 		)
 		return errors.New("verify sign failed")
 	}
@@ -86,7 +81,7 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 		return nil
 	}
 	// Update order status
-	err = l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, req.OutTradeNo, 2)
+	err = store.Order().UpdateOrderStatus(l.ctx, req.OutTradeNo, 2)
 	if err != nil {
 		l.Logger.Error("[EPayNotify] Update order status failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OutTradeNo))
 		return err

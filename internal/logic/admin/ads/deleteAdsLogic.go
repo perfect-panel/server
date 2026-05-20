@@ -26,7 +26,7 @@ func NewDeleteAdsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DeleteA
 }
 
 func (l *DeleteAdsLogic) DeleteAds(req *types.DeleteAdsRequest) error {
-	if err := l.svcCtx.AdsModel.Delete(l.ctx, req.Id); err != nil {
+	if err := l.svcCtx.Store.Ads().Delete(l.ctx, req.Id); err != nil {
 		l.Errorw("delete ads error", logger.Field("error", err.Error()), logger.Field("id", req.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete ads error: %v", err.Error())
 	}

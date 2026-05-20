@@ -61,7 +61,7 @@ func (l *UpdateBindMobileLogic) UpdateBindMobile(req *types.UpdateBindMobileRequ
 	}
 	l.svcCtx.Redis.Del(l.ctx, cacheKey)
 
-	m, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "mobile", req.Mobile)
+	m, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", req.Mobile)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}
@@ -69,7 +69,7 @@ func (l *UpdateBindMobileLogic) UpdateBindMobile(req *types.UpdateBindMobileRequ
 		return errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "mobile already bind")
 	}
 
-	method, err := l.svcCtx.UserModel.FindUserAuthMethodByUserId(l.ctx, "mobile", u.Id)
+	method, err := l.svcCtx.Store.User().FindUserAuthMethodByUserId(l.ctx, "mobile", u.Id)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}
@@ -80,13 +80,13 @@ func (l *UpdateBindMobileLogic) UpdateBindMobile(req *types.UpdateBindMobileRequ
 			AuthIdentifier: req.Mobile,
 			Verified:       true,
 		}
-		if err := l.svcCtx.UserModel.InsertUserAuthMethods(l.ctx, method); err != nil {
+		if err := l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, method); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "InsertUserAuthMethods error")
 		}
 	} else {
 		method.Verified = true
 		method.AuthIdentifier = req.Mobile
-		if err := l.svcCtx.UserModel.UpdateUserAuthMethods(l.ctx, method); err != nil {
+		if err := l.svcCtx.Store.User().UpdateUserAuthMethods(l.ctx, method); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "UpdateUserAuthMethods error")
 		}
 	}

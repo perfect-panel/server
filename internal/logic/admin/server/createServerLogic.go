@@ -101,7 +101,7 @@ func (l *CreateServerLogic) CreateServer(req *types.CreateServerRequest) error {
 			data.Country = result.Country
 		}
 	}
-	err = l.svcCtx.NodeModel.InsertServer(l.ctx, &data)
+	err = l.svcCtx.Store.Node().InsertServer(l.ctx, &data)
 	if err != nil {
 		l.Errorf("[CreateServer] Insert Server error: %v", err.Error())
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert server error: %v", err)

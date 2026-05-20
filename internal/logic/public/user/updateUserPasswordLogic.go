@@ -34,7 +34,7 @@ func (l *UpdateUserPasswordLogic) UpdateUserPassword(req *types.UpdateUserPasswo
 	userInfo := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	//update the password
 	userInfo.Password = tool.EncodePassWord(req.Password)
-	if err := l.svcCtx.UserModel.Update(l.ctx, userInfo); err != nil {
+	if err := l.svcCtx.Store.User().Update(l.ctx, userInfo); err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Update user password error")
 	}
 	return nil

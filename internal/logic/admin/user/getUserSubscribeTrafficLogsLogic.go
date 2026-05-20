@@ -28,7 +28,7 @@ func NewGetUserSubscribeTrafficLogsLogic(ctx context.Context, svcCtx *svc.Servic
 }
 
 func (l *GetUserSubscribeTrafficLogsLogic) GetUserSubscribeTrafficLogs(req *types.GetUserSubscribeTrafficLogsRequest) (resp *types.GetUserSubscribeTrafficLogsResponse, err error) {
-	list, total, err := l.svcCtx.TrafficLogModel.QueryTrafficLogPageList(l.ctx, req.UserId, req.SubscribeId, req.Page, req.Size)
+	list, total, err := l.svcCtx.Store.TrafficLog().QueryTrafficLogPageList(l.ctx, req.UserId, req.SubscribeId, req.Page, req.Size)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetUserSubscribeTrafficLogs failed: %v", err.Error())
 	}

@@ -12,6 +12,7 @@ type Config struct {
 	Host          string          `yaml:"Host" default:"0.0.0.0"`
 	Port          int             `yaml:"Port" default:"8080"`
 	Debug         bool            `yaml:"Debug" default:"false"`
+	Transport     TransportConfig `yaml:"Transport"`
 	TLS           TLS             `yaml:"TLS"`
 	JwtAuth       JwtAuth         `yaml:"JwtAuth"`
 	Logger        logger.LogConf  `yaml:"Logger"`
@@ -41,6 +42,10 @@ type RedisConfig struct {
 	Host string `yaml:"Host" default:"localhost:6379"`
 	Pass string `yaml:"Pass" default:""`
 	DB   int    `yaml:"DB" default:"0"`
+}
+
+type TransportConfig struct {
+	Driver string `yaml:"Driver" default:"hertz"`
 }
 
 type JwtAuth struct {
@@ -173,12 +178,35 @@ func (n *NodeDNS) Unmarshal(data []byte) error {
 }
 
 type NodeOutbound struct {
-	Name     string   `json:"name"`
-	Protocol string   `json:"protocol"`
-	Address  string   `json:"address"`
-	Port     int64    `json:"port"`
-	Password string   `json:"password"`
-	Rules    []string `json:"rules"`
+	Name                 string   `json:"name"`
+	Protocol             string   `json:"protocol"`
+	Address              string   `json:"address"`
+	Port                 int64    `json:"port"`
+	User                 string   `json:"user,omitempty"`
+	Password             string   `json:"password"`
+	UUID                 string   `json:"uuid,omitempty"`
+	Cipher               string   `json:"cipher,omitempty"`
+	Security             string   `json:"security,omitempty"`
+	SNI                  string   `json:"sni,omitempty"`
+	AllowInsecure        bool     `json:"allow_insecure,omitempty"`
+	Fingerprint          string   `json:"fingerprint,omitempty"`
+	Transport            string   `json:"transport,omitempty"`
+	Host                 string   `json:"host,omitempty"`
+	Path                 string   `json:"path,omitempty"`
+	ServiceName          string   `json:"service_name,omitempty"`
+	Flow                 string   `json:"flow,omitempty"`
+	UoT                  bool     `json:"uot,omitempty"`
+	UoTVersion           int      `json:"uot_version,omitempty"`
+	CongestionController string   `json:"congestion_controller,omitempty"`
+	UDPStream            bool     `json:"udp_stream,omitempty"`
+	ReduceRtt            bool     `json:"reduce_rtt,omitempty"`
+	Heartbeat            int      `json:"heartbeat,omitempty"`
+	RealityPublicKey     string   `json:"reality_public_key,omitempty"`
+	RealityShortId       string   `json:"reality_short_id,omitempty"`
+	SpiderX              string   `json:"spider_x,omitempty"`
+	Settings             string   `json:"settings,omitempty"`
+	StreamSettings       string   `json:"stream_settings,omitempty"`
+	Rules                []string `json:"rules"`
 }
 
 func (n *NodeOutbound) Marshal() ([]byte, error) {
@@ -191,15 +219,16 @@ func (n *NodeOutbound) Marshal() ([]byte, error) {
 }
 
 type File struct {
-	Host     string         `yaml:"Host" default:"0.0.0.0"`
-	Port     int            `yaml:"Port" default:"8080"`
-	TLS      TLS            `yaml:"TLS"`
-	Debug    bool           `yaml:"Debug" default:"true"`
-	JwtAuth  JwtAuth        `yaml:"JwtAuth"`
-	Logger   logger.LogConf `yaml:"Logger"`
-	Database orm.Config     `yaml:"Database"`
-	MySQL    *orm.Config    `yaml:"MySQL,omitempty"` // Deprecated: use Database.
-	Redis    RedisConfig    `yaml:"Redis"`
+	Host      string          `yaml:"Host" default:"0.0.0.0"`
+	Port      int             `yaml:"Port" default:"8080"`
+	Transport TransportConfig `yaml:"Transport"`
+	TLS       TLS             `yaml:"TLS"`
+	Debug     bool            `yaml:"Debug" default:"true"`
+	JwtAuth   JwtAuth         `yaml:"JwtAuth"`
+	Logger    logger.LogConf  `yaml:"Logger"`
+	Database  orm.Config      `yaml:"Database"`
+	MySQL     *orm.Config     `yaml:"MySQL,omitempty"` // Deprecated: use Database.
+	Redis     RedisConfig     `yaml:"Redis"`
 }
 
 func (c Config) DatabaseConfig() orm.Config {

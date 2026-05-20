@@ -27,7 +27,7 @@ func NewGetUserSubscribeResetTrafficLogsLogic(ctx context.Context, svcCtx *svc.S
 }
 
 func (l *GetUserSubscribeResetTrafficLogsLogic) GetUserSubscribeResetTrafficLogs(req *types.GetUserSubscribeResetTrafficLogsRequest) (resp *types.GetUserSubscribeResetTrafficLogsResponse, err error) {
-	data, total, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{
+	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
 		Type:     log.TypeResetSubscribe.Uint8(),

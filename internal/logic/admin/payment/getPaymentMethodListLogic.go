@@ -31,7 +31,7 @@ func NewGetPaymentMethodListLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *types.GetPaymentMethodListRequest) (resp *types.GetPaymentMethodListResponse, err error) {
-	total, list, err := l.svcCtx.PaymentModel.FindListByPage(l.ctx, req.Page, req.Size, &payment.Filter{
+	total, list, err := l.svcCtx.Store.Payment().FindListByPage(l.ctx, req.Page, req.Size, &payment.Filter{
 		Search: req.Search,
 		Mark:   req.Platform,
 		Enable: req.Enable,

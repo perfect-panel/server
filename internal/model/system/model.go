@@ -20,6 +20,7 @@ type customSystemLogicModel interface {
 	GetCurrencyConfig(ctx context.Context) ([]*System, error)
 	GetVerifyCodeConfig(ctx context.Context) ([]*System, error)
 	GetLogConfig(ctx context.Context) ([]*System, error)
+	UpdateValueByCategoryKey(ctx context.Context, category, key, value string) error
 	UpdateNodeMultiplierConfig(ctx context.Context, config string) error
 	FindNodeMultiplierConfig(ctx context.Context) (*System, error)
 }
@@ -128,6 +129,14 @@ func (m *customSystemModel) GetCurrencyConfig(ctx context.Context) ([]*System, e
 		return conn.Where("category = ?", "currency").Find(v).Error
 	})
 	return configs, err
+}
+
+func (m *customSystemModel) UpdateValueByCategoryKey(ctx context.Context, category, key, value string) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&System{}).
+			Scopes(WhereCategoryKey(category, key)).
+			Update("value", value).Error
+	})
 }
 
 func (m *customSystemModel) UpdateNodeMultiplierConfig(ctx context.Context, config string) error {

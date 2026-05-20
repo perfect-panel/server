@@ -9,14 +9,12 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/model/traffic"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 const consoleServerTotalDataCacheKey = "console:server_total_data"
@@ -55,16 +53,15 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	todayEnd := todayStart.Add(24 * time.Hour)
-	query := l.svcCtx.DB.WithContext(l.ctx)
+	trafficStore := l.svcCtx.Store.TrafficLog()
+	logStore := l.svcCtx.Store.Log()
+	nodeStore := l.svcCtx.Store.Node()
 
 	// Parallelize three traffic_log queries to reduce latency
 	var (
-		todayTop10User   []log.UserTraffic
-		todayTop10Server []log.ServerTraffic
-		todayTraffic     struct {
-			Upload   int64
-			Download int64
-		}
+		todayTop10User                 []traffic.UserTrafficRanking
+		todayTop10Server               []traffic.ServerTrafficRanking
+		todayTraffic                   *traffic.TotalTraffic
 		userErr, serverErr, trafficErr error
 		wg                             sync.WaitGroup
 	)
@@ -74,47 +71,32 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	// Query 1: Today's top 10 users by traffic
 	go func() {
 		defer wg.Done()
-		userErr = query.Model(&traffic.TrafficLog{}).
-			Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-			Where("timestamp >= ? AND timestamp < ?", todayStart, todayEnd).
-			Group("user_id, subscribe_id").
-			Order("total DESC").
-			Limit(10).
-			Scan(&todayTop10User).Error
+		todayTop10User, userErr = trafficStore.TopUsersTrafficByDay(l.ctx, now, 10)
 	}()
 
 	// Query 2: Today's top 10 servers by traffic
 	go func() {
 		defer wg.Done()
-		serverErr = query.Model(&traffic.TrafficLog{}).
-			Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-			Where("timestamp >= ? AND timestamp < ?", todayStart, todayEnd).
-			Group("server_id").
-			Order("total DESC").
-			Limit(10).
-			Scan(&todayTop10Server).Error
+		todayTop10Server, serverErr = trafficStore.TopServersTrafficByDay(l.ctx, now, 10)
 	}()
 
 	// Query 3: Today's total upload/download
 	go func() {
 		defer wg.Done()
-		trafficErr = query.Model(&traffic.TrafficLog{}).
-			Select("COALESCE(SUM(upload), 0) AS upload, COALESCE(SUM(download), 0) AS download").
-			Where("timestamp >= ? AND timestamp < ?", todayStart, todayEnd).
-			Scan(&todayTraffic).Error
+		todayTraffic, trafficErr = trafficStore.QueryTrafficSummary(l.ctx, todayStart, todayEnd)
 	}()
 
 	wg.Wait()
 
-	if userErr != nil && !errors.Is(userErr, gorm.ErrRecordNotFound) {
+	if userErr != nil {
 		logger.Errorf("[QueryServerTotalData] Query user traffic failed: %v", userErr.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query user traffic failed: %v", userErr.Error())
 	}
-	if serverErr != nil && !errors.Is(serverErr, gorm.ErrRecordNotFound) {
+	if serverErr != nil {
 		logger.Errorf("[QueryServerTotalData] Query server traffic failed: %v", serverErr.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query server traffic failed: %v", serverErr.Error())
 	}
-	if trafficErr != nil && !errors.Is(trafficErr, gorm.ErrRecordNotFound) {
+	if trafficErr != nil {
 		logger.Errorf("[QueryServerTotalData] Sum today traffic failed: %v", trafficErr.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Sum today traffic failed: %v", trafficErr.Error())
 	}
@@ -132,15 +114,14 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	// Query yesterday user traffic rank log
 	yesterday := todayStart.Add(-24 * time.Hour).Format(time.DateOnly)
 
-	var yesterdayLog log.SystemLog
-	err = query.Model(&log.SystemLog{}).Where("date = ? AND type = ?", yesterday, log.TypeUserTrafficRank).First(&yesterdayLog).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	yesterdayLog, err := logStore.FindFirstByDateType(l.ctx, yesterday, log.TypeUserTrafficRank.Uint8())
+	if err != nil {
 		l.Errorw("[QueryServerTotalDataLogic] Query yesterday user traffic rank log error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday user traffic rank log error: %v", err)
 	}
 
 	var yesterdayUserRankData []types.UserTrafficData
-	if yesterdayLog.Id > 0 {
+	if yesterdayLog != nil {
 		var rank log.UserTrafficRank
 		err = rank.Unmarshal([]byte(yesterdayLog.Content))
 		if err != nil {
@@ -161,23 +142,22 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		serverIDs = append(serverIDs, item.ServerId)
 	}
 
-	serverMap := make(map[int64]*node.Server)
+	serverMap := make(map[int64]string)
 	if len(serverIDs) > 0 {
-		var servers []*node.Server
-		err = query.Model(&node.Server{}).Where("id IN ?", serverIDs).Find(&servers).Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		servers, err := nodeStore.QueryServerList(l.ctx, serverIDs)
+		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] Batch fetch servers error", logger.Field("error", err.Error()))
 		}
 		for _, s := range servers {
-			serverMap[s.Id] = s
+			serverMap[s.Id] = s.Name
 		}
 	}
 
 	var todayServerRanking []types.ServerTrafficData
 	for _, item := range todayTop10Server {
 		name := ""
-		if s, ok := serverMap[item.ServerId]; ok {
-			name = s.Name
+		if serverName, ok := serverMap[item.ServerId]; ok {
+			name = serverName
 		}
 		todayServerRanking = append(todayServerRanking, types.ServerTrafficData{
 			ServerId: item.ServerId,
@@ -189,13 +169,12 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 
 	// Query yesterday server traffic rank
 	var yesterdayTop10Server []types.ServerTrafficData
-	var yesterdayServerTrafficLog log.SystemLog
-	err = query.Model(&log.SystemLog{}).Where("date = ? AND type = ?", yesterday, log.TypeServerTrafficRank).First(&yesterdayServerTrafficLog).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	yesterdayServerTrafficLog, err := logStore.FindFirstByDateType(l.ctx, yesterday, log.TypeServerTrafficRank.Uint8())
+	if err != nil {
 		l.Errorw("[QueryServerTotalDataLogic] Query yesterday server traffic rank log error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday server traffic rank log error: %v", err)
 	}
-	if yesterdayServerTrafficLog.Id > 0 {
+	if yesterdayServerTrafficLog != nil {
 		var rank log.ServerTrafficRank
 		err = rank.Unmarshal([]byte(yesterdayServerTrafficLog.Content))
 		if err != nil {
@@ -210,18 +189,17 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 			}
 		}
 		if len(yesterdayServerIDs) > 0 {
-			var extraServers []*node.Server
-			if err := query.Model(&node.Server{}).Where("id IN ?", yesterdayServerIDs).Find(&extraServers).Error; err == nil {
+			if extraServers, err := nodeStore.QueryServerList(l.ctx, yesterdayServerIDs); err == nil {
 				for _, s := range extraServers {
-					serverMap[s.Id] = s
+					serverMap[s.Id] = s.Name
 				}
 			}
 		}
 
 		for _, v := range rank.Rank {
 			name := ""
-			if s, ok := serverMap[v.ServerId]; ok {
-				name = s.Name
+			if serverName, ok := serverMap[v.ServerId]; ok {
+				name = serverName
 			}
 			yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
 				ServerId: v.ServerId,
@@ -233,24 +211,17 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	}
 
 	// Query online user count
-	onlineUsers, err := l.svcCtx.NodeModel.OnlineUserSubscribeGlobal(l.ctx)
+	onlineUsers, err := l.svcCtx.Store.Node().OnlineUserSubscribeGlobal(l.ctx)
 	if err != nil {
 		l.Errorw("[QueryServerTotalDataLogic] OnlineUserSubscribeGlobal error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "OnlineUserSubscribeGlobal error: %v", err)
 	}
 
 	// Query online/offline server count
-	var onlineServers, offlineServers int64
-	err = query.Model(&node.Server{}).Where("last_reported_at > ?", now.Add(-5*time.Minute)).Count(&onlineServers).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	onlineServers, offlineServers, err := nodeStore.CountServersByReportStatus(l.ctx, now.Add(-5*time.Minute))
+	if err != nil {
 		l.Errorw("[QueryServerTotalDataLogic] Count online servers error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count online servers error: %v", err)
-	}
-
-	err = query.Model(&node.Server{}).Where("last_reported_at <= ? OR last_reported_at IS NULL", now.Add(-5*time.Minute)).Count(&offlineServers).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		l.Errorw("[QueryServerTotalDataLogic] Count offline servers error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Count offline servers error: %v", err)
 	}
 
 	// Monthly traffic: today's real-time data + archived daily stats for previous days
@@ -268,11 +239,8 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 			dates = append(dates, d)
 		}
 
-		var dailyLogs []log.SystemLog
-		err = query.Model(&log.SystemLog{}).
-			Where("date IN ? AND type = ?", dates, log.TypeTrafficStat).
-			Find(&dailyLogs).Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		dailyLogs, err := logStore.FindByDatesType(l.ctx, dates, log.TypeTrafficStat.Uint8())
+		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] Batch query daily traffic stats error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Batch query daily traffic stats error: %v", err)
 		}

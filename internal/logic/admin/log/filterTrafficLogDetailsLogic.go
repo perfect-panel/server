@@ -43,22 +43,15 @@ func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.Filter
 		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		end = start.Add(24*time.Hour - time.Nanosecond)
 	}
-	var data []*traffic.TrafficLog
-	tx := l.svcCtx.DB.WithContext(l.ctx).Model(&traffic.TrafficLog{})
-	if req.ServerId != 0 {
-		tx = tx.Where("server_id = ?", req.ServerId)
-	}
-	if !start.IsZero() && !end.IsZero() {
-		tx = tx.Where("timestamp BETWEEN ? AND ?", start, end)
-	}
-	if req.UserId != 0 {
-		tx = tx.Where("user_id = ?", req.UserId)
-	}
-	if req.SubscribeId != 0 {
-		tx = tx.Where("subscribe_id = ?", req.SubscribeId)
-	}
-	var total int64
-	err = tx.Count(&total).Limit(req.Size).Offset((req.Page - 1) * req.Size).Find(&data).Error
+	data, total, err := l.svcCtx.Store.TrafficLog().QueryTrafficLogDetails(l.ctx, &traffic.TrafficLogDetailsFilter{
+		ServerId:    req.ServerId,
+		UserId:      req.UserId,
+		SubscribeId: req.SubscribeId,
+		Start:       start,
+		End:         end,
+		Page:        req.Page,
+		Size:        req.Size,
+	})
 	if err != nil {
 		l.Errorw("[FilterTrafficLogDetails] Query Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " database query error: %s", err.Error())

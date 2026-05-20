@@ -3,19 +3,18 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"net"
 	"strings"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
-
-	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
-
-	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/trace"
 )
 
 // statusByWriter returns a span status code and message for an HTTP status code
@@ -31,73 +30,90 @@ func statusByWriter(code int) (codes.Code, string) {
 	return codes.Unset, ""
 }
 
-func requestAttributes(req *http.Request) []attribute.KeyValue {
-	protoN := strings.SplitN(req.Proto, "/", 2)
-	remoteAddrN := strings.SplitN(req.RemoteAddr, ":", 2)
+func requestAttributes(ctx *app.RequestContext) []attribute.KeyValue {
+	protocolName, protocolVersion := protocolParts(ctx.Request.Header.GetProtocol())
+	clientHost, clientPort := remoteAddressParts(ctx.RemoteAddr())
+	uri := ctx.URI()
 
 	return []attribute.KeyValue{
-		semconv.HTTPRequestMethodKey.String(req.Method),
-		semconv.HTTPUserAgentKey.String(req.UserAgent()),
-		semconv.HTTPRequestContentLengthKey.Int64(req.ContentLength),
+		semconv.HTTPRequestMethodKey.String(string(ctx.Method())),
+		semconv.HTTPUserAgentKey.String(string(ctx.UserAgent())),
+		semconv.HTTPRequestContentLengthKey.Int64(int64(ctx.Request.Header.ContentLength())),
 
-		semconv.URLFullKey.String(req.URL.String()),
-		semconv.URLSchemeKey.String(req.URL.Scheme),
-		semconv.URLFragmentKey.String(req.URL.Fragment),
-		semconv.URLPathKey.String(req.URL.Path),
-		semconv.URLQueryKey.String(req.URL.RawQuery),
+		semconv.URLFullKey.String(string(uri.FullURI())),
+		semconv.URLSchemeKey.String(string(uri.Scheme())),
+		semconv.URLFragmentKey.String(string(uri.Hash())),
+		semconv.URLPathKey.String(string(uri.Path())),
+		semconv.URLQueryKey.String(string(uri.QueryString())),
 
-		semconv.NetworkProtocolNameKey.String(strings.ToLower(protoN[0])),
-		semconv.NetworkProtocolVersionKey.String(protoN[1]),
+		semconv.NetworkProtocolNameKey.String(protocolName),
+		semconv.NetworkProtocolVersionKey.String(protocolVersion),
 
-		semconv.ClientAddressKey.String(remoteAddrN[0]),
-		semconv.ClientPortKey.String(remoteAddrN[1]),
+		semconv.ClientAddressKey.String(clientHost),
+		semconv.ClientPortKey.String(clientPort),
 	}
 }
 
-func TraceMiddleware(_ *svc.ServiceContext) func(ctx *gin.Context) {
-	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-		tracer := trace.TracerFromContext(ctx)
+func protocolParts(protocol string) (string, string) {
+	if protocol == "" {
+		protocol = "HTTP/1.1"
+	}
+	parts := strings.SplitN(protocol, "/", 2)
+	if len(parts) != 2 {
+		return strings.ToLower(protocol), ""
+	}
+	return strings.ToLower(parts[0]), parts[1]
+}
 
-		spanName := c.FullPath()
-		method := c.Request.Method
+func remoteAddressParts(addr net.Addr) (string, string) {
+	if addr == nil {
+		return "", ""
+	}
+	host, port, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return addr.String(), ""
+	}
+	return host, port
+}
 
-		ctx, span := tracer.Start(
-			ctx,
+func TraceMiddleware(_ *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		tracer := trace.TracerFromContext(c)
+		spanName := ctx.FullPath()
+		method := string(ctx.Method())
+
+		c, span := tracer.Start(
+			c,
 			fmt.Sprintf("%s %s", method, spanName),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		)
 		defer span.End()
 
-		requestId := trace.TraceIDFromContext(ctx)
+		requestId := trace.TraceIDFromContext(c)
 
-		c.Header(trace.RequestIdKey, requestId)
+		ctx.Header(trace.RequestIdKey, requestId)
 
-		span.SetAttributes(requestAttributes(c.Request)...)
+		span.SetAttributes(requestAttributes(ctx)...)
 		span.SetAttributes(
 			attribute.String("http.request_id", requestId),
-			semconv.HTTPRouteKey.String(c.FullPath()),
+			semconv.HTTPRouteKey.String(ctx.FullPath()),
 		)
-		// context with request host
-		ctx = context.WithValue(ctx, constant.CtxKeyRequestHost, c.Request.Host)
-		// restructure context
-		c.Request = c.Request.WithContext(ctx)
 
-		c.Next()
+		c = context.WithValue(c, constant.CtxKeyRequestHost, string(ctx.Host()))
+		ctx.Next(c)
 
-		// handle response related attributes
-		status := c.Writer.Status()
+		status := responseStatus(ctx)
 		span.SetStatus(statusByWriter(status))
 		if status > 0 {
 			span.SetAttributes(semconv.HTTPResponseStatusCodeKey.Int(status))
 		}
-		if len(c.Errors) > 0 {
-			span.SetStatus(codes.Error, c.Errors.String())
-			for _, err := range c.Errors {
+		if hxCtx, ok := hertzx.ContextFromRequestContext(ctx); ok && len(hxCtx.Errors) > 0 {
+			span.SetStatus(codes.Error, hxCtx.Errors.String())
+			for _, err := range hxCtx.Errors {
 				span.RecordError(err.Err)
 			}
 		}
 
-		span.SetAttributes(semconv.HTTPResponseBodySizeKey.Int(c.Writer.Size()))
+		span.SetAttributes(semconv.HTTPResponseBodySizeKey.Int(len(ctx.Response.Body())))
 	}
 }

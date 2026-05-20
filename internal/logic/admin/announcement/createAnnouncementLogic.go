@@ -28,7 +28,7 @@ func NewCreateAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 
 func (l *CreateAnnouncementLogic) CreateAnnouncement(req *types.CreateAnnouncementRequest) error {
 
-	if err := l.svcCtx.AnnouncementModel.Insert(l.ctx, &announcement.Announcement{
+	if err := l.svcCtx.Store.Announcement().Insert(l.ctx, &announcement.Announcement{
 		Title:   req.Title,
 		Content: req.Content,
 	}); err != nil {

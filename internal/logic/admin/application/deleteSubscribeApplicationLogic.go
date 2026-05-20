@@ -26,7 +26,7 @@ func NewDeleteSubscribeApplicationLogic(ctx context.Context, svcCtx *svc.Service
 }
 
 func (l *DeleteSubscribeApplicationLogic) DeleteSubscribeApplication(req *types.DeleteSubscribeApplicationRequest) error {
-	err := l.svcCtx.ClientModel.Delete(l.ctx, req.Id)
+	err := l.svcCtx.Store.Client().Delete(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("Failed to delete subscribe application with ID %d: %v", req.Id, err)
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), err.Error())

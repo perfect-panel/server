@@ -7,23 +7,30 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/pkg/hertzx"
+)
+
+const (
+	TeamID       = "test-team-id"
+	ClientID     = "test-client-id"
+	KeyID        = "test-key-id"
+	ClientSecret = "test-client-secret"
 )
 
 func TestAppleLogin(t *testing.T) {
 	t.Skipf("Skip TestAppleLogin test")
-	router := gin.Default()
+	router := hertzx.Default()
 	router.LoadHTMLGlob("./*")
-	router.GET("/apple", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "apple.html", gin.H{
-			"title":   "Gin HTML Example",
-			"message": "Hello, Gin!",
+	router.GET("/apple", func(c *hertzx.Context) {
+		c.HTML(http.StatusOK, "apple.html", hertzx.H{
+			"title":   "Hertz HTML Example",
+			"message": "Hello, Hertz!",
 		})
 	})
-	router.POST("/auth/apple/callback", func(c *gin.Context) {
+	router.POST("/auth/apple/callback", func(c *hertzx.Context) {
 		var req CallbackRequest
 		if err := c.ShouldBind(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+			c.JSON(http.StatusBadRequest, hertzx.H{"error": "Invalid request data"})
 			return
 		}
 		handleAppleCallBack(c, req)

@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
-func ServerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func ServerMiddleware(svc *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		if key, ok := c.GetQuery("secret_key"); ok {
 			if key == svc.Config.Node.NodeSecret {
 				c.Next()

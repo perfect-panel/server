@@ -67,14 +67,38 @@ type UserFilterParams struct {
 	Unscoped        bool   // Whether to include soft-deleted records
 }
 
+type EmailRecipientFilter struct {
+	Scope             int8
+	RegisterStartTime int64
+	RegisterEndTime   int64
+}
+
+type SubscribeFilter struct {
+	Subscribers []int64
+	IsActive    *bool
+	StartTime   int64
+	EndTime     int64
+}
+
 type customUserLogicModel interface {
 	QueryPageList(ctx context.Context, page, size int, filter *UserFilterParams) ([]*User, int64, error)
+	FindUsersByIds(ctx context.Context, ids []int64) ([]*User, error)
+	CountAffiliates(ctx context.Context, refererId int64) (int64, error)
+	QueryAffiliateList(ctx context.Context, refererId int64, page, size int) ([]*User, int64, error)
 	FindOneByReferCode(ctx context.Context, referCode string) (*User, error)
 	BatchDeleteUser(ctx context.Context, ids []int64, tx ...*gorm.DB) error
 	InsertSubscribe(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error
 	FindOneSubscribeByToken(ctx context.Context, token string) (*Subscribe, error)
 	FindOneSubscribeByOrderId(ctx context.Context, orderId int64) (*Subscribe, error)
 	FindOneSubscribe(ctx context.Context, id int64) (*Subscribe, error)
+	FindSubscribesByIds(ctx context.Context, ids []int64) ([]*Subscribe, error)
+	QueryMonthlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
+	QueryFirstResetSubscribeIds(ctx context.Context, subscribeIds []int64) ([]int64, error)
+	QueryYearlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
+	ResetSubscribeTrafficByIds(ctx context.Context, ids []int64, tx ...*gorm.DB) error
+	FindTrafficExceededSubscribes(ctx context.Context) ([]*Subscribe, error)
+	FindExpiredSubscribes(ctx context.Context, now time.Time) ([]*Subscribe, error)
+	MarkSubscribesFinished(ctx context.Context, ids []int64, status uint8, finishedAt time.Time, tx ...*gorm.DB) error
 	UpdateSubscribe(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error
 	DeleteSubscribe(ctx context.Context, token string, tx ...*gorm.DB) error
 	DeleteSubscribeById(ctx context.Context, id int64, tx ...*gorm.DB) error
@@ -82,11 +106,14 @@ type customUserLogicModel interface {
 	FindOneSubscribeDetailsById(ctx context.Context, id int64) (*SubscribeDetails, error)
 	FindOneUserSubscribe(ctx context.Context, id int64) (*SubscribeDetails, error)
 	FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error)
+	FindUserSubscribesByStatus(ctx context.Context, status ...int64) ([]*Subscribe, error)
 	ActivatePendingSubscribesBySubscribeId(ctx context.Context, subscribeId int64) error
+	CountUserSubscribesBySubscribeIdAndStatus(ctx context.Context, subscribeId int64, status ...int64) (int64, error)
 	UpdateUserSubscribeWithTraffic(ctx context.Context, id, download, upload int64, tx ...*gorm.DB) error
 	QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error)
 	QueryResisterUserTotalByMonthly(ctx context.Context, date time.Time) (int64, error)
 	QueryResisterUserTotal(ctx context.Context) (int64, error)
+	CountEnabledUsers(ctx context.Context) (int64, error)
 	QueryAdminUsers(ctx context.Context) ([]*User, error)
 	UpdateUserCache(ctx context.Context, data *User) error
 	UpdateUserSubscribeCache(ctx context.Context, data *Subscribe) error
@@ -95,9 +122,14 @@ type customUserLogicModel interface {
 	InsertUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	UpdateUserAuthMethods(ctx context.Context, data *AuthMethods, tx ...*gorm.DB) error
 	DeleteUserAuthMethods(ctx context.Context, userId int64, platform string, tx ...*gorm.DB) error
+	UpdateUserAuthMethodOwner(ctx context.Context, authType, identifier string, userId int64, tx ...*gorm.DB) error
+	DeleteUserAuthMethodByIdentifier(ctx context.Context, authType, identifier string, tx ...*gorm.DB) error
+	UpsertUserAuthMethod(ctx context.Context, data *AuthMethods) error
 	FindUserAuthMethodByOpenID(ctx context.Context, method, openID string) (*AuthMethods, error)
 	FindUserAuthMethodByUserId(ctx context.Context, method string, userId int64) (*AuthMethods, error)
 	FindUserAuthMethodByPlatform(ctx context.Context, userId int64, platform string) (*AuthMethods, error)
+	QueryEmailRecipients(ctx context.Context, filter *EmailRecipientFilter) ([]string, error)
+	CountEmailRecipients(ctx context.Context, filter *EmailRecipientFilter) (int64, error)
 	FindOneByEmail(ctx context.Context, email string) (*User, error)
 	FindOneDevice(ctx context.Context, id int64) (*Device, error)
 	QueryDeviceList(ctx context.Context, userid int64) ([]*Device, int64, error)
@@ -106,6 +138,12 @@ type customUserLogicModel interface {
 	FindOneDeviceByIdentifier(ctx context.Context, id string) (*Device, error)
 	DeleteDevice(ctx context.Context, id int64, tx ...*gorm.DB) error
 	InsertDevice(ctx context.Context, data *Device, tx ...*gorm.DB) error
+	FindDeviceOnlineRecord(ctx context.Context, userId int64, startTime, endTime string) (*DeviceOnlineRecord, error)
+	InsertDeviceOnlineRecord(ctx context.Context, data *DeviceOnlineRecord, tx ...*gorm.DB) error
+	InsertWithdrawal(ctx context.Context, data *Withdrawal, tx ...*gorm.DB) error
+
+	QuerySubscribeIdsByFilter(ctx context.Context, filter *SubscribeFilter) ([]int64, error)
+	CountSubscribesByFilter(ctx context.Context, filter *SubscribeFilter) (int64, error)
 
 	ClearSubscribeCache(ctx context.Context, data ...*Subscribe) error
 	ClearUserCache(ctx context.Context, data ...*User) error
@@ -169,6 +207,96 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 		return conn.Model(&User{}).Group(userTable + ".id").Count(&total).Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error
 	})
 	return list, total, err
+}
+
+func emailRecipientQuery(conn *gorm.DB, filter *EmailRecipientFilter) *gorm.DB {
+	if filter == nil {
+		filter = &EmailRecipientFilter{Scope: 1}
+	}
+	userID := UserColumn(conn, "id")
+	userCreatedAt := UserColumn(conn, "created_at")
+	query := conn.Model(&AuthMethods{}).
+		Select("auth_identifier").
+		Joins(fmt.Sprintf("JOIN %s ON %s = user_auth_methods.user_id", UserTableName(conn), userID)).
+		Where("auth_type = ?", "email")
+
+	if filter.RegisterStartTime != 0 {
+		query = query.Where(userCreatedAt+" >= ?", time.UnixMilli(filter.RegisterStartTime))
+	}
+	if filter.RegisterEndTime != 0 {
+		query = query.Where(userCreatedAt+" <= ?", time.UnixMilli(filter.RegisterEndTime))
+	}
+
+	switch filter.Scope {
+	case 2:
+		query = query.Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", userID)).
+			Where("user_subscribe.status IN ?", []int64{1, 2})
+	case 3:
+		query = query.Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", userID)).
+			Where("user_subscribe.status = ?", 3)
+	case 4:
+		query = query.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userID)).
+			Where("user_subscribe.user_id IS NULL")
+	}
+	return query
+}
+
+func (m *customUserModel) QueryEmailRecipients(ctx context.Context, filter *EmailRecipientFilter) ([]string, error) {
+	if filter != nil && filter.Scope == 5 {
+		return nil, nil
+	}
+	var emails []string
+	err := m.QueryNoCacheCtx(ctx, &emails, func(conn *gorm.DB, v interface{}) error {
+		return emailRecipientQuery(conn, filter).Pluck("auth_identifier", v).Error
+	})
+	return emails, err
+}
+
+func (m *customUserModel) CountEmailRecipients(ctx context.Context, filter *EmailRecipientFilter) (int64, error) {
+	if filter != nil && filter.Scope == 5 {
+		return 0, nil
+	}
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		return emailRecipientQuery(conn, filter).Count(&total).Error
+	})
+	return total, err
+}
+
+func subscribeFilterQuery(conn *gorm.DB, filter *SubscribeFilter) *gorm.DB {
+	query := conn.Model(&Subscribe{})
+	if filter == nil {
+		return query
+	}
+	if len(filter.Subscribers) > 0 {
+		query = query.Where("subscribe_id IN ?", filter.Subscribers)
+	}
+	if filter.IsActive != nil && *filter.IsActive {
+		query = query.Where("status IN ?", []int64{0, 1, 2})
+	}
+	if filter.StartTime != 0 {
+		query = query.Where("start_time <= ?", time.UnixMilli(filter.StartTime))
+	}
+	if filter.EndTime != 0 {
+		query = query.Where("expire_time >= ?", time.UnixMilli(filter.EndTime))
+	}
+	return query
+}
+
+func (m *customUserModel) QuerySubscribeIdsByFilter(ctx context.Context, filter *SubscribeFilter) ([]int64, error) {
+	var ids []int64
+	err := m.QueryNoCacheCtx(ctx, &ids, func(conn *gorm.DB, v interface{}) error {
+		return subscribeFilterQuery(conn, filter).Pluck("id", v).Error
+	})
+	return ids, err
+}
+
+func (m *customUserModel) CountSubscribesByFilter(ctx context.Context, filter *SubscribeFilter) (int64, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		return subscribeFilterQuery(conn, filter).Count(&total).Error
+	})
+	return total, err
 }
 
 // BatchDeleteUser deletes multiple records by primary key.
@@ -242,6 +370,14 @@ func (m *customUserModel) QueryResisterUserTotal(ctx context.Context) (int64, er
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&User{}).Count(&total).Error
+	})
+	return total, err
+}
+
+func (m *customUserModel) CountEnabledUsers(ctx context.Context) (int64, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&User{}).Where("enable = ?", true).Count(&total).Error
 	})
 	return total, err
 }

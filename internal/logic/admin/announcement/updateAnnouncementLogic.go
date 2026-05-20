@@ -26,7 +26,7 @@ func NewUpdateAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *UpdateAnnouncementLogic) UpdateAnnouncement(req *types.UpdateAnnouncementRequest) error {
-	info, err := l.svcCtx.AnnouncementModel.FindOne(l.ctx, req.Id)
+	info, err := l.svcCtx.Store.Announcement().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[UpdateAnnouncement] Query Database Error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get announcement error: %v", err.Error())
@@ -42,7 +42,7 @@ func (l *UpdateAnnouncementLogic) UpdateAnnouncement(req *types.UpdateAnnounceme
 	if req.Popup != nil {
 		info.Popup = req.Popup
 	}
-	err = l.svcCtx.AnnouncementModel.Update(l.ctx, info)
+	err = l.svcCtx.Store.Announcement().Update(l.ctx, info)
 	if err != nil {
 		l.Errorw("[UpdateAnnouncement] Update Database Error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update announcement error: %v", err.Error())

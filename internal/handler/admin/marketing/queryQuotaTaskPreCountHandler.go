@@ -1,16 +1,16 @@
 package marketing
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/admin/marketing"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Query quota task pre-count
-func QueryQuotaTaskPreCountHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func QueryQuotaTaskPreCountHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		var req types.QueryQuotaTaskPreCountRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)

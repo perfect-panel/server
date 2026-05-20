@@ -28,7 +28,7 @@ func NewGetSubscribeConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 func (l *GetSubscribeConfigLogic) GetSubscribeConfig() (resp *types.SubscribeConfig, err error) {
 	resp = &types.SubscribeConfig{}
 	// get subscribe config from db
-	subscribeConfigs, err := l.svcCtx.SystemModel.GetSubscribeConfig(l.ctx)
+	subscribeConfigs, err := l.svcCtx.Store.System().GetSubscribeConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetSubscribeConfig] Database query error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe config failed: %v", err.Error())

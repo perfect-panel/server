@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -40,7 +41,7 @@ func (l *BindDeviceLogic) BindDeviceToUser(identifier, ip, userAgent string, cur
 	)
 
 	// Check if device exists
-	deviceInfo, err := l.svcCtx.UserModel.FindOneDeviceByIdentifier(l.ctx, identifier)
+	deviceInfo, err := l.svcCtx.Store.User().FindOneDeviceByIdentifier(l.ctx, identifier)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Device not found, create new device record
@@ -62,7 +63,7 @@ func (l *BindDeviceLogic) BindDeviceToUser(identifier, ip, userAgent string, cur
 		)
 		deviceInfo.Ip = ip
 		deviceInfo.UserAgent = userAgent
-		if err := l.svcCtx.UserModel.UpdateDevice(l.ctx, deviceInfo); err != nil {
+		if err := l.svcCtx.Store.User().UpdateDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to update device",
 				logger.Field("identifier", identifier),
 				logger.Field("error", err.Error()),
@@ -88,7 +89,7 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 		logger.Field("user_id", userId),
 	)
 
-	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
+	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Create device auth method
 		authMethod := &user.AuthMethods{
 			UserId:         userId,
@@ -96,7 +97,7 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 			AuthIdentifier: identifier,
 			Verified:       true,
 		}
-		if err := db.Create(authMethod).Error; err != nil {
+		if err := store.User().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
 			l.Errorw("failed to create device auth method",
 				logger.Field("user_id", userId),
 				logger.Field("identifier", identifier),
@@ -114,7 +115,7 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 			Enabled:    true,
 			Online:     false,
 		}
-		if err := db.Create(deviceInfo).Error; err != nil {
+		if err := store.User().InsertDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to create device",
 				logger.Field("user_id", userId),
 				logger.Field("identifier", identifier),
@@ -146,10 +147,10 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, userAgent string, newUserId int64) error {
 	oldUserId := deviceInfo.UserId
 
-	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
+	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Check if old user has other auth methods besides device
-		var authMethods []user.AuthMethods
-		if err := db.Where("user_id = ?", oldUserId).Find(&authMethods).Error; err != nil {
+		authMethods, err := store.User().FindUserAuthMethods(l.ctx, oldUserId)
+		if err != nil {
 			l.Errorw("failed to query auth methods for old user",
 				logger.Field("old_user_id", oldUserId),
 				logger.Field("error", err.Error()),
@@ -168,7 +169,16 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 		// Only disable old user if they have no other auth methods
 		if nonDeviceAuthCount == 0 {
 			falseVal := false
-			if err := db.Model(&user.User{}).Where("id = ?", oldUserId).Update("enable", &falseVal).Error; err != nil {
+			oldUser, err := store.User().FindOne(l.ctx, oldUserId)
+			if err != nil {
+				l.Errorw("failed to find old user",
+					logger.Field("old_user_id", oldUserId),
+					logger.Field("error", err.Error()),
+				)
+				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find old user failed: %v", err)
+			}
+			oldUser.Enable = &falseVal
+			if err := store.User().Update(l.ctx, oldUser); err != nil {
 				l.Errorw("failed to disable old user",
 					logger.Field("old_user_id", oldUserId),
 					logger.Field("error", err.Error()),
@@ -187,9 +197,7 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 		}
 
 		// Update device auth method to new user
-		if err := db.Model(&user.AuthMethods{}).
-			Where("auth_type = ? AND auth_identifier = ?", "device", deviceInfo.Identifier).
-			Update("user_id", newUserId).Error; err != nil {
+		if err := store.User().UpdateUserAuthMethodOwner(l.ctx, "device", deviceInfo.Identifier, newUserId); err != nil {
 			l.Errorw("failed to update device auth method",
 				logger.Field("identifier", deviceInfo.Identifier),
 				logger.Field("error", err.Error()),
@@ -203,7 +211,7 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 		deviceInfo.UserAgent = userAgent
 		deviceInfo.Enabled = true
 
-		if err := db.Save(deviceInfo).Error; err != nil {
+		if err := store.User().UpdateDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to update device",
 				logger.Field("identifier", deviceInfo.Identifier),
 				logger.Field("error", err.Error()),

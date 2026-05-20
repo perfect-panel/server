@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/node"
-	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -38,13 +36,15 @@ func NewGetStatLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetStatLo
 func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 	respJson, err := l.svcCtx.Redis.Get(l.ctx, config.CommonStatCacheKey).Result()
 	if err == nil {
-		err = json.Unmarshal([]byte(respJson), resp)
+		cachedResp := &types.GetStatResponse{}
+		err = json.Unmarshal([]byte(respJson), cachedResp)
 		if err == nil {
-			return
+			return cachedResp, nil
 		}
 	}
-	var u int64
-	err = l.svcCtx.DB.Model(&user.User{}).Where("enable = ?", true).Count(&u).Error
+	userStore := l.svcCtx.Store.User()
+	nodeStore := l.svcCtx.Store.Node()
+	u, err := userStore.CountEnabledUsers(l.ctx)
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get user count failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get user count failed: %v", err.Error())
@@ -56,21 +56,19 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 	} else {
 		u = 1
 	}
-	var n int64
-	err = l.svcCtx.DB.Model(&node.Node{}).Where("enabled = ?", true).Count(&n).Error
+	n, err := nodeStore.CountEnabledNodes(l.ctx)
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get server count failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get server count failed: %v", err.Error())
 	}
-	var nodeaddr []string
-	err = l.svcCtx.DB.Model(&node.Server{}).Pluck("address", &nodeaddr).Error
+	nodeaddr, err := nodeStore.QueryServerAddresses(l.ctx)
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get server_addr failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get server_addr failed: %v", err.Error())
 	}
 	type apireq struct {
-		query  string
-		fields string
+		Query  string `json:"query"`
+		Fields string `json:"fields"`
 	}
 	type apiret struct {
 		CountryCode string `json:"countryCode"`
@@ -86,16 +84,20 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 			if isAddr == nil {
 				ip, err := net.LookupIP(addr)
 				if err == nil && len(ip) > 0 {
-					batchreq = append(batchreq, apireq{query: ip[0].String(), fields: "countryCode"})
+					batchreq = append(batchreq, apireq{Query: ip[0].String(), Fields: "countryCode"})
 				}
 			} else {
-				batchreq = append(batchreq, apireq{query: addr, fields: "countryCode"})
+				batchreq = append(batchreq, apireq{Query: addr, Fields: "countryCode"})
 			}
+		}
+		if len(batchreq) == 0 {
+			continue
 		}
 		req, _ := json.Marshal(batchreq)
 		ret, err := http.Post("http://ip-api.com/batch", "application/json", strings.NewReader(string(req)))
 		if err == nil {
 			retBytes, err := io.ReadAll(ret.Body)
+			_ = ret.Body.Close()
 			if err == nil {
 				var retStruct []apiret
 				err := json.Unmarshal(retBytes, &retStruct)
@@ -110,24 +112,17 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 		}
 	}
 	protocolDict := make(map[string]void)
-	var protocol []string
-	err = l.svcCtx.DB.Model(&node.Node{}).Where("enabled = true").Pluck("protocol", &protocol).Error
+	protocol, err := nodeStore.QueryEnabledNodeProtocols(l.ctx)
 	if err != nil {
 		l.Logger.Error("[GetStatLogic] get protocol failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get protocol failed: %v", err.Error())
 	}
 
 	for _, p := range protocol {
-		var protocols []node.Protocol
-		err = json.Unmarshal([]byte(p), &protocols)
-		if err != nil {
+		if p == "" {
 			continue
 		}
-		for _, proto := range protocols {
-			if _, exists := protocolDict[proto.Type]; !exists {
-				protocolDict[proto.Type] = v
-			}
-		}
+		protocolDict[p] = v
 	}
 	protocol = nil
 	for p := range protocolDict {

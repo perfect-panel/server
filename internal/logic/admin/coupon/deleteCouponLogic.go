@@ -27,7 +27,7 @@ func NewDeleteCouponLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Dele
 
 func (l *DeleteCouponLogic) DeleteCoupon(req *types.DeleteCouponRequest) error {
 	// delete coupon by id
-	err := l.svcCtx.CouponModel.Delete(l.ctx, req.Id)
+	err := l.svcCtx.Store.Coupon().Delete(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[DeleteCoupon] Database Error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete coupon error: %v", err.Error())

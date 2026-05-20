@@ -1,15 +1,15 @@
 package payment
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/public/payment"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get available payment methods
-func GetAvailablePaymentMethodsHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func GetAvailablePaymentMethodsHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 
 		l := payment.NewGetAvailablePaymentMethodsLogic(c.Request.Context(), svcCtx)
 		resp, err := l.GetAvailablePaymentMethods()

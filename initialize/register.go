@@ -12,7 +12,7 @@ import (
 
 func Register(ctx *svc.ServiceContext) {
 	logger.Debug("Register config initialization")
-	configs, err := ctx.SystemModel.GetRegisterConfig(context.Background())
+	configs, err := ctx.Store.System().GetRegisterConfig(context.Background())
 	if err != nil {
 		logger.Errorf("[Init Register Config] Get Register Config Error: %s", err.Error())
 		return

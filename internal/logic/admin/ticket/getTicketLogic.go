@@ -27,7 +27,7 @@ func NewGetTicketLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetTick
 }
 
 func (l *GetTicketLogic) GetTicket(req *types.GetTicketRequest) (resp *types.Ticket, err error) {
-	data, err := l.svcCtx.TicketModel.QueryTicketDetail(l.ctx, req.Id)
+	data, err := l.svcCtx.Store.Ticket().QueryTicketDetail(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[GetTicket] Query Database Error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get ticket detail failed: %v", err.Error())

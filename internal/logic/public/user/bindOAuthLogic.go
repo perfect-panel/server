@@ -57,7 +57,7 @@ func (l *BindOAuthLogic) BindOAuth(req *types.BindOAuthRequest) (resp *types.Bin
 }
 
 func (l *BindOAuthLogic) google(req *types.BindOAuthRequest) (string, error) {
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "google")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "google")
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +87,7 @@ func (l *BindOAuthLogic) facebook() (string, error) {
 	return "", nil
 }
 func (l *BindOAuthLogic) apple(req *types.BindOAuthRequest) (string, error) {
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "apple")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "apple")
 	if err != nil {
 		return "", err
 	}

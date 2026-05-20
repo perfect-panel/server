@@ -29,7 +29,7 @@ func NewGetCouponListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 func (l *GetCouponListLogic) GetCouponList(req *types.GetCouponListRequest) (resp *types.GetCouponListResponse, err error) {
 	resp = &types.GetCouponListResponse{}
 	// get coupon list from db
-	total, list, err := l.svcCtx.CouponModel.QueryCouponListByPage(l.ctx, int(req.Page), int(req.Size), req.Subscribe, req.Search)
+	total, list, err := l.svcCtx.Store.Coupon().QueryCouponListByPage(l.ctx, int(req.Page), int(req.Size), req.Subscribe, req.Search)
 	if err != nil {
 		l.Errorw("[GetCouponList] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get coupon list error: %v", err.Error())

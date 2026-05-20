@@ -2,7 +2,6 @@ package marketing
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +15,6 @@ import (
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	types2 "github.com/perfect-panel/server/queue/types"
-	"gorm.io/gorm"
 )
 
 type CreateBatchSendEmailTaskLogic struct {
@@ -34,60 +32,15 @@ func NewCreateBatchSendEmailTaskLogic(ctx context.Context, svcCtx *svc.ServiceCo
 	}
 }
 func (l *CreateBatchSendEmailTaskLogic) CreateBatchSendEmailTask(req *types.CreateBatchSendEmailTaskRequest) (err error) {
-	tx := l.svcCtx.DB
-
-	var emails []string
-
-	// 通用查询器（含 user JOIN + 注册时间范围过滤）
-	baseQuery := func() *gorm.DB {
-		userID := user.UserColumn(tx, "id")
-		userCreatedAt := user.UserColumn(tx, "created_at")
-		query := tx.Model(&user.AuthMethods{}).
-			Select("auth_identifier").
-			Joins(fmt.Sprintf("JOIN %s ON %s = user_auth_methods.user_id", user.UserTableName(tx), userID)).
-			Where("auth_type = ?", "email")
-
-		if req.RegisterStartTime != 0 {
-			query = query.Where(userCreatedAt+" >= ?", time.UnixMilli(req.RegisterStartTime))
-		}
-		if req.RegisterEndTime != 0 {
-			query = query.Where(userCreatedAt+" <= ?", time.UnixMilli(req.RegisterEndTime))
-		}
-		return query
-	}
-
-	var query *gorm.DB
-
 	scope := task.ParseScopeType(req.Scope)
-
-	switch scope {
-	case task.ScopeAll:
-		query = baseQuery()
-
-	case task.ScopeActive:
-		query = baseQuery().
-			Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
-			Where("user_subscribe.status IN ?", []int64{1, 2})
-
-	case task.ScopeExpired:
-		query = baseQuery().
-			Joins(fmt.Sprintf("JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
-			Where("user_subscribe.status = ?", 3)
-
-	case task.ScopeNone:
-		query = baseQuery().
-			Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", user.UserColumn(tx, "id"))).
-			Where("user_subscribe.user_id IS NULL")
-	default:
-
-	}
-	if query != nil {
-		// 执行查询
-		err = query.Pluck("auth_identifier", &emails).Error
-		if err != nil {
-			l.Errorf("[CreateBatchSendEmailTask] Failed to fetch email addresses: %v", err.Error())
-			return xerr.NewErrCode(xerr.DatabaseQueryError)
-		}
+	emails, err := l.svcCtx.Store.User().QueryEmailRecipients(l.ctx, &user.EmailRecipientFilter{
+		Scope:             scope.Int8(),
+		RegisterStartTime: req.RegisterStartTime,
+		RegisterEndTime:   req.RegisterEndTime,
+	})
+	if err != nil {
+		l.Errorf("[CreateBatchSendEmailTask] Failed to fetch email addresses: %v", err.Error())
+		return xerr.NewErrCode(xerr.DatabaseQueryError)
 	}
 
 	// 邮箱列表为空，返回错误
@@ -154,7 +107,7 @@ func (l *CreateBatchSendEmailTaskLogic) CreateBatchSendEmailTask(req *types.Crea
 		Current: 0,
 	}
 
-	if err = l.svcCtx.DB.Model(&task.Task{}).Create(taskInfo).Error; err != nil {
+	if err = l.svcCtx.Store.Task().Insert(l.ctx, taskInfo); err != nil {
 		l.Errorf("[CreateBatchSendEmailTask] Failed to create email task: %v", err.Error())
 		return xerr.NewErrCode(xerr.DatabaseInsertError)
 	}

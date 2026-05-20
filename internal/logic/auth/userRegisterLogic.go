@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/logic/common"
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -53,7 +54,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		}
 	} else {
 		// Check if the invite code is valid
-		referer, err = l.svcCtx.UserModel.FindOneByReferCode(l.ctx, req.Invite)
+		referer, err = l.svcCtx.Store.User().FindOneByReferCode(l.ctx, req.Invite)
 		if err != nil {
 			l.Errorw("FindOneByReferCode Error", logger.Field("error", err))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InviteCodeError), "invite code is invalid")
@@ -79,7 +80,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		}
 	}
 	// Check if the user exists
-	u, err := l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
+	u, err := l.svcCtx.Store.User().FindOneByEmail(l.ctx, req.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("FindOneByEmail Error", logger.Field("error", err))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
@@ -99,15 +100,15 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	if referer != nil {
 		userInfo.RefererId = referer.Id
 	}
-	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
+	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Save user information
-		if err := db.Create(userInfo).Error; err != nil {
+		if err := store.User().Insert(l.ctx, userInfo); err != nil {
 			return err
 		}
 		// Generate ReferCode
 		userInfo.ReferCode = uuidx.UserInviteCode(userInfo.Id)
 		// Update ReferCode
-		if err := db.Model(&user.User{}).Where("id = ?", userInfo.Id).Update("refer_code", userInfo.ReferCode).Error; err != nil {
+		if err := store.User().Update(l.ctx, userInfo); err != nil {
 			return err
 		}
 		// create user auth info
@@ -117,13 +118,13 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 			AuthIdentifier: req.Email,
 			Verified:       email.EnableVerify,
 		}
-		if err = db.Create(authInfo).Error; err != nil {
+		if err = store.User().InsertUserAuthMethods(l.ctx, authInfo); err != nil {
 			return err
 		}
 
 		if l.svcCtx.Config.Register.EnableTrial {
 			// Active trial
-			if err = l.activeTrial(userInfo.Id); err != nil {
+			if err = l.activeTrial(store, userInfo.Id); err != nil {
 				return err
 			}
 		}
@@ -175,7 +176,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
-			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Id:       0,
 				Type:     log.TypeLogin.Uint8(),
 				Date:     time.Now().Format("2006-01-02"),
@@ -198,7 +199,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 				Timestamp:  time.Now().UnixMilli(),
 			}
 			content, _ = registerLog.Marshal()
-			if err = l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			if err = l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeRegister.Uint8(),
 				ObjectID: userInfo.Id,
 				Date:     time.Now().Format("2006-01-02"),
@@ -216,8 +217,8 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	}, nil
 }
 
-func (l *UserRegisterLogic) activeTrial(uid int64) error {
-	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
+func (l *UserRegisterLogic) activeTrial(store repository.Store, uid int64) error {
+	sub, err := store.Subscribe().FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
 	if err != nil {
 		return err
 	}
@@ -234,5 +235,5 @@ func (l *UserRegisterLogic) activeTrial(uid int64) error {
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
-	return l.svcCtx.UserModel.InsertSubscribe(l.ctx, userSub)
+	return store.User().InsertSubscribe(l.ctx, userSub)
 }

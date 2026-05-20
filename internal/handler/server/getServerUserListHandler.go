@@ -1,37 +1,44 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/server"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/result"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
 // Get user list
-func GetServerUserListHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		var req types.GetServerUserListRequest
-		_ = c.ShouldBind(&req)
-		_ = c.ShouldBindQuery(&req.ServerCommon)
-		validateErr := svcCtx.Validate(&req)
-		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+func GetServerUserListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		commonReq, err := serverCommonRequest(ctx)
+		if err != nil {
+			writeParamError(ctx, err)
+			return
+		}
+		req := types.GetServerUserListRequest{ServerCommon: commonReq}
+		if validateErr := svcCtx.Validate(&req); validateErr != nil {
+			writeParamError(ctx, validateErr)
 			return
 		}
 
-		l := server.NewGetServerUserListLogic(c, svcCtx)
+		l := server.NewGetServerUserListLogic(c, svcCtx, server.RequestMeta{
+			IfNoneMatch: string(ctx.GetHeader("If-None-Match")),
+		})
 		resp, err := l.GetServerUserList(&req)
+		writeHeaders(ctx, l.ResponseMeta().Headers)
 		if err != nil {
 			if errors.Is(err, xerr.StatusNotModified) {
-				c.String(304, "Not Modified")
+				ctx.String(consts.StatusNotModified, "Not Modified")
 				return
 			}
-			c.String(404, "Not Found")
+			ctx.String(consts.StatusNotFound, "Not Found")
 			return
 		}
-		c.JSON(200, resp)
+		ctx.JSON(consts.StatusOK, resp)
 	}
 }

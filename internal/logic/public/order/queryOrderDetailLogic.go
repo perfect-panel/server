@@ -27,7 +27,7 @@ func NewQueryOrderDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *QueryOrderDetailLogic) QueryOrderDetail(req *types.QueryOrderDetailRequest) (resp *types.OrderDetail, err error) {
-	orderInfo, err := l.svcCtx.OrderModel.FindOneDetailsByOrderNo(l.ctx, req.OrderNo)
+	orderInfo, err := l.svcCtx.Store.Order().FindOneDetailsByOrderNo(l.ctx, req.OrderNo)
 	if err != nil {
 		l.Errorw("[QueryOrderDetail] Database query error", logger.Field("error", err.Error()), logger.Field("order_no", req.OrderNo))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find order error: %v", err.Error())

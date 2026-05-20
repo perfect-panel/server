@@ -29,7 +29,7 @@ func NewGetTosLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetTosLogi
 func (l *GetTosLogic) GetTos() (resp *types.GetTosResponse, err error) {
 	resp = &types.GetTosResponse{}
 	// get Tos config from db
-	configs, err := l.svcCtx.SystemModel.GetTosConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetTosConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetTosLogic] GetTos error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetTos error: %v", err.Error())

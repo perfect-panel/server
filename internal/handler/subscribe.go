@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"net/http"
+	"context"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -12,101 +13,95 @@ import (
 	"github.com/perfect-panel/server/pkg/tool"
 )
 
-func SubscribeHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		var req types.SubscribeRequest
-		if c.Request.Header.Get("token") != "" {
-			req.Token = c.Request.Header.Get("token")
-		} else {
-			req.Token = c.Query("token")
+func SubscribeHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		req := types.SubscribeRequest{
+			Token:  string(ctx.GetHeader("token")),
+			UA:     string(ctx.UserAgent()),
+			Flag:   ctx.Query("flag"),
+			Type:   ctx.Query("type"),
+			Params: getQueryMap(ctx),
 		}
-		ua := c.GetHeader("User-Agent")
-		req.UA = c.Request.Header.Get("User-Agent")
-		req.Flag = c.Query("flag")
-		req.Type = c.Query("type")
-		// 获取所有查询参数
-		req.Params = getQueryMap(c.Request)
+		if req.Token == "" {
+			req.Token = ctx.Query("token")
+		}
 
 		if svcCtx.Config.Subscribe.PanDomain {
-			domain := c.Request.Host
-			domainArr := strings.Split(domain, ".")
+			domainArr := strings.Split(string(ctx.Host()), ".")
+			if len(domainArr) == 0 {
+				ctx.String(consts.StatusForbidden, "Access denied")
+				return
+			}
 			short, err := tool.FixedUniqueString(req.Token, 8, "")
 			if err != nil {
-				logger.Errorf("[SubscribeHandler] Generate short token failed: %v", err)
-				c.String(http.StatusInternalServerError, "Internal Server")
-				c.Abort()
+				logger.WithContext(c).Errorf("[SubscribeHandler] Generate short token failed: %v", err)
+				ctx.String(consts.StatusInternalServerError, "Internal Server")
 				return
 			}
 			if strings.ToLower(short) != strings.ToLower(domainArr[0]) {
-				logger.Debugf("[SubscribeHandler] Generate short token failed, short: %s, domain: %s", short, domainArr[0])
-				c.String(http.StatusForbidden, "Access denied")
-				c.Abort()
+				logger.WithContext(c).Debugf("[SubscribeHandler] short token mismatch, short: %s, domain: %s", short, domainArr[0])
+				ctx.String(consts.StatusForbidden, "Access denied")
 				return
 			}
 		}
 
-		if svcCtx.Config.Subscribe.UserAgentLimit {
-			if ua == "" {
-				c.String(http.StatusForbidden, "Access denied")
-				c.Abort()
-				return
-			}
-			clientUserAgents := tool.RemoveDuplicateElements(strings.Split(svcCtx.Config.Subscribe.UserAgentList, "\n")...)
-
-			// query client list
-			clients, err := svcCtx.ClientModel.List(c.Request.Context())
-			if err != nil {
-				logger.Errorw("[PanDomainMiddleware] Query client list failed", logger.Field("error", err.Error()))
-			}
-			for _, item := range clients {
-				u := strings.ToLower(item.UserAgent)
-				u = strings.Trim(u, " ")
-				clientUserAgents = append(clientUserAgents, u)
-			}
-
-			var allow = false
-			for _, keyword := range clientUserAgents {
-				keyword = strings.Trim(keyword, " ")
-				if keyword == "" {
-					continue
-				}
-				if strings.Contains(strings.ToLower(ua), strings.ToLower(keyword)) {
-					allow = true
-				}
-			}
-			if !allow {
-				c.String(http.StatusForbidden, "Access denied")
-				c.Abort()
-				return
-			}
-		}
-
-		l := subscribe.NewSubscribeLogic(c, svcCtx)
-		resp, err := l.Handler(&req)
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Internal Server")
+		if svcCtx.Config.Subscribe.UserAgentLimit && !subscribe.IsUserAgentAllowed(c, svcCtx, req.UA) {
+			ctx.String(consts.StatusForbidden, "Access denied")
 			return
 		}
-		c.Header("subscription-userinfo", resp.Header)
-		c.String(200, "%s", string(resp.Config))
+		writeSubscribeResponse(c, ctx, svcCtx, req)
 	}
 }
 
-func RegisterSubscribeHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
-	path := serverCtx.Config.Subscribe.SubscribePath
-	if path == "" {
-		path = "/v1/subscribe/config"
-	}
-	router.GET(path, SubscribeHandler(serverCtx))
-}
-
-// GetQueryMap 将 http.Request 的查询参数转换为 map[string]string
-func getQueryMap(r *http.Request) map[string]string {
-	result := make(map[string]string)
-	for k, v := range r.URL.Query() {
-		if len(v) > 0 {
-			result[k] = v[0]
+func PanDomainSubscribeHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		ua := string(ctx.UserAgent())
+		if svcCtx.Config.Subscribe.UserAgentLimit && !subscribe.IsUserAgentAllowed(c, svcCtx, ua) {
+			ctx.String(consts.StatusForbidden, "Access denied")
+			return
 		}
+
+		domainArr := strings.Split(string(ctx.Host()), ".")
+		if len(domainArr) < 2 {
+			ctx.String(consts.StatusForbidden, "Access denied")
+			return
+		}
+
+		writeSubscribeResponse(c, ctx, svcCtx, types.SubscribeRequest{
+			Token:  domainArr[0],
+			Flag:   domainArr[1],
+			UA:     ua,
+			Params: getQueryMap(ctx),
+		})
 	}
+}
+
+func writeSubscribeResponse(c context.Context, ctx *app.RequestContext, svcCtx *svc.ServiceContext, req types.SubscribeRequest) {
+	l := subscribe.NewSubscribeLogic(c, svcCtx, subscribe.RequestMeta{
+		Host:       string(ctx.Host()),
+		RequestURI: string(ctx.URI().RequestURI()),
+		UserAgent:  string(ctx.UserAgent()),
+		ClientIP:   ctx.ClientIP(),
+	})
+	resp, err := l.Handler(&req)
+	if err != nil {
+		ctx.String(consts.StatusInternalServerError, "Internal Server")
+		return
+	}
+	for key, value := range resp.Headers {
+		ctx.Header(key, value)
+	}
+	ctx.Header("subscription-userinfo", resp.Header)
+	ctx.Data(consts.StatusOK, "text/plain; charset=utf-8", resp.Config)
+}
+
+func getQueryMap(ctx *app.RequestContext) map[string]string {
+	result := make(map[string]string)
+	ctx.QueryArgs().VisitAll(func(key, value []byte) {
+		k := string(key)
+		if _, ok := result[k]; !ok {
+			result[k] = string(value)
+		}
+	})
 	return result
 }

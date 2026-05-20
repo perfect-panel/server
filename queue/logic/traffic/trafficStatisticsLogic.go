@@ -40,7 +40,7 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 		return nil
 	}
 	// query server info
-	serverInfo, err := l.svc.NodeModel.FindOneServer(ctx, payload.ServerId)
+	serverInfo, err := l.svc.Store.Node().FindOneServer(ctx, payload.ServerId)
 	if err != nil {
 		logger.WithContext(ctx).Error("[TrafficStatistics] Find server info failed",
 			logger.Field("serverId", payload.ServerId),
@@ -82,7 +82,7 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 	logger.Debugf("[TrafficStatisticsLogic] Current time traffic multiplier: %.2f", realTimeMultiplier)
 	for _, log := range payload.Logs {
 		// query user Subscribe Info
-		sub, err := l.svc.UserModel.FindOneSubscribe(ctx, log.SID)
+		sub, err := l.svc.Store.User().FindOneSubscribe(ctx, log.SID)
 		if err != nil {
 			logger.WithContext(ctx).Error("[TrafficStatistics] Find user Subscribe Info failed",
 				logger.Field("uid", log.SID),
@@ -98,7 +98,7 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 		// update user subscribe with log
 		d := int64(float32(log.Download) * ratio * realTimeMultiplier)
 		u := int64(float32(log.Upload) * ratio * realTimeMultiplier)
-		if err := l.svc.UserModel.UpdateUserSubscribeWithTraffic(ctx, sub.Id, d, u); err != nil {
+		if err := l.svc.Store.User().UpdateUserSubscribeWithTraffic(ctx, sub.Id, d, u); err != nil {
 			logger.WithContext(ctx).Error("[TrafficStatistics] Update user subscribe with log failed",
 				logger.Field("sid", log.SID),
 				logger.Field("download", float32(log.Download)*ratio),
@@ -109,7 +109,7 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 		}
 
 		// create log log
-		if err = l.svc.TrafficLogModel.Insert(ctx, &traffic.TrafficLog{
+		if err = l.svc.Store.TrafficLog().Insert(ctx, &traffic.TrafficLog{
 			ServerId:    payload.ServerId,
 			SubscribeId: log.SID,
 			UserId:      sub.UserId,

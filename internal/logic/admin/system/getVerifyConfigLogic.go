@@ -29,7 +29,7 @@ func NewGetVerifyConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 func (l *GetVerifyConfigLogic) GetVerifyConfig() (*types.VerifyConfig, error) {
 	resp := &types.VerifyConfig{}
 	// get verify config from db
-	verifyConfigs, err := l.svcCtx.SystemModel.GetVerifyConfig(l.ctx)
+	verifyConfigs, err := l.svcCtx.Store.System().GetVerifyConfig(l.ctx)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get verify config failed: %v", err.Error())
 	}

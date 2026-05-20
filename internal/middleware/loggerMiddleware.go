@@ -1,51 +1,30 @@
 package middleware
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
-	"io"
+	"strings"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/logger"
-
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-
-	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/server/internal/svc"
 )
 
-type responseBodyWriter struct {
-	gin.ResponseWriter
-	body *bytes.Buffer
-}
-
-func (r responseBodyWriter) Write(b []byte) (int, error) {
-	r.body.Write(b)
-	return r.ResponseWriter.Write(b)
-}
-
-func LoggerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		// get response body
-		w := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
-		c.Writer = w
-		// get request body
-		var requestBody []byte
-		if c.Request.Body != nil {
-			// c.Request.Body It can only be read once, and after reading, it needs to be reassigned to c.Request Body
-			requestBody, _ = io.ReadAll(c.Request.Body)
-			// After reading, reassign c.Request Body ， For subsequent operations
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-		}
-		// start time
+func LoggerMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 		start := time.Now()
-		c.Next()
-		// Start recording logs
-		cost := time.Since(start)
-		responseStatus := c.Writer.Status()
+		ctx.Next(c)
 
-		host := c.Request.Host
+		cost := time.Since(start)
+		responseStatus := responseStatus(ctx)
+		method := string(ctx.Method())
+		path := string(ctx.Path())
+		host := string(ctx.Host())
 
 		logs := []logger.LogField{
 			{
@@ -54,47 +33,88 @@ func LoggerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
 			},
 			{
 				Key:   "request",
-				Value: c.Request.Method + " " + host + c.Request.URL.String(),
+				Value: method + " " + host + string(ctx.URI().RequestURI()),
 			},
 			{
 				Key:   "query",
-				Value: c.Request.URL.RawQuery,
+				Value: string(ctx.URI().QueryString()),
 			},
 			{
 				Key:   "ip",
-				Value: c.ClientIP(),
+				Value: ctx.ClientIP(),
 			},
 			{
 				Key:   "user-agent",
-				Value: c.Request.UserAgent(),
+				Value: string(ctx.UserAgent()),
 			},
 		}
-		if c.Errors.Last() != nil {
-			var e *xerr.CodeError
-			var errMessage string
-			if errors.As(c.Errors.Last().Err, &e) {
-				errMessage = e.GetErrMsg()
-			} else {
-				errMessage = c.Errors.Last().Error()
-			}
+		if errMessage := hertzxErrorMessage(ctx); errMessage != "" {
 			logs = append(logs, logger.Field("error", errMessage))
 		}
-		if c.Request.Method == "POST" || c.Request.Method == "PUT" || c.Request.Method == "DELETE" {
-			// request content
-			logs = append(logs, logger.Field("request_body", string(maskSensitiveFields(requestBody, []string{"password", "old_password", "new_password"}))))
-			// response content
-			logs = append(logs, logger.Field("response_body", w.body.String()))
+		if shouldLogBody(method, path) {
+			logs = append(logs, logger.Field("request_body", string(maskSensitiveFields(ctx.Request.Body(), []string{"password", "old_password", "new_password"}))))
+			logs = append(logs, logger.Field("response_body", string(ctx.Response.Body())))
+		} else if isBodyMethod(method) && isServerTelemetryPath(path) {
+			logs = append(logs, logger.Field("body_omitted", true))
 		}
 		logs = append(logs, logger.Field("duration", cost))
 		if responseStatus >= 500 && responseStatus <= 599 {
-			logger.WithContext(c.Request.Context()).Errorw("HTTP Error", logs...)
+			logger.WithContext(c).Errorw("HTTP Error", logs...)
 		} else {
-			logger.WithContext(c.Request.Context()).Infow("HTTP Request", logs...)
+			logger.WithContext(c).Infow("HTTP Request", logs...)
 		}
 
-		if responseStatus == 404 {
-			logger.WithContext(c.Request.Context()).Debugf("404 Not Found: Host:%s Path:%s IsPanDomain:%v", host, c.Request.URL.Path, svc.Config.Subscribe.PanDomain)
+		if responseStatus == consts.StatusNotFound {
+			logger.WithContext(c).Debugf("404 Not Found: Host:%s Path:%s IsPanDomain:%v", host, path, svc.Config.Subscribe.PanDomain)
 		}
+	}
+}
+
+func responseStatus(ctx *app.RequestContext) int {
+	status := ctx.Response.StatusCode()
+	if status == 0 {
+		return consts.StatusOK
+	}
+	return status
+}
+
+func hertzxErrorMessage(ctx *app.RequestContext) string {
+	c, ok := hertzx.ContextFromRequestContext(ctx)
+	if !ok || c.Errors.Last() == nil {
+		return ""
+	}
+	var e *xerr.CodeError
+	if errors.As(c.Errors.Last().Err, &e) {
+		return e.GetErrMsg()
+	}
+	return c.Errors.Last().Error()
+}
+
+func shouldLogBody(method, path string) bool {
+	return isBodyMethod(method) && !isServerTelemetryPath(path)
+}
+
+func isBodyMethod(method string) bool {
+	switch method {
+	case consts.MethodPost, consts.MethodPut, consts.MethodDelete:
+		return true
+	default:
+		return false
+	}
+}
+
+func isServerTelemetryPath(path string) bool {
+	switch {
+	case path == "/v1/server/online":
+		return true
+	case path == "/v1/server/push":
+		return true
+	case path == "/v1/server/status":
+		return true
+	case strings.HasPrefix(path, "/v2/server/"):
+		return true
+	default:
+		return false
 	}
 }
 

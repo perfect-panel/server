@@ -32,7 +32,7 @@ func NewUpdateAuthMethodConfigLogic(ctx context.Context, svcCtx *svc.ServiceCont
 }
 
 func (l *UpdateAuthMethodConfigLogic) UpdateAuthMethodConfig(req *types.UpdateAuthMethodConfigRequest) (resp *types.AuthMethodConfig, err error) {
-	method, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, req.Method)
+	method, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, req.Method)
 	if err != nil {
 		l.Errorw("find one by method failed", logger.Field("method", req.Method), logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find one by method failed: %v", err.Error())
@@ -67,7 +67,7 @@ func (l *UpdateAuthMethodConfigLogic) UpdateAuthMethodConfig(req *types.UpdateAu
 		// initialize platform config
 		method.Config = initializePlatformConfig(req.Method).(string)
 	}
-	err = l.svcCtx.AuthModel.Update(l.ctx, method)
+	err = l.svcCtx.Store.Auth().Update(l.ctx, method)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "update auth method failed: %v", err.Error())
 	}

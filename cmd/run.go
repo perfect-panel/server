@@ -11,8 +11,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/perfect-panel/server/pkg/hertzx"
 
 	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal"
@@ -82,7 +82,7 @@ func getServers() *service.Group {
 	}
 	conf.MustLoad(startConfigPath, &c)
 	if !c.Debug {
-		gin.SetMode(gin.ReleaseMode)
+		hertzx.SetMode(hertzx.ReleaseMode)
 	}
 	// init logger
 	if err := logger.SetUp(c.Logger); err != nil {

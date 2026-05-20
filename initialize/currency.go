@@ -12,7 +12,7 @@ import (
 
 func Currency(ctx *svc.ServiceContext) {
 	// Retrieve system currency configuration
-	currency, err := ctx.SystemModel.GetCurrencyConfig(context.Background())
+	currency, err := ctx.Store.System().GetCurrencyConfig(context.Background())
 	if err != nil {
 		logger.Errorf("[INIT] Failed to get currency configuration: %v", err.Error())
 		panic(fmt.Sprintf("[INIT] Failed to get currency configuration: %v", err.Error()))

@@ -28,21 +28,19 @@ func NewGetBatchSendEmailTaskListLogic(ctx context.Context, svcCtx *svc.ServiceC
 
 func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.GetBatchSendEmailTaskListRequest) (resp *types.GetBatchSendEmailTaskListResponse, err error) {
 
-	var tasks []*task.Task
-	tx := l.svcCtx.DB.Model(&task.Task{}).Where("type = ?", task.TypeEmail)
-	if req.Status != nil {
-		tx = tx.Where("status = ?", *req.Status)
-	}
-	if req.Scope != nil {
-		tx = tx.Where("scope = ?", req.Scope)
-	}
 	if req.Page == 0 {
 		req.Page = 1
 	}
 	if req.Size == 0 {
 		req.Size = 10
 	}
-	err = tx.Offset((req.Page - 1) * req.Size).Limit(req.Size).Order("created_at DESC").Find(&tasks).Error
+	total, tasks, err := l.svcCtx.Store.Task().QueryTaskList(l.ctx, &task.Filter{
+		Type:   task.TypeEmail,
+		Page:   req.Page,
+		Size:   req.Size,
+		Status: req.Status,
+		Scope:  req.Scope,
+	})
 	if err != nil {
 		l.Errorf("failed to get email tasks: %v", err)
 		return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
@@ -84,6 +82,7 @@ func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.Ge
 	}
 
 	return &types.GetBatchSendEmailTaskListResponse{
-		List: list,
+		Total: total,
+		List:  list,
 	}, nil
 }

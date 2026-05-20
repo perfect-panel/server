@@ -24,7 +24,7 @@ func NewQueryTicketWaitReplyLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *QueryTicketWaitReplyLogic) QueryTicketWaitReply() (resp *types.TicketWaitRelpyResponse, err error) {
-	count, err := l.svcCtx.TicketModel.QueryWaitReplyTotal(l.ctx)
+	count, err := l.svcCtx.Store.Ticket().QueryWaitReplyTotal(l.ctx)
 	if err != nil {
 		l.Errorw("[QueryTicketWaitReply] Query Database Error: ", logger.Field("error", err.Error()))
 		return nil, err

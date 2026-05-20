@@ -63,7 +63,7 @@ func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *types.BindOAuthCallbackR
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "bind oauth callback failed")
 	}
 	// update user info to redis
-	err = l.svcCtx.UserModel.UpdateUserCache(l.ctx, u)
+	err = l.svcCtx.Store.User().UpdateUserCache(l.ctx, u)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "update user cache failed")
 	}
@@ -89,7 +89,7 @@ func (l *BindOAuthCallbackLogic) google(req *types.BindOAuthCallbackRequest) err
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get google state code failed")
 	}
 	// get google config
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "google")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "google")
 	if err != nil {
 		l.Errorw("error find google auth method: %v", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find google auth method failed")
@@ -116,7 +116,7 @@ func (l *BindOAuthCallbackLogic) google(req *types.BindOAuthCallbackRequest) err
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get google user info failed")
 	}
 	// query user info
-	userAuthMethod, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "google", googleUserInfo.OpenID)
+	userAuthMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "google", googleUserInfo.OpenID)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user auth method failed")
 	}
@@ -130,7 +130,7 @@ func (l *BindOAuthCallbackLogic) google(req *types.BindOAuthCallbackRequest) err
 		AuthIdentifier: googleUserInfo.OpenID,
 		Verified:       true,
 	}
-	err = l.svcCtx.UserModel.InsertUserAuthMethods(l.ctx, userAuthMethod)
+	err = l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, userAuthMethod)
 	if err != nil {
 		l.Errorw("error insert user auth method: %v", logger.Field("error", err.Error()))
 		return err
@@ -145,7 +145,7 @@ func (l *BindOAuthCallbackLogic) apple(req *types.BindOAuthCallbackRequest) erro
 		l.Errorw("[BindOAuthCallbackLogic] Get State code error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple state code failed: %v", err.Error())
 	}
-	appleAuth, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "apple")
+	appleAuth, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "apple")
 	if err != nil {
 		l.Errorw("[BindOAuthCallbackLogic] FindOneByMethod error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find apple auth method failed: %v", err.Error())
@@ -185,7 +185,7 @@ func (l *BindOAuthCallbackLogic) apple(req *types.BindOAuthCallbackRequest) erro
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple unique id failed: %v", err.Error())
 	}
 	// query user by apple unique id
-	userAuthMethod, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "apple", appleUnique)
+	userAuthMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "apple", appleUnique)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("[BindOAuthCallbackLogic] FindUserAuthMethodByOpenID error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth method by openid failed: %v", err.Error())
@@ -207,7 +207,7 @@ func (l *BindOAuthCallbackLogic) apple(req *types.BindOAuthCallbackRequest) erro
 		AuthIdentifier: appleUnique,
 		Verified:       true,
 	}
-	err = l.svcCtx.UserModel.InsertUserAuthMethods(l.ctx, userAuthMethod)
+	err = l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, userAuthMethod)
 	if err != nil {
 		l.Errorw("[BindOAuthCallbackLogic] InsertUserAuthMethods error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert user auth method failed: %v", err.Error())

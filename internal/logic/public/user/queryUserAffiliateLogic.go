@@ -9,7 +9,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -38,14 +37,11 @@ func (l *QueryUserAffiliateLogic) QueryUserAffiliate() (resp *types.QueryUserAff
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 	var sum int64
-	var total int64
-	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		return db.Model(&user.User{}).Where("referer_id = ?", u.Id).Count(&total).Find(&user.User{}).Error
-	})
+	total, err := l.svcCtx.Store.User().CountAffiliates(l.ctx, u.Id)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Affiliate failed: %v", err)
 	}
-	data, _, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{
+	data, _, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     1,
 		Size:     99999,
 		Type:     log.TypeCommission.Uint8(),

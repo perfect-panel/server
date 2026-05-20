@@ -13,7 +13,7 @@ import (
 
 func Device(ctx *svc.ServiceContext) {
 	logger.Debug("device config initialization")
-	method, err := ctx.AuthModel.FindOneByMethod(context.Background(), "device")
+	method, err := ctx.Store.Auth().FindOneByMethod(context.Background(), "device")
 	if err != nil {
 		panic(err)
 	}

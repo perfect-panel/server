@@ -35,6 +35,7 @@ func NewRechargeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Recharge
 }
 
 func (l *RechargeLogic) Recharge(req *types.RechargeOrderRequest) (resp *types.RechargeOrderResponse, err error) {
+	store := l.svcCtx.Store
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -56,7 +57,7 @@ func (l *RechargeLogic) Recharge(req *types.RechargeOrderRequest) (resp *types.R
 	}
 
 	// find payment method
-	payment, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
+	payment, err := store.Payment().FindOne(l.ctx, req.Payment)
 	if err != nil {
 		l.Errorw("[Recharge] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(err, "find payment error: %v", err.Error())
@@ -75,7 +76,7 @@ func (l *RechargeLogic) Recharge(req *types.RechargeOrderRequest) (resp *types.R
 	}
 
 	// query user is new purchase or renewal
-	isNew, err := l.svcCtx.OrderModel.IsUserEligibleForNewOrder(l.ctx, u.Id)
+	isNew, err := store.Order().IsUserEligibleForNewOrder(l.ctx, u.Id)
 	if err != nil {
 		l.Errorw("[Recharge] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		return nil, errors.Wrapf(err, "query user error: %v", err.Error())
@@ -92,7 +93,7 @@ func (l *RechargeLogic) Recharge(req *types.RechargeOrderRequest) (resp *types.R
 		Status:    1,
 		IsNew:     isNew,
 	}
-	err = l.svcCtx.OrderModel.Insert(l.ctx, &orderInfo)
+	err = store.Order().Insert(l.ctx, &orderInfo)
 	if err != nil {
 		l.Errorw("[Recharge] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))
 		return nil, errors.Wrapf(err, "insert order error: %v", err.Error())

@@ -28,7 +28,7 @@ func NewCreateAdsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateA
 }
 
 func (l *CreateAdsLogic) CreateAds(req *types.CreateAdsRequest) error {
-	if err := l.svcCtx.AdsModel.Insert(l.ctx, &ads.Ads{
+	if err := l.svcCtx.Store.Ads().Insert(l.ctx, &ads.Ads{
 		Title:     req.Title,
 		Type:      req.Type,
 		Content:   req.Content,

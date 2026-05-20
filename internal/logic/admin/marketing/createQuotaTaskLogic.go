@@ -3,7 +3,6 @@ package marketing
 import (
 	"context"
 	"strconv"
-	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/task"
@@ -32,34 +31,18 @@ func NewCreateQuotaTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *C
 }
 
 func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest) error {
-	var subs []*user.Subscribe
-	query := l.svcCtx.DB.WithContext(l.ctx).Model(&user.Subscribe{})
-	if len(req.Subscribers) > 0 {
-		query = query.Where("subscribe_id IN ?", req.Subscribers)
-	}
-
-	if req.IsActive != nil && *req.IsActive {
-		query = query.Where("status IN ?", []int64{0, 1, 2}) // 0: Pending 1: Active 2: Finished
-	}
-	if req.StartTime != 0 {
-		start := time.UnixMilli(req.StartTime)
-		query = query.Where("start_time <= ?", start)
-	}
-	if req.EndTime != 0 {
-		end := time.UnixMilli(req.EndTime)
-		query = query.Where("expire_time >= ?", end)
-	}
-
-	if err := query.Find(&subs).Error; err != nil {
+	subIds, err := l.svcCtx.Store.User().QuerySubscribeIdsByFilter(l.ctx, &user.SubscribeFilter{
+		Subscribers: req.Subscribers,
+		IsActive:    req.IsActive,
+		StartTime:   req.StartTime,
+		EndTime:     req.EndTime,
+	})
+	if err != nil {
 		l.Errorf("[CreateQuotaTask] find subscribers error: %v", err.Error())
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribers error")
 	}
-	if len(subs) == 0 {
+	if len(subIds) == 0 {
 		return errors.Wrapf(xerr.NewErrMsg("No subscribers found"), "no subscribers found")
-	}
-	var subIds []int64
-	for _, sub := range subs {
-		subIds = append(subIds, sub.Id)
 	}
 
 	scopeInfo := task.QuotaScope{
@@ -88,7 +71,7 @@ func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest
 		Errors:  "",
 	}
 
-	if err := l.svcCtx.DB.WithContext(l.ctx).Model(&task.Task{}).Create(newTask).Error; err != nil {
+	if err := l.svcCtx.Store.Task().Insert(l.ctx, newTask); err != nil {
 		l.Errorf("[CreateQuotaTask] create task error: %v", err.Error())
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create task error")
 	}

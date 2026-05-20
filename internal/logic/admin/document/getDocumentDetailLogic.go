@@ -27,7 +27,7 @@ func NewGetDocumentDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *GetDocumentDetailLogic) GetDocumentDetail(req *types.GetDocumentDetailRequest) (resp *types.Document, err error) {
-	data, err := l.svcCtx.DocumentModel.QueryDocumentDetail(l.ctx, req.Id)
+	data, err := l.svcCtx.Store.Document().QueryDocumentDetail(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[GetDocumentDetail] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryDocumentDetail error: %v", err.Error())

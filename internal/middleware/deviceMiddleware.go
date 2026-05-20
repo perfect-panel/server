@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/svc"
 	pkgaes "github.com/perfect-panel/server/pkg/aes"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -18,7 +19,7 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
-	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
 const (
@@ -26,8 +27,8 @@ const (
 	defaultStatus = http.StatusOK
 )
 
-func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 
 		if !srvCtx.Config.Device.Enable {
 			c.Next()
@@ -58,17 +59,21 @@ func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *gin.Context) {
 			c.Abort()
 			return
 		}
+		hertzx.SyncRequestURI(c)
+		hertzx.SyncRequestBody(c)
 		c.Writer = rw
 		c.Next()
 		rw.FlushAbort()
 	}
 }
 
-func NewResponseWriter(c *gin.Context, srvCtx *svc.ServiceContext) (rw *ResponseWriter) {
+func NewResponseWriter(c *hertzx.Context, srvCtx *svc.ServiceContext) (rw *ResponseWriter) {
 	rw = &ResponseWriter{
 		c:              c,
 		body:           new(bytes.Buffer),
 		ResponseWriter: c.Writer,
+		size:           noWritten,
+		status:         defaultStatus,
 	}
 	rw.encryptionKey = srvCtx.Config.Device.SecuritySecret
 	rw.encryptionMethod = "AES"
@@ -173,8 +178,6 @@ func (rw *ResponseWriter) Decrypt() bool {
 
 func (rw *ResponseWriter) FlushAbort() {
 	defer rw.c.Abort()
-	responseBody := rw.body.String()
-	fmt.Println("Original Response Body:", responseBody)
 	rw.flush = true
 	if rw.encryption {
 		rw.Encrypt()
@@ -191,7 +194,7 @@ type ResponseWriter struct {
 	status           int
 	flush            bool
 	body             *bytes.Buffer
-	c                *gin.Context
+	c                *hertzx.Context
 	encryption       bool
 	encryptionKey    string
 	encryptionMethod string
@@ -256,6 +259,21 @@ func (rw *ResponseWriter) Size() int {
 
 func (rw *ResponseWriter) Written() bool {
 	return rw.size != noWritten
+}
+
+func (rw *ResponseWriter) SyncFromHertz(ctx *app.RequestContext) {
+	if writer, ok := rw.ResponseWriter.(interface {
+		SyncFromHertz(*app.RequestContext)
+	}); ok {
+		writer.SyncFromHertz(ctx)
+	}
+	status := ctx.Response.StatusCode()
+	if status != 0 {
+		rw.status = status
+	}
+	if size := len(ctx.Response.Body()); size > 0 {
+		rw.size = size
+	}
 }
 
 // Hijack implements the http.Hijacker interface.

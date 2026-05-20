@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 
 	"github.com/hibiken/asynq"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -31,14 +31,15 @@ func NewUpdateOrderStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *UpdateOrderStatusLogic) UpdateOrderStatus(req *types.UpdateOrderStatusRequest) error {
-	info, err := l.svcCtx.OrderModel.FindOne(l.ctx, req.Id)
+	store := l.svcCtx.Store
+	info, err := store.Order().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[UpdateOrderStatus] FindOne error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOne error: %v", err.Error())
 	}
 
 	if req.PaymentId != 0 {
-		paymentMethod, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.PaymentId)
+		paymentMethod, err := store.Payment().FindOne(l.ctx, req.PaymentId)
 		if err != nil {
 			l.Logger.Error("[CreateOrder] PaymentMethod Not Found", logger.Field("error", err.Error()))
 			return errors.Wrapf(xerr.NewErrCode(xerr.PaymentMethodNotFound), "PaymentMethod not found: %v", err.Error())
@@ -50,12 +51,13 @@ func (l *UpdateOrderStatusLogic) UpdateOrderStatus(req *types.UpdateOrderStatusR
 		info.TradeNo = req.TradeNo
 	}
 
-	err = l.svcCtx.OrderModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		if err := l.svcCtx.OrderModel.Update(l.ctx, info, db); err != nil {
+	err = store.InTx(l.ctx, func(txStore repository.Store) error {
+		orderStore := txStore.Order()
+		if err := orderStore.Update(l.ctx, info); err != nil {
 			l.Errorw("[UpdateOrderStatus] Update error", logger.Field("error", err.Error()), logger.Field("OrderID", info.Id))
 			return err
 		}
-		if err := l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, info.OrderNo, req.Status, db); err != nil {
+		if err := orderStore.UpdateOrderStatus(l.ctx, info.OrderNo, req.Status); err != nil {
 			return err
 		}
 		// If order status is 2, create user subscription

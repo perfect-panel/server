@@ -28,7 +28,7 @@ func NewGetAdsListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetAds
 }
 
 func (l *GetAdsListLogic) GetAdsList(req *types.GetAdsListRequest) (resp *types.GetAdsListResponse, err error) {
-	total, data, err := l.svcCtx.AdsModel.GetAdsListByPage(l.ctx, req.Page, req.Size, ads.Filter{
+	total, data, err := l.svcCtx.Store.Ads().GetAdsListByPage(l.ctx, req.Page, req.Size, ads.Filter{
 		Search: req.Search,
 		Status: req.Status,
 	})

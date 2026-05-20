@@ -12,7 +12,7 @@ import (
 
 func Subscribe(svc *svc.ServiceContext) {
 	logger.Debug("Subscribe config initialization")
-	configs, err := svc.SystemModel.GetSubscribeConfig(context.Background())
+	configs, err := svc.Store.System().GetSubscribeConfig(context.Background())
 	if err != nil {
 		logger.Error("[Init Subscribe Config] Get Subscribe Config Error: ", logger.Field("error", err.Error()))
 		return

@@ -1,0 +1,63 @@
+name: Performance
+
+on:
+  pull_request:
+    branches: ["develop", "main"]
+    paths:
+      - "internal/**"
+      - "pkg/hertzx/**"
+      - "scripts/perf/**"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/performance.yml"
+  workflow_dispatch:
+    inputs:
+      bench_time:
+        description: "Go benchmark benchtime, for example 1s, 3s, or 10s"
+        required: false
+        default: "3s"
+      bench_count:
+        description: "Number of benchmark repetitions"
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+
+jobs:
+  http-server-benchmark:
+    name: HTTP server benchmarks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run benchmarks
+        env:
+          BENCH_TIME: ${{ github.event.inputs.bench_time }}
+          BENCH_COUNT: ${{ github.event.inputs.bench_count }}
+        run: |
+          bash scripts/perf/bench.sh | tee benchmark.txt
+          {
+            echo "### HTTP server benchmarks"
+            echo
+            echo '```'
+            cat benchmark.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark result
+        uses: actions/upload-artifact@v4
+        with:
+          name: http-server-benchmark
+          path: benchmark.txt

@@ -27,7 +27,7 @@ func NewGetUserDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 
 func (l *GetUserDetailLogic) GetUserDetail(req *types.GetDetailRequest) (*types.User, error) {
 	resp := types.User{}
-	userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, req.Id)
+	userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, req.Id)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get user detail error: %v", err.Error())
 	}

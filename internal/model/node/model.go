@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -13,6 +14,15 @@ import (
 type customServerLogicModel interface {
 	FilterServerList(ctx context.Context, params *FilterParams) (int64, []*Server, error)
 	FilterNodeList(ctx context.Context, params *FilterNodeParams) (int64, []*Node, error)
+	QueryNodeSorts(ctx context.Context) ([]SortItem, error)
+	QueryServerSorts(ctx context.Context) ([]SortItem, error)
+	UpdateNodeSort(ctx context.Context, id int64, sort int64) error
+	UpdateServerSort(ctx context.Context, id int64, sort int64) error
+	QueryNodeTags(ctx context.Context) ([]string, error)
+	CountEnabledNodes(ctx context.Context) (int64, error)
+	CountServersByReportStatus(ctx context.Context, cutoff time.Time) (int64, int64, error)
+	QueryServerAddresses(ctx context.Context) ([]string, error)
+	QueryEnabledNodeProtocols(ctx context.Context) ([]string, error)
 	ClearNodeCache(ctx context.Context, params *FilterNodeParams) error
 }
 
@@ -44,6 +54,11 @@ type FilterNodeParams struct {
 	Enabled  *bool    // Enabled
 }
 
+type SortItem struct {
+	Id   int64
+	Sort int64
+}
+
 // FilterServerList Filter Server List
 func (m *customServerModel) FilterServerList(ctx context.Context, params *FilterParams) (int64, []*Server, error) {
 	var servers []*Server
@@ -69,6 +84,21 @@ func (m *customServerModel) QueryServerList(ctx context.Context, ids []int64) (s
 	query := m.WithContext(ctx).Model(&Server{})
 	err = query.Where("id IN (?)", ids).Find(&servers).Error
 	return
+}
+
+func (m *customServerModel) QueryServerSorts(ctx context.Context) ([]SortItem, error) {
+	var items []SortItem
+	err := m.WithContext(ctx).Model(&Server{}).Select("id", "sort").Order("sort ASC").Find(&items).Error
+	return items, err
+}
+
+func (m *customServerModel) UpdateServerSort(ctx context.Context, id int64, sort int64) error {
+	server, err := m.FindOneServer(ctx, id)
+	if err != nil {
+		return err
+	}
+	server.Sort = int(sort)
+	return m.UpdateServer(ctx, server)
 }
 
 // FilterNodeList Filter Node List
@@ -116,6 +146,59 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 
 	err := query.Count(&total).Order("sort ASC").Limit(params.Size).Offset((params.Page - 1) * params.Size).Find(&nodes).Error
 	return total, nodes, err
+}
+
+func (m *customServerModel) QueryNodeSorts(ctx context.Context) ([]SortItem, error) {
+	var items []SortItem
+	err := m.WithContext(ctx).Model(&Node{}).Select("id", "sort").Order("sort ASC").Find(&items).Error
+	return items, err
+}
+
+func (m *customServerModel) UpdateNodeSort(ctx context.Context, id int64, sort int64) error {
+	node, err := m.FindOneNode(ctx, id)
+	if err != nil {
+		return err
+	}
+	node.Sort = int(sort)
+	return m.UpdateNode(ctx, node)
+}
+
+func (m *customServerModel) QueryNodeTags(ctx context.Context) ([]string, error) {
+	var tags []string
+	err := m.WithContext(ctx).Model(&Node{}).Pluck("tags", &tags).Error
+	return tags, err
+}
+
+func (m *customServerModel) CountEnabledNodes(ctx context.Context) (int64, error) {
+	var total int64
+	err := m.WithContext(ctx).Model(&Node{}).Where("enabled = ?", true).Count(&total).Error
+	return total, err
+}
+
+func (m *customServerModel) CountServersByReportStatus(ctx context.Context, cutoff time.Time) (int64, int64, error) {
+	var online int64
+	if err := m.WithContext(ctx).Model(&Server{}).Where("last_reported_at > ?", cutoff).Count(&online).Error; err != nil {
+		return 0, 0, err
+	}
+
+	var offline int64
+	if err := m.WithContext(ctx).Model(&Server{}).Where("last_reported_at <= ? OR last_reported_at IS NULL", cutoff).Count(&offline).Error; err != nil {
+		return 0, 0, err
+	}
+
+	return online, offline, nil
+}
+
+func (m *customServerModel) QueryServerAddresses(ctx context.Context) ([]string, error) {
+	var addresses []string
+	err := m.WithContext(ctx).Model(&Server{}).Pluck("address", &addresses).Error
+	return addresses, err
+}
+
+func (m *customServerModel) QueryEnabledNodeProtocols(ctx context.Context) ([]string, error) {
+	var protocols []string
+	err := m.WithContext(ctx).Model(&Node{}).Where("enabled = ?", true).Pluck("protocol", &protocols).Error
+	return protocols, err
 }
 
 // ClearNodeCache Clear Node Cache

@@ -30,7 +30,7 @@ func NewQuerySubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 
 func (l *QuerySubscribeListLogic) QuerySubscribeList(req *types.QuerySubscribeListRequest) (resp *types.QuerySubscribeListResponse, err error) {
 
-	total, data, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+	total, data, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
 		Page:            1,
 		Size:            9999,
 		Language:        req.Language,

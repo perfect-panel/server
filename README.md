@@ -10,7 +10,7 @@
 
 **PPanel is a pure, professional, and perfect open-source proxy panel tool, designed for learning and practical use.**
 
-[English](README.md) | [中文](readme_zh.md) | [Report Bug](https://github.com/perfect-panel/server/issues/new) | [Request Feature](https://github.com/perfect-panel/server/issues/new)
+[English](README.md) | [中文](README_ZH.md) | [Report Bug](https://github.com/perfect-panel/server/issues/new) | [Request Feature](https://github.com/perfect-panel/server/issues/new)
 
 </div>
 
@@ -130,7 +130,7 @@ The documentation covers all endpoints, request/response formats, and authentica
 
 | Project          | Description                | Link                                                  |
 |------------------|----------------------------|-------------------------------------------------------|
-| PPanel Web       | Frontend for PPanel        | [GitHub](https://github.com/perfect-panel/ppanel-web) |
+| PPanel Web       | Frontend for PPanel        | [GitHub](https://github.com/perfect-panel/frontend) |
 | PPanel User Web  | User interface for PPanel  | [Preview](https://user.ppanel.dev)                    |
 | PPanel Admin Web | Admin interface for PPanel | [Preview](https://admin.ppanel.dev)                   |
 
@@ -224,14 +224,13 @@ project's development! 🚀
   <tbody>
     <tr>
       <td align="center" style="padding: 15px; vertical-align: middle;">
-        <a href="https://gin-gonic.com/" style="text-decoration: none;">
-          <img src="https://raw.githubusercontent.com/gin-gonic/logo/master/color.png" width="25" alt="Gin" style="border-radius: 8px;" /><br/>
-          <strong>Gin</strong><br/>
-          <img src="https://img.shields.io/github/stars/gin-gonic/gin?style=social" alt="Gin Stars" />
+        <a href="https://www.cloudwego.io/docs/hertz/" style="text-decoration: none;">
+          <strong>Hertz</strong><br/>
+          <img src="https://img.shields.io/github/stars/cloudwego/hertz?style=social" alt="Hertz Stars" />
         </a>
       </td>
       <td style="padding: 15px; vertical-align: middle;">
-        High-performance Go Web framework<br/>
+        High-performance Go HTTP framework<br/>
       </td>
       <td align="center" style="padding: 15px; vertical-align: middle;">
         <a href="https://gorm.io/" style="text-decoration: none;">

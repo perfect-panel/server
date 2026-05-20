@@ -9,7 +9,8 @@ type (
 		Params map[string]string
 	}
 	SubscribeResponse struct {
-		Config []byte
-		Header string
+		Config  []byte
+		Header  string
+		Headers map[string]string
 	}
 )

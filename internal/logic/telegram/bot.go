@@ -10,7 +10,6 @@ import (
 
 	"github.com/perfect-panel/server/pkg/logger"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -22,7 +21,7 @@ import (
 
 func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*types.TelegramConfig, error) {
 
-	data, err := svcCtx.AuthModel.FindOneByMethod(ctx, "telegram")
+	data, err := svcCtx.Store.Auth().FindOneByMethod(ctx, "telegram")
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get Telegram config failed: %v", err.Error())
 	}
@@ -40,12 +39,12 @@ func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*types.
 	}, nil
 }
 
-func ApiLink(ctx *gin.Context, svcCtx *svc.ServiceContext, method string) string {
+func ApiLink(ctx context.Context, svcCtx *svc.ServiceContext, method string) string {
 	cfg, _ := GetTelegramConfig(ctx, svcCtx)
 	return "https://api.telegram.org/bot" + cfg.TelegramBotToken + "/" + method
 }
 
-func SendUserMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, u user.User, text string, parseMode string) {
+func SendUserMessage(ctx context.Context, svcCtx *svc.ServiceContext, u user.User, text string, parseMode string) {
 	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "sendMessage"), nil)
 	q := req.URL.Query()
 
@@ -64,7 +63,7 @@ func SendUserMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, u user.User, 
 
 }
 
-func SendAdminMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, text string, parseMode string) {
+func SendAdminMessage(ctx context.Context, svcCtx *svc.ServiceContext, text string, parseMode string) {
 	var adminTelegram []int64
 	f := false
 	adminTelegramJson, err := svcCtx.Redis.Get(ctx, "adminTelegram").Result()
@@ -75,7 +74,16 @@ func SendAdminMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, text string,
 		}
 	}
 	if !f {
-		svcCtx.DB.Model(&user.User{}).Where("is_admin = true").Pluck("telegram", &adminTelegram)
+		admins, err := svcCtx.Store.User().QueryAdminUsers(ctx)
+		if err != nil {
+			logger.WithContext(ctx).Error("[SendAdminMessage] query admin users failed", logger.Field("error", err.Error()))
+			return
+		}
+		for _, admin := range admins {
+			if telegram, ok := findTelegram(admin); ok {
+				adminTelegram = append(adminTelegram, telegram)
+			}
+		}
 		val, _ := json.Marshal(adminTelegram)
 		_ = svcCtx.Redis.Set(ctx, "TelegramConfig", string(val), time.Duration(3600)*time.Second).Err()
 	}
@@ -93,8 +101,8 @@ func SendAdminMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, text string,
 	}
 }
 
-func SetWebhook(ctx *gin.Context, svcCtx *svc.ServiceContext) error {
-	configs, _ := svcCtx.SystemModel.GetSiteConfig(ctx)
+func SetWebhook(ctx context.Context, svcCtx *svc.ServiceContext) error {
+	configs, _ := svcCtx.Store.System().GetSiteConfig(ctx)
 	cfg := &types.SiteConfig{}
 	tool.SystemConfigSliceReflectToStruct(configs, cfg)
 	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "setWebhook"), nil)

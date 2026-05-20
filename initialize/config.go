@@ -9,14 +9,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/perfect-panel/server/internal/report"
-	"github.com/perfect-panel/server/pkg/logger"
-
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/perfect-panel/server/initialize/migrate"
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/pkg/conf"
+	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/pkg/errors"
@@ -32,8 +31,8 @@ var configPath string
 func Config(path string) (chan bool, *http.Server) {
 	// Set the configuration file path
 	configPath = path
-	// Create a new Gin instance
-	r := gin.Default()
+	// Create a new Hertz-compatible instance.
+	r := hertzx.Default()
 	// get server port
 	port := 8080
 	host := "127.0.0.1"
@@ -70,7 +69,7 @@ func Config(path string) (chan bool, *http.Server) {
 	r.POST("/init/mysql/test", HandleMySQLTest)
 	r.POST("/init/redis/test", HandleRedisTest)
 	// Handle 404
-	r.NoRoute(func(c *gin.Context) {
+	r.NoRoute(func(c *hertzx.Context) {
 		c.Redirect(http.StatusFound, "/init")
 	})
 
@@ -84,10 +83,10 @@ func Config(path string) (chan bool, *http.Server) {
 	return initStatus, server
 }
 
-func handleInit(c *gin.Context) {
+func handleInit(c *hertzx.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
 }
-func handleInitConfig(c *gin.Context) {
+func handleInitConfig(c *hertzx.Context) {
 	// Load configuration file
 
 	var cfg config.File
@@ -108,7 +107,7 @@ func handleInitConfig(c *gin.Context) {
 		RedisPassword string `json:"redisPassword"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, hertzx.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
@@ -122,7 +121,7 @@ func handleInitConfig(c *gin.Context) {
 	// database
 	dbConfig, err := buildDatabaseConfig(request.DatabaseDriver, request.MysqlHost, request.MysqlPort, request.MysqlDatabase, request.MysqlUser, request.MysqlPassword)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, hertzx.H{
 			"code": 400,
 			"msg":  err.Error(),
 			"data": nil,
@@ -138,7 +137,7 @@ func handleInitConfig(c *gin.Context) {
 	// save config
 	fileData, err := yaml.Marshal(cfg)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, hertzx.H{
 			"code": 500,
 			"msg":  "Configuration initialization failed",
 			"data": nil,
@@ -151,7 +150,7 @@ func handleInitConfig(c *gin.Context) {
 	dbClient := orm.Mysql{Config: dbConfig}
 	db, err := orm.ConnectDatabase(dbClient)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, hertzx.H{
 			"code": 500,
 			"msg":  "Database connection failed",
 			"data": nil,
@@ -166,7 +165,7 @@ func handleInitConfig(c *gin.Context) {
 	// migrate database
 	if err = migrate.Migrate(dbClient.Driver(), dbClient.MigrationDsn()).Up(); err != nil {
 		logger.Errorf("[Init Database] Migrate failed: %v", err.Error())
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, hertzx.H{
 			"code": 500,
 			"msg":  "Database migration failed",
 			"data": nil,
@@ -178,7 +177,7 @@ func handleInitConfig(c *gin.Context) {
 	// create admin user
 	if err = migrate.CreateAdminUser(request.AdminEmail, request.AdminPassword, db); err != nil {
 		logger.Errorf("[Init Database] Create admin user failed: %v", err.Error())
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, hertzx.H{
 			"code": 500,
 			"msg":  "Admin user creation failed",
 			"data": nil,
@@ -189,7 +188,7 @@ func handleInitConfig(c *gin.Context) {
 
 	// write to file
 	if err = os.WriteFile(configPath, fileData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, hertzx.H{
 			"code": 500,
 			"msg":  "Configuration initialization failed",
 			"data": nil,
@@ -198,7 +197,7 @@ func handleInitConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, hertzx.H{
 		"code":   200,
 		"msg":    "Configuration initialized",
 		"status": true,
@@ -206,11 +205,11 @@ func handleInitConfig(c *gin.Context) {
 	initStatus <- true
 }
 
-func HandleMySQLTest(c *gin.Context) {
+func HandleMySQLTest(c *hertzx.Context) {
 	HandleDatabaseTest(c)
 }
 
-func HandleDatabaseTest(c *gin.Context) {
+func HandleDatabaseTest(c *hertzx.Context) {
 	var request struct {
 		Driver   string `json:"driver"`
 		Host     string `json:"host"`
@@ -220,7 +219,7 @@ func HandleDatabaseTest(c *gin.Context) {
 		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, hertzx.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
@@ -234,7 +233,7 @@ func HandleDatabaseTest(c *gin.Context) {
 	var tables []string
 	dbConfig, err := buildDatabaseConfig(request.Driver, request.Host, request.Port, request.Database, request.User, request.Password)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, hertzx.H{
 			"code":   200,
 			"msg":    err.Error(),
 			"status": false,
@@ -272,7 +271,7 @@ func HandleDatabaseTest(c *gin.Context) {
 	}
 
 result:
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, hertzx.H{
 		"code":   200,
 		"msg":    message,
 		"status": status,
@@ -304,14 +303,14 @@ func buildDatabaseConfig(driver, host, port, database, user, password string) (o
 	return cfg, nil
 }
 
-func HandleRedisTest(c *gin.Context) {
+func HandleRedisTest(c *hertzx.Context) {
 	var request struct {
 		Host     string `json:"host"`
 		Port     string `json:"port"`
 		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, hertzx.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
@@ -320,14 +319,14 @@ func HandleRedisTest(c *gin.Context) {
 		return
 	}
 	if err := tool.RedisPing(fmt.Sprintf("%s:%s", request.Host, request.Port), request.Password, 0); err != nil {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, hertzx.H{
 			"code":   200,
 			"msg":    nil,
 			"status": false,
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, hertzx.H{
 		"code":   200,
 		"msg":    nil,
 		"status": true,

@@ -27,7 +27,7 @@ func NewGetVerifyCodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *GetVerifyCodeConfigLogic) GetVerifyCodeConfig() (resp *types.VerifyCodeConfig, err error) {
-	data, err := l.svcCtx.SystemModel.GetVerifyCodeConfig(l.ctx)
+	data, err := l.svcCtx.Store.System().GetVerifyCodeConfig(l.ctx)
 	if err != nil {
 		l.Errorw("Get Verify Code Config Error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get Verify Code Config Error: %s", err.Error())

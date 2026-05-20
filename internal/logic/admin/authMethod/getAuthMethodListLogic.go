@@ -28,7 +28,7 @@ func NewGetAuthMethodListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *GetAuthMethodListLogic) GetAuthMethodList() (resp *types.GetAuthMethodListResponse, err error) {
-	methods, err := l.svcCtx.AuthModel.FindAll(l.ctx)
+	methods, err := l.svcCtx.Store.Auth().FindAll(l.ctx)
 	if err != nil {
 		l.Errorw("find all failed", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find all failed: %v", err.Error())
