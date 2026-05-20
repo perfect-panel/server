@@ -35,6 +35,7 @@ func NewAlipayNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Alip
 }
 
 func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
+	store := l.svcCtx.Store
 	data, ok := l.ctx.Value(constant.CtxKeyPayment).(*payment.Payment)
 	if !ok {
 		return fmt.Errorf("payment config not found")
@@ -57,7 +58,7 @@ func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
 		return err
 	}
 	if notify.Status == alipay.Success {
-		orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, notify.OrderNo)
+		orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, notify.OrderNo)
 		if err != nil {
 			l.Logger.Error("[AlipayNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
 			return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", notify.OrderNo)
@@ -68,7 +69,7 @@ func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
 		}
 
 		// Update order status
-		err = l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, notify.OrderNo, 2)
+		err = store.Order().UpdateOrderStatus(l.ctx, notify.OrderNo, 2)
 		if err != nil {
 			l.Logger.Error("[AlipayNotify] Update order status failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
 			return err

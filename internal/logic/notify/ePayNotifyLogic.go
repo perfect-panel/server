@@ -36,6 +36,7 @@ func NewEPayNotifyLogic(ctx *gin.Context, svcCtx *svc.ServiceContext) *EPayNotif
 }
 
 func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
+	store := l.svcCtx.Store
 	// Find payment config
 	data, ok := l.ctx.Request.Context().Value(constant.CtxKeyPayment).(*payment.Payment)
 	if !ok {
@@ -43,7 +44,7 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "payment config not found")
 	}
 
-	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, req.OutTradeNo)
+	orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, req.OutTradeNo)
 	if err != nil {
 		l.Logger.Error("[EPayNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OutTradeNo))
 		return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", req.OutTradeNo)
@@ -86,7 +87,7 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 		return nil
 	}
 	// Update order status
-	err = l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, req.OutTradeNo, 2)
+	err = store.Order().UpdateOrderStatus(l.ctx, req.OutTradeNo, 2)
 	if err != nil {
 		l.Logger.Error("[EPayNotify] Update order status failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OutTradeNo))
 		return err
