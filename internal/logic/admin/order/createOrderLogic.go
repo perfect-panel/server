@@ -28,13 +28,14 @@ func NewCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Creat
 }
 
 func (l *CreateOrderLogic) CreateOrder(req *types.CreateOrderRequest) error {
-	paymentMethod, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.PaymentId)
+	store := l.svcCtx.Store
+	paymentMethod, err := store.Payment().FindOne(l.ctx, req.PaymentId)
 	if err != nil {
 		l.Logger.Error("[CreateOrder] PaymentMethod Not Found", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.PaymentMethodNotFound), "PaymentMethod not found: %v", err.Error())
 	}
 
-	err = l.svcCtx.OrderModel.Insert(l.ctx, &order.Order{
+	err = store.Order().Insert(l.ctx, &order.Order{
 		UserId:         req.UserId,
 		OrderNo:        tool.GenerateTradeNo(),
 		Type:           req.Type,
