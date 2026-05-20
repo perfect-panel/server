@@ -233,7 +233,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	}
 
 	// Query online user count
-	onlineUsers, err := l.svcCtx.NodeModel.OnlineUserSubscribeGlobal(l.ctx)
+	onlineUsers, err := l.svcCtx.Store.Node().OnlineUserSubscribeGlobal(l.ctx)
 	if err != nil {
 		l.Errorw("[QueryServerTotalDataLogic] OnlineUserSubscribeGlobal error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "OnlineUserSubscribeGlobal error: %v", err)
