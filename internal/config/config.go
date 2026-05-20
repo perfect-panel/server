@@ -12,6 +12,7 @@ type Config struct {
 	Host          string          `yaml:"Host" default:"0.0.0.0"`
 	Port          int             `yaml:"Port" default:"8080"`
 	Debug         bool            `yaml:"Debug" default:"false"`
+	Transport     TransportConfig `yaml:"Transport"`
 	TLS           TLS             `yaml:"TLS"`
 	JwtAuth       JwtAuth         `yaml:"JwtAuth"`
 	Logger        logger.LogConf  `yaml:"Logger"`
@@ -41,6 +42,10 @@ type RedisConfig struct {
 	Host string `yaml:"Host" default:"localhost:6379"`
 	Pass string `yaml:"Pass" default:""`
 	DB   int    `yaml:"DB" default:"0"`
+}
+
+type TransportConfig struct {
+	Driver string `yaml:"Driver" default:"gin"`
 }
 
 type JwtAuth struct {
@@ -191,15 +196,16 @@ func (n *NodeOutbound) Marshal() ([]byte, error) {
 }
 
 type File struct {
-	Host     string         `yaml:"Host" default:"0.0.0.0"`
-	Port     int            `yaml:"Port" default:"8080"`
-	TLS      TLS            `yaml:"TLS"`
-	Debug    bool           `yaml:"Debug" default:"true"`
-	JwtAuth  JwtAuth        `yaml:"JwtAuth"`
-	Logger   logger.LogConf `yaml:"Logger"`
-	Database orm.Config     `yaml:"Database"`
-	MySQL    *orm.Config    `yaml:"MySQL,omitempty"` // Deprecated: use Database.
-	Redis    RedisConfig    `yaml:"Redis"`
+	Host      string          `yaml:"Host" default:"0.0.0.0"`
+	Port      int             `yaml:"Port" default:"8080"`
+	Transport TransportConfig `yaml:"Transport"`
+	TLS       TLS             `yaml:"TLS"`
+	Debug     bool            `yaml:"Debug" default:"true"`
+	JwtAuth   JwtAuth         `yaml:"JwtAuth"`
+	Logger    logger.LogConf  `yaml:"Logger"`
+	Database  orm.Config      `yaml:"Database"`
+	MySQL     *orm.Config     `yaml:"MySQL,omitempty"` // Deprecated: use Database.
+	Redis     RedisConfig     `yaml:"Redis"`
 }
 
 func (c Config) DatabaseConfig() orm.Config {

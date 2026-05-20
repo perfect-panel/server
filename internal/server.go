@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/report"
+	"github.com/perfect-panel/server/internal/transport/fiberserver"
 	"github.com/perfect-panel/server/internal/transport/ginserver"
 	"github.com/perfect-panel/server/pkg/logger"
 
@@ -30,13 +32,22 @@ func NewService(svc *svc.ServiceContext) *Service {
 	}
 }
 
+func newHTTPHandler(svc *svc.ServiceContext) http.Handler {
+	switch strings.ToLower(svc.Config.Transport.Driver) {
+	case "fiber":
+		return fiberserver.NewHTTPHandler(svc)
+	default:
+		return ginserver.New(svc)
+	}
+}
+
 func (m *Service) Start() {
 	if m.svc == nil {
 		panic("config file path is nil")
 	}
 
 	// init service
-	r := ginserver.New(m.svc)
+	r := newHTTPHandler(m.svc)
 	// get server port
 	port := m.svc.Config.Port
 	host := m.svc.Config.Host
