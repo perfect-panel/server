@@ -108,6 +108,7 @@ type customUserLogicModel interface {
 	FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error)
 	FindUserSubscribesByStatus(ctx context.Context, status ...int64) ([]*Subscribe, error)
 	ActivatePendingSubscribesBySubscribeId(ctx context.Context, subscribeId int64) error
+	CountUserSubscribesByUserAndSubscribe(ctx context.Context, userId, subscribeId int64) (int64, error)
 	CountUserSubscribesBySubscribeIdAndStatus(ctx context.Context, subscribeId int64, status ...int64) (int64, error)
 	UpdateUserSubscribeWithTraffic(ctx context.Context, id, download, upload int64, tx ...*gorm.DB) error
 	QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error)

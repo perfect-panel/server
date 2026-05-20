@@ -542,7 +542,7 @@ activation:
 		return err
 	}
 
-	task := asynq.NewTask(queueType.ForthwithActivateOrder, bytes)
+	task := asynq.NewTask(queueType.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
 	_, err = l.svcCtx.Queue.EnqueueContext(l.ctx, task)
 	if err != nil {
 		l.Errorw("[PurchaseCheckout] Enqueue activation task error", logger.Field("error", err.Error()))
