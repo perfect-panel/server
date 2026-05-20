@@ -21,6 +21,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/ticket"
 	"github.com/perfect-panel/server/internal/model/traffic"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/limit"
 	"github.com/perfect-panel/server/pkg/nodeMultiplier"
 	"github.com/perfect-panel/server/pkg/orm"
@@ -38,6 +39,7 @@ type ServiceContext struct {
 	Queue        *asynq.Client
 	ExchangeRate float64
 	GeoIP        *IPLocation
+	Store        repository.Store
 
 	//NodeCache   *cache.NodeCacheClient
 	AuthModel   auth.Model
@@ -92,6 +94,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		_ = rds.FlushAll(context.Background()).Err()
 	}
 	authLimiter := limit.NewPeriodLimit(86400, 15, rds, config.SendCountLimitKeyPrefix, limit.Align())
+	store := repository.NewGormStore(db, rds)
 	srv := &ServiceContext{
 		DB:           db,
 		Redis:        rds,
@@ -99,24 +102,25 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Queue:        NewAsynqClient(c),
 		ExchangeRate: 0,
 		GeoIP:        geoIP,
+		Store:        store,
 		//NodeCache:   cache.NewNodeCacheClient(rds),
 		AuthLimiter: authLimiter,
-		AdsModel:    ads.NewModel(db, rds),
-		LogModel:    log.NewModel(db),
-		NodeModel:   node.NewModel(db, rds),
-		AuthModel:   auth.NewModel(db, rds),
-		UserModel:   user.NewModel(db, rds),
-		OrderModel:  order.NewModel(db, rds),
-		ClientModel: client.NewSubscribeApplicationModel(db),
-		TicketModel: ticket.NewModel(db, rds),
+		AdsModel:    store.Ads(),
+		LogModel:    store.Log(),
+		NodeModel:   store.Node(),
+		AuthModel:   store.Auth(),
+		UserModel:   store.User(),
+		OrderModel:  store.Order(),
+		ClientModel: store.Client(),
+		TicketModel: store.Ticket(),
 		//ServerModel:       server.NewModel(db, rds),
-		SystemModel:       system.NewModel(db, rds),
-		CouponModel:       coupon.NewModel(db, rds),
-		PaymentModel:      payment.NewModel(db, rds),
-		DocumentModel:     document.NewModel(db, rds),
-		SubscribeModel:    subscribe.NewModel(db, rds),
-		TrafficLogModel:   traffic.NewModel(db),
-		AnnouncementModel: announcement.NewModel(db, rds),
+		SystemModel:       store.System(),
+		CouponModel:       store.Coupon(),
+		PaymentModel:      store.Payment(),
+		DocumentModel:     store.Document(),
+		SubscribeModel:    store.Subscribe(),
+		TrafficLogModel:   store.TrafficLog(),
+		AnnouncementModel: store.Announcement(),
 	}
 	srv.DeviceManager = NewDeviceManager(srv)
 	return srv
