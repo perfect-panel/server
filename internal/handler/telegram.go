@@ -30,7 +30,7 @@ func TelegramHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
 			c.Abort()
 			result.HttpResult(c, nil, err)
 		}
-		l := telegram.NewTelegramLogic(c, svcCtx)
+		l := telegram.NewTelegramLogic(c.Request.Context(), svcCtx)
 		l.TelegramLogic(&request)
 	}
 }

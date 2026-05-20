@@ -10,7 +10,6 @@ import (
 
 	"github.com/perfect-panel/server/pkg/logger"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -40,12 +39,12 @@ func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*types.
 	}, nil
 }
 
-func ApiLink(ctx *gin.Context, svcCtx *svc.ServiceContext, method string) string {
+func ApiLink(ctx context.Context, svcCtx *svc.ServiceContext, method string) string {
 	cfg, _ := GetTelegramConfig(ctx, svcCtx)
 	return "https://api.telegram.org/bot" + cfg.TelegramBotToken + "/" + method
 }
 
-func SendUserMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, u user.User, text string, parseMode string) {
+func SendUserMessage(ctx context.Context, svcCtx *svc.ServiceContext, u user.User, text string, parseMode string) {
 	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "sendMessage"), nil)
 	q := req.URL.Query()
 
@@ -64,7 +63,7 @@ func SendUserMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, u user.User, 
 
 }
 
-func SendAdminMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, text string, parseMode string) {
+func SendAdminMessage(ctx context.Context, svcCtx *svc.ServiceContext, text string, parseMode string) {
 	var adminTelegram []int64
 	f := false
 	adminTelegramJson, err := svcCtx.Redis.Get(ctx, "adminTelegram").Result()
@@ -102,7 +101,7 @@ func SendAdminMessage(ctx *gin.Context, svcCtx *svc.ServiceContext, text string,
 	}
 }
 
-func SetWebhook(ctx *gin.Context, svcCtx *svc.ServiceContext) error {
+func SetWebhook(ctx context.Context, svcCtx *svc.ServiceContext) error {
 	configs, _ := svcCtx.Store.System().GetSiteConfig(ctx)
 	cfg := &types.SiteConfig{}
 	tool.SystemConfigSliceReflectToStruct(configs, cfg)
