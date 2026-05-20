@@ -9,32 +9,51 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 )
 
-// HttpResult HTTP Result
-func HttpResult(ctx *gin.Context, resp interface{}, err error) {
+type HTTPResult struct {
+	StatusCode int
+	Body       interface{}
+}
 
+func BuildHTTPResult(resp interface{}, err error) HTTPResult {
 	if err == nil {
-		// Success Result
-		ctx.JSON(http.StatusOK, Success(resp))
-		return
+		return HTTPResult{
+			StatusCode: http.StatusOK,
+			Body:       Success(resp),
+		}
 	}
 
-	// Init Error Code and Message
 	code := xerr.ERROR
 	msg := "Internal Server Error"
 
-	// Get Error Type
 	var e *xerr.CodeError
 	if errors.As(errors.Cause(err), &e) {
-		// Custom Code Error
 		code = e.GetErrCode()
 		msg = e.GetErrMsg()
 	}
-	ctx.JSON(http.StatusOK, Error(code, msg))
+
+	return HTTPResult{
+		StatusCode: http.StatusOK,
+		Body:       Error(code, msg),
+	}
+}
+
+func BuildParamErrorResult(err error) HTTPResult {
+	return HTTPResult{
+		StatusCode: http.StatusOK,
+		Body:       Error(xerr.InvalidParams, err.Error()),
+	}
+}
+
+// HttpResult HTTP Result
+func HttpResult(ctx *gin.Context, resp interface{}, err error) {
+	result := BuildHTTPResult(resp, err)
+	ctx.JSON(result.StatusCode, result.Body)
 }
 
 // ParamErrorResult Param Error Result
 func ParamErrorResult(ctx *gin.Context, err error) {
 	errMsg := err.Error()
 	_ = ctx.Error(errors.New(errMsg))
-	ctx.JSON(http.StatusOK, Error(xerr.InvalidParams, errMsg))
+	result := BuildParamErrorResult(err)
+	ctx.JSON(result.StatusCode, result.Body)
 }
