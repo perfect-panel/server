@@ -29,7 +29,7 @@ func NewGetPrivacyPolicyConfigLogic(ctx context.Context, svcCtx *svc.ServiceCont
 func (l *GetPrivacyPolicyConfigLogic) GetPrivacyPolicyConfig() (resp *types.PrivacyPolicyConfig, err error) {
 	resp = &types.PrivacyPolicyConfig{}
 	// get tos config from db
-	configs, err := l.svcCtx.SystemModel.GetTosConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetTosConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetTosConfig] GetTosConfig error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetTosConfig error: %v", err.Error())

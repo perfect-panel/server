@@ -29,7 +29,7 @@ func NewGetNodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 
 func (l *GetNodeConfigLogic) GetNodeConfig() (*types.NodeConfig, error) {
 	// get server config from db
-	configs, err := l.svcCtx.SystemModel.GetNodeConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetNodeConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetNodeConfigLogic] GetNodeConfig get server config error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetNodeConfig get server config error: %v", err.Error())

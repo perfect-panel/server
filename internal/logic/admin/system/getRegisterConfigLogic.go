@@ -29,7 +29,7 @@ func (l *GetRegisterConfigLogic) GetRegisterConfig() (*types.RegisterConfig, err
 	resp := &types.RegisterConfig{}
 
 	// get register config from database
-	configs, err := l.svcCtx.SystemModel.GetRegisterConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetRegisterConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetRegisterConfig] Database query error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get register config error: %v", err.Error())

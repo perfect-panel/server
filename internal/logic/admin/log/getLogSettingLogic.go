@@ -25,7 +25,7 @@ func NewGetLogSettingLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 }
 
 func (l *GetLogSettingLogic) GetLogSetting() (resp *types.LogSetting, err error) {
-	configs, err := l.svcCtx.SystemModel.GetLogConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetLogConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetLogSetting] Database query error", logger.Field("error", err.Error()))
 		return nil, err
