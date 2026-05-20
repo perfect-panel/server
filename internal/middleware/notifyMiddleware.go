@@ -3,9 +3,9 @@ package middleware
 import (
 	"context"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
 type PaymentParams struct {
@@ -13,18 +13,18 @@ type PaymentParams struct {
 	Token    string `uri:"token"`
 }
 
-func NotifyMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func NotifyMiddleware(svc *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		var params PaymentParams
 		// Get platform and token from uri
 		if err := c.ShouldBindUri(&params); err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
+			c.JSON(400, hertzx.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
 		ctx, err := PaymentNotifyContext(c.Request.Context(), svc, params.Token)
 		if err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
+			c.JSON(400, hertzx.H{"error": err.Error()})
 			c.Abort()
 			return
 		}

@@ -3,10 +3,10 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
-func CorsMiddleware(c *gin.Context) {
+func CorsMiddleware(c *hertzx.Context) {
 	origin := c.Request.Header.Get("Origin")
 	if origin != "" {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)

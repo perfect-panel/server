@@ -4,7 +4,6 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	adminAds "github.com/perfect-panel/server/internal/handler/admin/ads"
 	adminAnnouncement "github.com/perfect-panel/server/internal/handler/admin/announcement"
 	adminApplication "github.com/perfect-panel/server/internal/handler/admin/application"
@@ -36,9 +35,10 @@ import (
 	server "github.com/perfect-panel/server/internal/handler/server"
 	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
-func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
+func RegisterHandlers(router *hertzx.Engine, serverCtx *svc.ServiceContext) {
 	adminAdsGroupRouter := router.Group("/v1/admin/ads")
 	adminAdsGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 

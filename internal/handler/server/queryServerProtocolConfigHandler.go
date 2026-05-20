@@ -1,21 +1,20 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/server"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // QueryServerProtocolConfigHandler Get Server Protocol Config
-func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		var req types.QueryServerConfigRequest
 
 		serverID, err := strconv.ParseInt(c.Param("server_id"), 10, 64)
@@ -33,8 +32,6 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) func(c *gin.Co
 			c.Abort()
 			return
 		}
-
-		fmt.Printf("[QueryServerProtocolConfigHandler] - ShouldBindQuery request: %+v\n", req)
 
 		if svcCtx.Config.Node.NodeSecret != req.SecretKey {
 			c.String(http.StatusUnauthorized, "Unauthorized")

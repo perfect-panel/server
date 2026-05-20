@@ -2,69 +2,63 @@ package hertzserver
 
 import (
 	"context"
-	"io"
-	"net"
 	"net/http"
 	"testing"
-	"time"
 
-	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/cloudwego/hertz/pkg/network/standard"
+	appconfig "github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
 )
 
-func TestNewFallbackHandler(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen failed: %v", err)
-	}
-	addr := ln.Addr().String()
+func TestServerSecretMiddlewareBlocksMigratedPost(t *testing.T) {
+	app := newTestServer("secret")
 
-	app := newServer(&svc.ServiceContext{}, []config.Option{
-		server.WithListener(ln),
-		server.WithTransport(standard.NewTransporter),
-		server.WithDisablePrintRoute(true),
-	}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Fallback", "gin")
-		w.WriteHeader(http.StatusAccepted)
-		_, _ = w.Write([]byte("fallback"))
-	}))
+	status, body := performNativeRequest(app, http.MethodPost, "/v1/server/online?secret_key=wrong")
+	if status != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, status)
+	}
+	if body != "Forbidden" {
+		t.Fatalf("expected forbidden body, got %q", body)
+	}
+}
 
-	go app.Start()
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		if err := app.Shutdown(ctx); err != nil {
-			t.Fatalf("shutdown failed: %v", err)
-		}
-	}()
+func TestQueryServerProtocolConfigRejectsInvalidID(t *testing.T) {
+	app := newTestServer("secret")
 
-	deadline := time.Now().Add(time.Second)
-	for !app.Engine().IsRunning() {
-		if time.Now().After(deadline) {
-			t.Fatal("server did not start")
-		}
-		time.Sleep(10 * time.Millisecond)
+	status, body := performNativeRequest(app, http.MethodGet, "/v2/server/not-a-number?secret_key=secret")
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, status)
 	}
+	if body != "Invalid Params" {
+		t.Fatalf("expected invalid params body, got %q", body)
+	}
+}
 
-	resp, err := http.Get("http://" + addr + "/fallback")
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read response failed: %v", err)
-	}
+func TestQueryServerProtocolConfigRejectsInvalidSecret(t *testing.T) {
+	app := newTestServer("secret")
 
-	if got := resp.StatusCode; got != http.StatusAccepted {
-		t.Fatalf("expected status %d, got %d", http.StatusAccepted, got)
+	status, body := performNativeRequest(app, http.MethodGet, "/v2/server/1?secret_key=wrong")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, status)
 	}
-	if got := resp.Header.Get("X-Fallback"); got != "gin" {
-		t.Fatalf("expected fallback header, got %q", got)
+	if body != "Unauthorized" {
+		t.Fatalf("expected unauthorized body, got %q", body)
 	}
-	if got := string(body); got != "fallback" {
-		t.Fatalf("expected fallback body, got %q", got)
-	}
+}
+
+func newTestServer(secret string) *Server {
+	return New(&svc.ServiceContext{
+		Config: appconfig.Config{
+			Node: appconfig.NodeConfig{
+				NodeSecret: secret,
+			},
+		},
+	}, "127.0.0.1:0", nil)
+}
+
+func performNativeRequest(server *Server, method, uri string) (int, string) {
+	ctx := server.Engine().NewContext()
+	ctx.Request.SetRequestURI(uri)
+	ctx.Request.Header.SetMethod(method)
+	server.Engine().ServeHTTP(context.Background(), ctx)
+	return ctx.Response.StatusCode(), string(ctx.Response.Body())
 }

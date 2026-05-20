@@ -4,14 +4,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
-func PanDomainMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func PanDomainMiddleware(svc *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 
 		if svc.Config.Subscribe.PanDomain && c.Request.URL.Path == "/" {
 			// intercept browser

@@ -45,7 +45,7 @@ type RedisConfig struct {
 }
 
 type TransportConfig struct {
-	Driver string `yaml:"Driver" default:"gin"`
+	Driver string `yaml:"Driver" default:"hertz"`
 }
 
 type JwtAuth struct {

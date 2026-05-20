@@ -11,12 +11,12 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
 type responseBodyWriter struct {
-	gin.ResponseWriter
+	hertzx.ResponseWriter
 	body *bytes.Buffer
 }
 
@@ -25,8 +25,8 @@ func (r responseBodyWriter) Write(b []byte) (int, error) {
 	return r.ResponseWriter.Write(b)
 }
 
-func LoggerMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func LoggerMiddleware(svc *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		// get response body
 		w := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
 		c.Writer = w

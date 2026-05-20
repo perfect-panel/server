@@ -1,15 +1,15 @@
 package system
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/admin/system"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get Verify Code Config
-func GetVerifyCodeConfigHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func GetVerifyCodeConfigHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 
 		l := system.NewGetVerifyCodeConfigLogic(c.Request.Context(), svcCtx)
 		resp, err := l.GetVerifyCodeConfig()

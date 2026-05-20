@@ -5,14 +5,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/report"
-	"github.com/perfect-panel/server/internal/transport/ginserver"
 	"github.com/perfect-panel/server/internal/transport/hertzserver"
 	"github.com/perfect-panel/server/pkg/logger"
 
@@ -38,59 +35,20 @@ type transportServer interface {
 	Shutdown(ctx context.Context) error
 }
 
-type ginTransportServer struct {
-	server     *http.Server
-	tlsEnabled bool
-	certFile   string
-	keyFile    string
-}
-
-func (s *ginTransportServer) Start() {
-	var err error
-	if s.tlsEnabled {
-		err = s.server.ListenAndServeTLS(s.certFile, s.keyFile)
-	} else {
-		err = s.server.ListenAndServe()
-	}
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Errorf("server start error: %s", err.Error())
-	}
-}
-
-func (s *ginTransportServer) Shutdown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
-}
-
 func newTransportServer(svc *svc.ServiceContext, addr string) transportServer {
-	switch strings.ToLower(svc.Config.Transport.Driver) {
-	case "hertz":
-		var tlsConfig *tls.Config
-		if svc.Config.TLS.Enable {
-			cert, err := tls.LoadX509KeyPair(svc.Config.TLS.CertFile, svc.Config.TLS.KeyFile)
-			if err != nil {
-				logger.Errorf("load tls certificate error: %s", err.Error())
-				return nil
-			}
-			tlsConfig = &tls.Config{
-				MinVersion:   tls.VersionTLS12,
-				Certificates: []tls.Certificate{cert},
-			}
+	var tlsConfig *tls.Config
+	if svc.Config.TLS.Enable {
+		cert, err := tls.LoadX509KeyPair(svc.Config.TLS.CertFile, svc.Config.TLS.KeyFile)
+		if err != nil {
+			logger.Errorf("load tls certificate error: %s", err.Error())
+			return nil
 		}
-		return hertzserver.New(svc, addr, tlsConfig, ginserver.New(svc))
-	default:
-		return &ginTransportServer{
-			server: &http.Server{
-				Addr:    addr,
-				Handler: ginserver.New(svc),
-				TLSConfig: &tls.Config{
-					MinVersion: tls.VersionTLS12,
-				},
-			},
-			tlsEnabled: svc.Config.TLS.Enable,
-			certFile:   svc.Config.TLS.CertFile,
-			keyFile:    svc.Config.TLS.KeyFile,
+		tlsConfig = &tls.Config{
+			MinVersion:   tls.VersionTLS12,
+			Certificates: []tls.Certificate{cert},
 		}
 	}
+	return hertzserver.New(svc, addr, tlsConfig)
 }
 
 func (m *Service) Start() {

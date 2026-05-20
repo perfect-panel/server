@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/result"
@@ -17,8 +17,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func AuthMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func AuthMiddleware(svc *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		ctx, err := AuthenticateRequest(c.Request.Context(), svc, c.GetHeader("Authorization"), c.Request.URL.Path)
 		if err != nil {
 			result.HttpResult(c, nil, err)

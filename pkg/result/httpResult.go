@@ -3,7 +3,7 @@ package result
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/pkg/errors"
 
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -45,13 +45,13 @@ func BuildParamErrorResult(err error) HTTPResult {
 }
 
 // HttpResult HTTP Result
-func HttpResult(ctx *gin.Context, resp interface{}, err error) {
+func HttpResult(ctx *hertzx.Context, resp interface{}, err error) {
 	result := BuildHTTPResult(resp, err)
 	ctx.JSON(result.StatusCode, result.Body)
 }
 
 // ParamErrorResult Param Error Result
-func ParamErrorResult(ctx *gin.Context, err error) {
+func ParamErrorResult(ctx *hertzx.Context, err error) {
 	errMsg := err.Error()
 	_ = ctx.Error(errors.New(errMsg))
 	result := BuildParamErrorResult(err)

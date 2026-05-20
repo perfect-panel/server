@@ -224,14 +224,13 @@ project's development! 🚀
   <tbody>
     <tr>
       <td align="center" style="padding: 15px; vertical-align: middle;">
-        <a href="https://gin-gonic.com/" style="text-decoration: none;">
-          <img src="https://raw.githubusercontent.com/gin-gonic/logo/master/color.png" width="25" alt="Gin" style="border-radius: 8px;" /><br/>
-          <strong>Gin</strong><br/>
-          <img src="https://img.shields.io/github/stars/gin-gonic/gin?style=social" alt="Gin Stars" />
+        <a href="https://www.cloudwego.io/docs/hertz/" style="text-decoration: none;">
+          <strong>Hertz</strong><br/>
+          <img src="https://img.shields.io/github/stars/cloudwego/hertz?style=social" alt="Hertz Stars" />
         </a>
       </td>
       <td style="padding: 15px; vertical-align: middle;">
-        High-performance Go Web framework<br/>
+        High-performance Go HTTP framework<br/>
       </td>
       <td align="center" style="padding: 15px; vertical-align: middle;">
         <a href="https://gorm.io/" style="text-decoration: none;">

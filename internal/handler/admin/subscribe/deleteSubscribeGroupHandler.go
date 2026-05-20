@@ -1,16 +1,16 @@
 package subscribe
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/admin/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Delete subscribe group
-func DeleteSubscribeGroupHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func DeleteSubscribeGroupHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		var req types.DeleteSubscribeGroupRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)

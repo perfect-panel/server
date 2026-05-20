@@ -8,7 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
@@ -54,8 +54,8 @@ func requestAttributes(req *http.Request) []attribute.KeyValue {
 	}
 }
 
-func TraceMiddleware(_ *svc.ServiceContext) func(ctx *gin.Context) {
-	return func(c *gin.Context) {
+func TraceMiddleware(_ *svc.ServiceContext) func(ctx *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		ctx := c.Request.Context()
 		tracer := trace.TracerFromContext(ctx)
 

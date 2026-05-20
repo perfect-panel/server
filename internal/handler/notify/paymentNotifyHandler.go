@@ -5,19 +5,19 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/notify"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // PaymentNotifyHandler Payment Notify
-func PaymentNotifyHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func PaymentNotifyHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		platform, ok := c.Request.Context().Value(constant.CtxKeyPlatform).(string)
 		if !ok {
 			logger.WithContext(c.Request.Context()).Errorf("platform not found")
