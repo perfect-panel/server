@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -30,14 +29,14 @@ func NewQueryNodeTagLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Quer
 
 func (l *QueryNodeTagLogic) QueryNodeTag() (resp *types.QueryNodeTagResponse, err error) {
 
-	var nodes []*node.Node
-	if err = l.svcCtx.DB.WithContext(l.ctx).Model(&node.Node{}).Find(&nodes).Error; err != nil {
+	nodeTags, err := l.svcCtx.Store.Node().QueryNodeTags(l.ctx)
+	if err != nil {
 		l.Errorw("[QueryNodeTag] Query Database Error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "[QueryNodeTag] Query Database Error")
 	}
 	var tags []string
-	for _, item := range nodes {
-		tags = append(tags, strings.Split(item.Tags, ",")...)
+	for _, item := range nodeTags {
+		tags = append(tags, strings.Split(item, ",")...)
 	}
 
 	return &types.QueryNodeTagResponse{

@@ -37,7 +37,7 @@ func (l *CreateNodeLogic) CreateNode(req *types.CreateNodeRequest) error {
 		ServerId: req.ServerId,
 		Protocol: req.Protocol,
 	}
-	err := l.svcCtx.NodeModel.InsertNode(l.ctx, &data)
+	err := l.svcCtx.Store.Node().InsertNode(l.ctx, &data)
 	if err != nil {
 		l.Errorw("[CreateNode] Insert Database Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "[CreateNode] Insert Database Error")

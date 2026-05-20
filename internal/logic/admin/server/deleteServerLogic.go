@@ -27,12 +27,13 @@ func NewDeleteServerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Dele
 }
 
 func (l *DeleteServerLogic) DeleteServer(req *types.DeleteServerRequest) error {
-	err := l.svcCtx.NodeModel.DeleteServer(l.ctx, req.Id)
+	nodeStore := l.svcCtx.Store.Node()
+	err := nodeStore.DeleteServer(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[DeleteServer] Delete Server Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "[DeleteServer] Delete Server Error")
 	}
-	return l.svcCtx.NodeModel.ClearNodeCache(l.ctx, &node.FilterNodeParams{
+	return nodeStore.ClearNodeCache(l.ctx, &node.FilterNodeParams{
 		Page:     1,
 		Size:     1000,
 		ServerId: []int64{req.Id},

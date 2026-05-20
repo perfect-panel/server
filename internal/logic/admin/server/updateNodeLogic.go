@@ -28,7 +28,8 @@ func NewUpdateNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Update
 }
 
 func (l *UpdateNodeLogic) UpdateNode(req *types.UpdateNodeRequest) error {
-	data, err := l.svcCtx.NodeModel.FindOneNode(l.ctx, req.Id)
+	nodeStore := l.svcCtx.Store.Node()
+	data, err := nodeStore.FindOneNode(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[UpdateNode] Query Database Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "[UpdateNode] Query Database Error")
@@ -40,12 +41,12 @@ func (l *UpdateNodeLogic) UpdateNode(req *types.UpdateNodeRequest) error {
 	data.Address = req.Address
 	data.Protocol = req.Protocol
 	data.Enabled = req.Enabled
-	err = l.svcCtx.NodeModel.UpdateNode(l.ctx, data)
+	err = nodeStore.UpdateNode(l.ctx, data)
 	if err != nil {
 		l.Errorw("[UpdateNode] Update Database Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "[UpdateNode] Update Database Error")
 	}
-	return l.svcCtx.NodeModel.ClearNodeCache(l.ctx, &node.FilterNodeParams{
+	return nodeStore.ClearNodeCache(l.ctx, &node.FilterNodeParams{
 		Page:     1,
 		Size:     1000,
 		ServerId: []int64{data.ServerId},
