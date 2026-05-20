@@ -3,7 +3,6 @@ package marketing
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/email"
@@ -32,7 +31,7 @@ func (l *StopBatchSendEmailTaskLogic) StopBatchSendEmailTask(req *types.StopBatc
 	} else {
 		logger.Error("[StopBatchSendEmailTaskLogic] email.Manager is nil, cannot stop task")
 	}
-	err = l.svcCtx.DB.Model(&task.Task{}).Where("id = ?", req.Id).Update("status", 2).Error
+	err = l.svcCtx.Store.Task().UpdateStatus(l.ctx, req.Id, 2)
 
 	if err != nil {
 		l.Errorf("failed to stop email task, error: %v", err)

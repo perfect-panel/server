@@ -15,6 +15,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/payment"
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/model/system"
+	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/model/ticket"
 	"github.com/perfect-panel/server/internal/model/traffic"
 	"github.com/perfect-panel/server/internal/model/user"
@@ -35,6 +36,7 @@ type Store interface {
 	Payment() payment.Model
 	Subscribe() subscribe.Model
 	System() system.Model
+	Task() task.Model
 	Ticket() ticket.Model
 	TrafficLog() traffic.Model
 	User() user.Model
@@ -60,6 +62,7 @@ type GormStore struct {
 	payment      payment.Model
 	subscribe    subscribe.Model
 	system       system.Model
+	task         task.Model
 	ticket       ticket.Model
 	trafficLog   traffic.Model
 	user         user.Model
@@ -81,6 +84,7 @@ func NewGormStore(db *gorm.DB, rds *redis.Client) *GormStore {
 		payment:      payment.NewModel(db, rds),
 		subscribe:    subscribe.NewModel(db, rds),
 		system:       system.NewModel(db, rds),
+		task:         task.NewModel(db),
 		ticket:       ticket.NewModel(db, rds),
 		trafficLog:   traffic.NewModel(db),
 		user:         user.NewModel(db, rds),
@@ -133,6 +137,10 @@ func (s *GormStore) Subscribe() subscribe.Model {
 
 func (s *GormStore) System() system.Model {
 	return s.system
+}
+
+func (s *GormStore) Task() task.Model {
+	return s.task
 }
 
 func (s *GormStore) Ticket() ticket.Model {

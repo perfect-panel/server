@@ -3,7 +3,6 @@ package marketing
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -26,10 +25,7 @@ func NewGetBatchSendEmailTaskStatusLogic(ctx context.Context, svcCtx *svc.Servic
 }
 
 func (l *GetBatchSendEmailTaskStatusLogic) GetBatchSendEmailTaskStatus(req *types.GetBatchSendEmailTaskStatusRequest) (resp *types.GetBatchSendEmailTaskStatusResponse, err error) {
-	tx := l.svcCtx.DB
-
-	var taskInfo *task.Task
-	err = tx.Model(&task.Task{}).Where("id = ?", req.Id).First(&taskInfo).Error
+	taskInfo, err := l.svcCtx.Store.Task().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("failed to get email task status, error: %v", err)
 		return nil, xerr.NewErrCode(xerr.DatabaseQueryError)

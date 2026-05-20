@@ -19,6 +19,17 @@ type customTrafficLogicModel interface {
 	QueryServerTrafficRanking(ctx context.Context, start, end time.Time) ([]ServerTrafficRanking, error)
 	QueryUserTrafficRanking(ctx context.Context, start, end time.Time) ([]UserTrafficRanking, error)
 	QueryTrafficLogPageList(ctx context.Context, userId, subscribeId int64, page, size int) ([]*TrafficLog, int64, error)
+	QueryTrafficLogDetails(ctx context.Context, filter *TrafficLogDetailsFilter) ([]*TrafficLog, int64, error)
+}
+
+type TrafficLogDetailsFilter struct {
+	ServerId    int64
+	UserId      int64
+	SubscribeId int64
+	Start       time.Time
+	End         time.Time
+	Page        int
+	Size        int
 }
 
 // NewModel returns a model for the database table.
@@ -153,5 +164,39 @@ func (m *customTrafficModel) QueryTrafficLogPageList(ctx context.Context, userId
 	var list []*TrafficLog
 	var total int64
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).Where("user_id = ? and subscribe_id= ?", userId, subscribeId).Count(&total).Limit(size).Offset((page - 1) * size).Find(&list).Error
+	return list, total, err
+}
+
+func (m *customTrafficModel) QueryTrafficLogDetails(ctx context.Context, filter *TrafficLogDetailsFilter) ([]*TrafficLog, int64, error) {
+	if filter == nil {
+		filter = &TrafficLogDetailsFilter{Page: 1, Size: 10}
+	}
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.Size < 1 {
+		filter.Size = 10
+	}
+
+	query := m.Conn.WithContext(ctx).Model(&TrafficLog{})
+	if filter.ServerId != 0 {
+		query = query.Where("server_id = ?", filter.ServerId)
+	}
+	if !filter.Start.IsZero() && !filter.End.IsZero() {
+		query = query.Where("timestamp BETWEEN ? AND ?", filter.Start, filter.End)
+	}
+	if filter.UserId != 0 {
+		query = query.Where("user_id = ?", filter.UserId)
+	}
+	if filter.SubscribeId != 0 {
+		query = query.Where("subscribe_id = ?", filter.SubscribeId)
+	}
+
+	var list []*TrafficLog
+	var total int64
+	err := query.Count(&total).
+		Limit(filter.Size).
+		Offset((filter.Page - 1) * filter.Size).
+		Find(&list).Error
 	return list, total, err
 }
