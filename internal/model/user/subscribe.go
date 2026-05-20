@@ -65,6 +65,18 @@ func (m *defaultUserModel) FindUsersSubscribeBySubscribeId(ctx context.Context, 
 	return data, err
 }
 
+func (m *defaultUserModel) FindUserSubscribesByStatus(ctx context.Context, status ...int64) ([]*Subscribe, error) {
+	var data []*Subscribe
+	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
+		conn = conn.Model(&Subscribe{})
+		if len(status) > 0 {
+			conn = conn.Where("status IN ?", status)
+		}
+		return conn.Find(v).Error
+	})
+	return data, err
+}
+
 func (m *defaultUserModel) ActivatePendingSubscribesBySubscribeId(ctx context.Context, subscribeId int64) error {
 	var pending []*Subscribe
 	err := m.QueryNoCacheCtx(ctx, &pending, func(conn *gorm.DB, v interface{}) error {
@@ -82,6 +94,18 @@ func (m *defaultUserModel) ActivatePendingSubscribesBySubscribeId(ctx context.Co
 	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status = ?", subscribeId, 0).Update("status", 1).Error
 	}, cacheKeys...)
+}
+
+func (m *defaultUserModel) CountUserSubscribesBySubscribeIdAndStatus(ctx context.Context, subscribeId int64, status ...int64) (int64, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		conn = conn.Model(&Subscribe{}).Where("subscribe_id = ?", subscribeId)
+		if len(status) > 0 {
+			conn = conn.Where("status IN ?", status)
+		}
+		return conn.Count(&total).Error
+	})
+	return total, err
 }
 
 // QueryUserSubscribe returns a list of records that meet the conditions.

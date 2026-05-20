@@ -29,7 +29,7 @@ func NewGetSubscribeDetailsLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *GetSubscribeDetailsLogic) GetSubscribeDetails(req *types.GetSubscribeDetailsRequest) (resp *types.Subscribe, err error) {
-	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, req.Id)
+	sub, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Logger.Error("[GetSubscribeDetailsLogic] get subscribe details failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe details failed: %v", err.Error())

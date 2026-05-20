@@ -27,10 +27,10 @@ func NewCreateSubscribeGroupLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *CreateSubscribeGroupLogic) CreateSubscribeGroup(req *types.CreateSubscribeGroupRequest) error {
-	err := l.svcCtx.DB.Model(&subscribe.Group{}).Create(&subscribe.Group{
+	err := l.svcCtx.Store.Subscribe().CreateGroup(l.ctx, &subscribe.Group{
 		Name:        req.Name,
 		Description: req.Description,
-	}).Error
+	})
 	if err != nil {
 		l.Logger.Error("[CreateSubscribeGroupLogic] create subscribe group failed: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create subscribe group failed: %v", err.Error())

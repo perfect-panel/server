@@ -36,6 +36,12 @@ type customSubscribeLogicModel interface {
 	FilterList(ctx context.Context, params *FilterParams) (int64, []*Subscribe, error)
 	ClearCache(ctx context.Context, id ...int64) error
 	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
+	UpdateSort(ctx context.Context, data []*Subscribe) error
+	QueryGroupList(ctx context.Context) (int64, []*Group, error)
+	CreateGroup(ctx context.Context, data *Group) error
+	UpdateGroup(ctx context.Context, data *Group) error
+	DeleteGroup(ctx context.Context, id int64) error
+	BatchDeleteGroup(ctx context.Context, ids []int64) error
 }
 
 // NewModel returns a model for the database table.
@@ -67,6 +73,48 @@ func (m *customSubscribeModel) ClearCache(ctx context.Context, ids ...int64) err
 		cacheKeys = append(cacheKeys, m.getCacheKeys(data)...)
 	}
 	return m.CachedConn.DelCacheCtx(ctx, cacheKeys...)
+}
+
+func (m *customSubscribeModel) UpdateSort(ctx context.Context, data []*Subscribe) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Save(data).Error
+	}, m.batchGetCacheKeys(data...)...)
+}
+
+func (m *customSubscribeModel) QueryGroupList(ctx context.Context) (int64, []*Group, error) {
+	var list []*Group
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Group{}).Count(&total).Find(v).Error
+	})
+	return total, list, err
+}
+
+func (m *customSubscribeModel) CreateGroup(ctx context.Context, data *Group) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Create(data).Error
+	})
+}
+
+func (m *customSubscribeModel) UpdateGroup(ctx context.Context, data *Group) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Where("id = ?", data.Id).Save(data).Error
+	})
+}
+
+func (m *customSubscribeModel) DeleteGroup(ctx context.Context, id int64) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Where("id = ?", id).Delete(&Group{}).Error
+	})
+}
+
+func (m *customSubscribeModel) BatchDeleteGroup(ctx context.Context, ids []int64) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Where("id IN ?", ids).Delete(&Group{}).Error
+	})
 }
 
 // FilterList Filter Subscribe List

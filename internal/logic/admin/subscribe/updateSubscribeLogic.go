@@ -32,7 +32,7 @@ func NewUpdateSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *U
 
 func (l *UpdateSubscribeLogic) UpdateSubscribe(req *types.UpdateSubscribeRequest) error {
 	// Query the database to get the subscribe information
-	_, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, req.Id)
+	_, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Logger.Error("[UpdateSubscribe] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe error: %v", err.Error())
@@ -72,7 +72,7 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *types.UpdateSubscribeRequest
 		RenewalReset:      req.RenewalReset,
 		ShowOriginalPrice: req.ShowOriginalPrice,
 	}
-	err = l.svcCtx.SubscribeModel.Update(l.ctx, sub)
+	err = l.svcCtx.Store.Subscribe().Update(l.ctx, sub)
 	if err != nil {
 		l.Logger.Error("[UpdateSubscribe] update subscribe failed", logger.Field("error", err.Error()), logger.Field("subscribe", sub))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update subscribe error: %v", err.Error())

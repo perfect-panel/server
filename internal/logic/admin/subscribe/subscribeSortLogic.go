@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -36,12 +36,12 @@ func (l *SubscribeSortLogic) SubscribeSort(req *types.SubscribeSortRequest) erro
 		ids = append(ids, v.Id)
 	}
 	// query min sort by ids
-	minSort, err := l.svcCtx.SubscribeModel.QuerySubscribeMinSortByIds(l.ctx, ids)
+	minSort, err := l.svcCtx.Store.Subscribe().QuerySubscribeMinSortByIds(l.ctx, ids)
 	if err != nil {
 		l.Logger.Error("[SubscribeSortLogic] query subscribe list by ids error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query subscribe list by ids error: %v", err.Error())
 	}
-	_, subs, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+	_, subs, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
 		Page: 1,
 		Size: 9999,
 		Ids:  ids,
@@ -57,8 +57,8 @@ func (l *SubscribeSortLogic) SubscribeSort(req *types.SubscribeSortRequest) erro
 		}
 	}
 	// update sort
-	err = l.svcCtx.SubscribeModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		return db.Save(subs).Error
+	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+		return store.Subscribe().UpdateSort(l.ctx, subs)
 	})
 	if err != nil {
 		l.Logger.Error("[SubscribeSortLogic] update subscribe sort error: ", logger.Field("error", err.Error()))

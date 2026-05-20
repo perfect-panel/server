@@ -3,7 +3,6 @@ package subscribe
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -27,7 +26,7 @@ func NewDeleteSubscribeGroupLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *DeleteSubscribeGroupLogic) DeleteSubscribeGroup(req *types.DeleteSubscribeGroupRequest) error {
-	err := l.svcCtx.DB.Model(&subscribe.Group{}).Where("id = ?", req.Id).Delete(&subscribe.Group{}).Error
+	err := l.svcCtx.Store.Subscribe().DeleteGroup(l.ctx, req.Id)
 	if err != nil {
 		l.Logger.Error("[DeleteSubscribeGroupLogic] delete subscribe group failed: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete subscribe group failed: %v", err.Error())
