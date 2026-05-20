@@ -10,7 +10,7 @@
 
 **PPanel is a pure, professional, and perfect open-source proxy panel tool, designed for learning and practical use.**
 
-[English](README.md) | [中文](readme_zh.md) | [Report Bug](https://github.com/perfect-panel/server/issues/new) | [Request Feature](https://github.com/perfect-panel/server/issues/new)
+[English](README.md) | [中文](README_ZH.md) | [Report Bug](https://github.com/perfect-panel/server/issues/new) | [Request Feature](https://github.com/perfect-panel/server/issues/new)
 
 </div>
 
@@ -130,7 +130,7 @@ The documentation covers all endpoints, request/response formats, and authentica
 
 | Project          | Description                | Link                                                  |
 |------------------|----------------------------|-------------------------------------------------------|
-| PPanel Web       | Frontend for PPanel        | [GitHub](https://github.com/perfect-panel/ppanel-web) |
+| PPanel Web       | Frontend for PPanel        | [GitHub](https://github.com/perfect-panel/frontend) |
 | PPanel User Web  | User interface for PPanel  | [Preview](https://user.ppanel.dev)                    |
 | PPanel Admin Web | Admin interface for PPanel | [Preview](https://admin.ppanel.dev)                   |
 
