@@ -27,7 +27,7 @@ func NewGetClientLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetClie
 }
 
 func (l *GetClientLogic) GetClient() (resp *types.GetSubscribeClientResponse, err error) {
-	data, err := l.svcCtx.ClientModel.List(l.ctx)
+	data, err := l.svcCtx.Store.Client().List(l.ctx)
 	if err != nil {
 		l.Errorf("Failed to get subscribe application list: %v", err)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Failed to get subscribe application list")
