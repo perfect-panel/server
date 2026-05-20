@@ -16,7 +16,7 @@ func GlobalValues(c config.NodeConfig) types.ServerNodeConfigValues {
 		dns = append(dns, types.NodeDNS{
 			Proto:   d.Proto,
 			Address: d.Address,
-			Domains: cloneStrings(d.Domains),
+			Domains: normalizeStrings(d.Domains),
 		})
 	}
 
@@ -28,15 +28,15 @@ func GlobalValues(c config.NodeConfig) types.ServerNodeConfigValues {
 			Address:  o.Address,
 			Port:     o.Port,
 			Password: o.Password,
-			Rules:    cloneStrings(o.Rules),
+			Rules:    normalizeStrings(o.Rules),
 		})
 	}
 
 	return types.ServerNodeConfigValues{
 		IPStrategy: c.IPStrategy,
-		DNS:        dns,
-		Block:      cloneStrings(c.Block),
-		Outbound:   outbound,
+		DNS:        ensureDNS(dns),
+		Block:      normalizeStrings(c.Block),
+		Outbound:   ensureOutbound(outbound),
 	}
 }
 
@@ -60,7 +60,7 @@ func ApplyOverride(values *types.ServerNodeConfigValues, override *node.ServerCo
 		if err := unmarshalJSONField(*override.Block, &block, "block"); err != nil {
 			return err
 		}
-		values.Block = cloneStrings(block)
+		values.Block = normalizeStrings(block)
 	}
 	if override.Outbound != nil {
 		var outbound []types.NodeOutbound
@@ -104,7 +104,7 @@ func OverrideResponse(override *node.ServerConfigOverride) (types.ServerNodeConf
 		if err := unmarshalJSONField(*override.Block, &block, "block"); err != nil {
 			return resp, err
 		}
-		resp.Block = cloneStrings(block)
+		resp.Block = normalizeStrings(block)
 	}
 	if override.Outbound != nil {
 		resp.InheritOutbound = false
@@ -134,7 +134,7 @@ func OverrideModel(serverID int64, req types.ServerNodeConfigOverride) (*node.Se
 		data.DNS = &value
 	}
 	if !req.InheritBlock {
-		value, err := marshalJSONField(cloneStrings(req.Block), "block")
+		value, err := marshalJSONField(normalizeStrings(req.Block), "block")
 		if err != nil {
 			return nil, false, err
 		}
@@ -158,7 +158,7 @@ func CloneValues(values types.ServerNodeConfigValues) types.ServerNodeConfigValu
 		dns = append(dns, types.NodeDNS{
 			Proto:   d.Proto,
 			Address: d.Address,
-			Domains: cloneStrings(d.Domains),
+			Domains: normalizeStrings(d.Domains),
 		})
 	}
 
@@ -170,15 +170,15 @@ func CloneValues(values types.ServerNodeConfigValues) types.ServerNodeConfigValu
 			Address:  o.Address,
 			Port:     o.Port,
 			Password: o.Password,
-			Rules:    cloneStrings(o.Rules),
+			Rules:    normalizeStrings(o.Rules),
 		})
 	}
 
 	return types.ServerNodeConfigValues{
 		IPStrategy: values.IPStrategy,
-		DNS:        dns,
-		Block:      cloneStrings(values.Block),
-		Outbound:   outbound,
+		DNS:        ensureDNS(dns),
+		Block:      normalizeStrings(values.Block),
+		Outbound:   ensureOutbound(outbound),
 	}
 }
 
@@ -200,11 +200,24 @@ func marshalJSONField(value any, field string) (string, error) {
 	return string(data), nil
 }
 
-func cloneStrings(values []string) []string {
+func normalizeStrings(values []string) []string {
 	if values == nil {
 		return []string{}
 	}
-	return append([]string(nil), values...)
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 func ensureDNS(values []types.NodeDNS) []types.NodeDNS {
@@ -213,10 +226,15 @@ func ensureDNS(values []types.NodeDNS) []types.NodeDNS {
 	}
 	result := make([]types.NodeDNS, 0, len(values))
 	for _, item := range values {
+		proto := strings.TrimSpace(item.Proto)
+		address := strings.TrimSpace(item.Address)
+		if proto == "" || address == "" {
+			continue
+		}
 		result = append(result, types.NodeDNS{
-			Proto:   item.Proto,
-			Address: item.Address,
-			Domains: cloneStrings(item.Domains),
+			Proto:   proto,
+			Address: address,
+			Domains: normalizeStrings(item.Domains),
 		})
 	}
 	return result
@@ -228,13 +246,19 @@ func ensureOutbound(values []types.NodeOutbound) []types.NodeOutbound {
 	}
 	result := make([]types.NodeOutbound, 0, len(values))
 	for _, item := range values {
+		name := strings.TrimSpace(item.Name)
+		protocol := strings.TrimSpace(item.Protocol)
+		rules := normalizeStrings(item.Rules)
+		if name == "" || protocol == "" || len(rules) == 0 {
+			continue
+		}
 		result = append(result, types.NodeOutbound{
-			Name:     item.Name,
-			Protocol: item.Protocol,
-			Address:  item.Address,
+			Name:     name,
+			Protocol: protocol,
+			Address:  strings.TrimSpace(item.Address),
 			Port:     item.Port,
 			Password: item.Password,
-			Rules:    cloneStrings(item.Rules),
+			Rules:    rules,
 		})
 	}
 	return result
