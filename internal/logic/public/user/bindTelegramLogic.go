@@ -7,7 +7,10 @@ import (
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/pkg/errors"
 )
 
 type BindTelegramLogic struct {
@@ -26,7 +29,15 @@ func NewBindTelegramLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Bind
 }
 
 func (l *BindTelegramLogic) BindTelegram() (resp *types.BindTelegramResponse, err error) {
-	session := l.ctx.Value("session").(string)
+	session, ok := l.ctx.Value(constant.CtxKeySessionID).(string)
+	if !ok || session == "" {
+		l.Errorw("bind telegram failed: session id missing from context")
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
+	}
+	if l.svcCtx.Config.Telegram.BotName == "" {
+		l.Errorw("bind telegram failed: telegram bot is not initialized")
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "telegram bot is not configured")
+	}
 	return &types.BindTelegramResponse{
 		Url:       fmt.Sprintf("https://t.me/%s?start=%s", l.svcCtx.Config.Telegram.BotName, session),
 		ExpiredAt: time.Now().Add(300 * time.Second).UnixMilli(),

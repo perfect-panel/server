@@ -71,6 +71,10 @@ func (l *UnbindTelegramLogic) UnbindTelegram() error {
 		l.Errorw("UnbindTelegramLogic RenderTemplateToString Error", logger.Field("id", u.Id), logger.Field("error", err.Error()))
 		return nil
 	}
+	if l.svcCtx.TelegramBot == nil {
+		l.Errorw("UnbindTelegramLogic TelegramBot is nil", logger.Field("id", u.Id))
+		return nil
+	}
 	msg := tgbotapi.NewMessage(userTelegramChatId, text)
 	_, err = l.svcCtx.TelegramBot.Send(msg)
 	if err != nil {
