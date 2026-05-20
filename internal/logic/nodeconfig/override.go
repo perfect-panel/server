@@ -295,7 +295,7 @@ func ensureOutbound(values []types.NodeOutbound) []types.NodeOutbound {
 		name := strings.TrimSpace(item.Name)
 		protocol := strings.TrimSpace(item.Protocol)
 		rules := normalizeStrings(item.Rules)
-		if name == "" || protocol == "" || len(rules) == 0 {
+		if name == "" || protocol == "" {
 			continue
 		}
 		result = append(result, types.NodeOutbound{

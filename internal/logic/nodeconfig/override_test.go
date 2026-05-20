@@ -109,8 +109,8 @@ func TestSanitizeNodeConfigValues(t *testing.T) {
 	if len(global.Block) != 1 || global.Block[0] != "geosite:ads" {
 		t.Fatalf("Block = %#v, want sanitized block rules", global.Block)
 	}
-	if len(global.Outbound) != 1 {
-		t.Fatalf("Outbound len = %d, want 1", len(global.Outbound))
+	if len(global.Outbound) != 2 {
+		t.Fatalf("Outbound len = %d, want 2", len(global.Outbound))
 	}
 	if global.Outbound[0].Name != "node" || global.Outbound[0].Protocol != "socks" {
 		t.Fatalf("Outbound = %#v, want trimmed outbound", global.Outbound[0])
@@ -123,5 +123,54 @@ func TestSanitizeNodeConfigValues(t *testing.T) {
 	}
 	if len(global.Outbound[0].Rules) != 1 || global.Outbound[0].Rules[0] != "geoip:private" {
 		t.Fatalf("Outbound rules = %#v, want sanitized rules", global.Outbound[0].Rules)
+	}
+	if global.Outbound[1].Name != "empty-rules" || len(global.Outbound[1].Rules) != 0 {
+		t.Fatalf("Outbound without rules = %#v, want preserved with empty rules", global.Outbound[1])
+	}
+}
+
+func TestOverrideModelPreservesOutboundWithoutRules(t *testing.T) {
+	override, allInherited, err := OverrideModel(1, types.ServerNodeConfigOverride{
+		InheritIPStrategy: true,
+		InheritDNS:        true,
+		InheritBlock:      true,
+		InheritOutbound:   false,
+		Outbound: []types.NodeOutbound{
+			{
+				Name:     " warp ",
+				Protocol: " socks ",
+				Address:  " 127.0.0.1 ",
+				Port:     1080,
+				Rules:    []string{},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("OverrideModel() error = %v", err)
+	}
+	if allInherited {
+		t.Fatal("OverrideModel() allInherited = true, want false")
+	}
+	if override.Outbound == nil {
+		t.Fatal("OverrideModel() Outbound = nil, want override value")
+	}
+	override.Id = 1
+
+	resp, err := OverrideResponse(override)
+	if err != nil {
+		t.Fatalf("OverrideResponse() error = %v", err)
+	}
+	if resp.InheritOutbound {
+		t.Fatal("OverrideResponse() InheritOutbound = true, want false")
+	}
+	if len(resp.Outbound) != 1 {
+		t.Fatalf("OverrideResponse() Outbound len = %d, want 1", len(resp.Outbound))
+	}
+	got := resp.Outbound[0]
+	if got.Name != "warp" || got.Protocol != "socks" || got.Address != "127.0.0.1" || got.Port != 1080 {
+		t.Fatalf("OverrideResponse() Outbound = %#v, want preserved trimmed warp outbound", got)
+	}
+	if len(got.Rules) != 0 {
+		t.Fatalf("OverrideResponse() Outbound rules = %#v, want empty rules", got.Rules)
 	}
 }
