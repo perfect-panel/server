@@ -80,7 +80,18 @@ func TestSanitizeNodeConfigValues(t *testing.T) {
 		},
 		Block: []string{" geosite:ads ", "", "geosite:ads", "   "},
 		Outbound: []config.NodeOutbound{
-			{Name: " node ", Protocol: " socks ", Address: " 127.0.0.1 ", Rules: []string{" geoip:private ", "", "geoip:private"}},
+			{
+				Name:             " node ",
+				Protocol:         " socks ",
+				Address:          " 127.0.0.1 ",
+				User:             " user ",
+				Transport:        " websocket ",
+				Host:             " example.com ",
+				Settings:         " {\"address\":\"127.0.0.1\",\"port\":1080} ",
+				StreamSettings:   " {\"network\":\"tcp\"} ",
+				RealityPublicKey: " public-key ",
+				Rules:            []string{" geoip:private ", "", "geoip:private"},
+			},
 			{Name: "empty-rules", Protocol: "direct", Rules: []string{" "}},
 			{Name: "", Protocol: "direct", Rules: []string{"geoip:cn"}},
 		},
@@ -103,6 +114,12 @@ func TestSanitizeNodeConfigValues(t *testing.T) {
 	}
 	if global.Outbound[0].Name != "node" || global.Outbound[0].Protocol != "socks" {
 		t.Fatalf("Outbound = %#v, want trimmed outbound", global.Outbound[0])
+	}
+	if global.Outbound[0].User != "user" || global.Outbound[0].Transport != "websocket" || global.Outbound[0].Host != "example.com" {
+		t.Fatalf("Outbound extra fields = %#v, want trimmed extra fields", global.Outbound[0])
+	}
+	if global.Outbound[0].Settings != "{\"address\":\"127.0.0.1\",\"port\":1080}" || global.Outbound[0].StreamSettings != "{\"network\":\"tcp\"}" {
+		t.Fatalf("Outbound raw JSON fields = %#v, want trimmed raw JSON fields", global.Outbound[0])
 	}
 	if len(global.Outbound[0].Rules) != 1 || global.Outbound[0].Rules[0] != "geoip:private" {
 		t.Fatalf("Outbound rules = %#v, want sanitized rules", global.Outbound[0].Rules)
