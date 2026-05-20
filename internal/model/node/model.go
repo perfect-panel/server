@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -19,6 +20,7 @@ type customServerLogicModel interface {
 	UpdateServerSort(ctx context.Context, id int64, sort int64) error
 	QueryNodeTags(ctx context.Context) ([]string, error)
 	CountEnabledNodes(ctx context.Context) (int64, error)
+	CountServersByReportStatus(ctx context.Context, cutoff time.Time) (int64, int64, error)
 	QueryServerAddresses(ctx context.Context) ([]string, error)
 	QueryEnabledNodeProtocols(ctx context.Context) ([]string, error)
 	ClearNodeCache(ctx context.Context, params *FilterNodeParams) error
@@ -171,6 +173,20 @@ func (m *customServerModel) CountEnabledNodes(ctx context.Context) (int64, error
 	var total int64
 	err := m.WithContext(ctx).Model(&Node{}).Where("enabled = ?", true).Count(&total).Error
 	return total, err
+}
+
+func (m *customServerModel) CountServersByReportStatus(ctx context.Context, cutoff time.Time) (int64, int64, error) {
+	var online int64
+	if err := m.WithContext(ctx).Model(&Server{}).Where("last_reported_at > ?", cutoff).Count(&online).Error; err != nil {
+		return 0, 0, err
+	}
+
+	var offline int64
+	if err := m.WithContext(ctx).Model(&Server{}).Where("last_reported_at <= ? OR last_reported_at IS NULL", cutoff).Count(&offline).Error; err != nil {
+		return 0, 0, err
+	}
+
+	return online, offline, nil
 }
 
 func (m *customServerModel) QueryServerAddresses(ctx context.Context) ([]string, error) {

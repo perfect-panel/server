@@ -11,6 +11,7 @@ type customTrafficLogicModel interface {
 	QueryServerTrafficByDay(ctx context.Context, serverId int64, date time.Time) (*TotalTraffic, error)
 	QueryTrafficByDay(ctx context.Context, date time.Time) (*TotalTraffic, error)
 	QueryTrafficByMonthly(ctx context.Context, date time.Time) (*TotalTraffic, error)
+	QueryTrafficSummary(ctx context.Context, start, end time.Time) (*TotalTraffic, error)
 	TopServersTrafficByDay(ctx context.Context, date time.Time, limit int) ([]ServerTrafficRanking, error)
 	TopServersTrafficByMonthly(ctx context.Context, date time.Time, limit int) ([]ServerTrafficRanking, error)
 	TopUsersTrafficByDay(ctx context.Context, date time.Time, limit int) ([]UserTrafficRanking, error)
@@ -60,11 +61,20 @@ func (m *customTrafficModel) QueryTrafficByMonthly(ctx context.Context, date tim
 	return &data, err
 }
 
+func (m *customTrafficModel) QueryTrafficSummary(ctx context.Context, start, end time.Time) (*TotalTraffic, error) {
+	var data TotalTraffic
+	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
+		Select("COALESCE(SUM(upload), 0) AS upload, COALESCE(SUM(download), 0) AS download").
+		Where("timestamp >= ? AND timestamp < ?", start, end).
+		Scan(&data).Error
+	return &data, err
+}
+
 func (m *customTrafficModel) TopServersTrafficByDay(ctx context.Context, date time.Time, limit int) ([]ServerTrafficRanking, error) {
 	var summaries []ServerTrafficRanking
 	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.Local)
 	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
-	err := m.Conn.Debug().WithContext(ctx).Model(&TrafficLog{}).
+	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
 		Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
 		Where("timestamp BETWEEN ? AND ?", start, end).
 		Group("server_id").
