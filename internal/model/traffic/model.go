@@ -15,6 +15,8 @@ type customTrafficLogicModel interface {
 	TopServersTrafficByMonthly(ctx context.Context, date time.Time, limit int) ([]ServerTrafficRanking, error)
 	TopUsersTrafficByDay(ctx context.Context, date time.Time, limit int) ([]UserTrafficRanking, error)
 	TopUsersTrafficByMonthly(ctx context.Context, date time.Time, limit int) ([]UserTrafficRanking, error)
+	QueryServerTrafficRanking(ctx context.Context, start, end time.Time) ([]ServerTrafficRanking, error)
+	QueryUserTrafficRanking(ctx context.Context, start, end time.Time) ([]UserTrafficRanking, error)
 	QueryTrafficLogPageList(ctx context.Context, userId, subscribeId int64, page, size int) ([]*TrafficLog, int64, error)
 }
 
@@ -110,6 +112,28 @@ func (m *customTrafficModel) TopUsersTrafficByMonthly(ctx context.Context, date 
 		Group("user_id, subscribe_id"). // 修改这里，添加 subscribe_id 到 GROUP BY 子句
 		Order("total DESC").
 		Limit(limit).
+		Scan(&summaries).Error
+	return summaries, err
+}
+
+func (m *customTrafficModel) QueryServerTrafficRanking(ctx context.Context, start, end time.Time) ([]ServerTrafficRanking, error) {
+	var summaries []ServerTrafficRanking
+	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
+		Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
+		Where("timestamp BETWEEN ? AND ?", start, end).
+		Group("server_id").
+		Order("total DESC").
+		Scan(&summaries).Error
+	return summaries, err
+}
+
+func (m *customTrafficModel) QueryUserTrafficRanking(ctx context.Context, start, end time.Time) ([]UserTrafficRanking, error) {
+	var summaries []UserTrafficRanking
+	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
+		Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
+		Where("timestamp BETWEEN ? AND ?", start, end).
+		Group("user_id, subscribe_id").
+		Order("total DESC").
 		Scan(&summaries).Error
 	return summaries, err
 }

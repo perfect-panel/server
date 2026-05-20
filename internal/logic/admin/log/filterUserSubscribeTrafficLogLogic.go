@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/traffic"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -45,14 +44,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 		end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
 
-		var userTraffic []types.UserSubscribeTrafficLog
-		err = l.svcCtx.DB.WithContext(l.ctx).
-			Model(&traffic.TrafficLog{}).
-			Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-			Where("timestamp BETWEEN ? AND ?", start, end).
-			Group("user_id, subscribe_id").
-			Order("SUM(download + upload) DESC").
-			Scan(&userTraffic).Error
+		userTraffic, err := l.svcCtx.Store.TrafficLog().QueryUserTrafficRanking(l.ctx, start, end)
 		if err != nil {
 			l.Errorw("[FilterUserSubscribeTrafficLog] Query Database Error", logger.Field("error", err.Error()))
 			return nil, err
