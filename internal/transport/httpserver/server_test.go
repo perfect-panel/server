@@ -45,6 +45,23 @@ func TestQueryServerProtocolConfigRejectsInvalidSecret(t *testing.T) {
 	}
 }
 
+func TestCorsPreflightBypassesServerSecretMiddleware(t *testing.T) {
+	app := newTestServer("secret")
+
+	ctx := app.Engine().NewContext()
+	ctx.Request.SetRequestURI("/v1/server/online")
+	ctx.Request.Header.SetMethod(http.MethodOptions)
+	ctx.Request.Header.Set("Origin", "https://example.com")
+	app.Engine().ServeHTTP(context.Background(), ctx)
+
+	if status := ctx.Response.StatusCode(); status != http.StatusNoContent {
+		t.Fatalf("expected status %d, got %d", http.StatusNoContent, status)
+	}
+	if origin := string(ctx.Response.Header.Peek("Access-Control-Allow-Origin")); origin != "https://example.com" {
+		t.Fatalf("expected CORS origin header, got %q", origin)
+	}
+}
+
 func newTestServer(secret string) *Server {
 	return New(&svc.ServiceContext{
 		Config: appconfig.Config{

@@ -31,7 +31,7 @@ func New(svc *svc.ServiceContext, addr string, tlsConfig *tls.Config) *Server {
 
 func newServer(svc *svc.ServiceContext, opts []config.Option) *Server {
 	engine := hertzx.Default(opts...)
-	engine.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, hertzx.Recovery())
+	engine.Hertz().Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware)
 
 	handler.RegisterNativeHandlers(engine.Hertz(), svc)
 	handler.RegisterHandlers(engine, svc)

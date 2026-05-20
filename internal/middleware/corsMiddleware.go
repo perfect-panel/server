@@ -1,28 +1,28 @@
 package middleware
 
 import (
-	"net/http"
+	"context"
 
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
-func CorsMiddleware(c *hertzx.Context) {
-	origin := c.Request.Header.Get("Origin")
+func CorsMiddleware(c context.Context, ctx *app.RequestContext) {
+	origin := string(ctx.GetHeader("Origin"))
 	if origin != "" {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		ctx.Header("Access-Control-Allow-Origin", origin)
 	} else {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		ctx.Header("Access-Control-Allow-Origin", "*")
 	}
-	// c.Writer.Header().Set("Access-Control-Allow-Origin", c.Request.Host)
-	c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Origin, X-CSRF-Token, Authorization, AccessToken, Token, Range")
-	c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers")
-	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-	c.Writer.Header().Set("Access-Control-Max-Age", "172800")
-	if c.Request.Method == "OPTIONS" {
-		c.AbortWithStatus(http.StatusNoContent)
+	ctx.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+	ctx.Header("Access-Control-Allow-Headers", "Content-Type, Origin, X-CSRF-Token, Authorization, AccessToken, Token, Range")
+	ctx.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers")
+	ctx.Header("Access-Control-Allow-Credentials", "true")
+	ctx.Header("Access-Control-Max-Age", "172800")
+	if string(ctx.Method()) == consts.MethodOptions {
+		ctx.AbortWithStatus(consts.StatusNoContent)
 		return
 	}
 
-	c.Next()
+	ctx.Next(c)
 }

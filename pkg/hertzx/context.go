@@ -61,6 +61,15 @@ func NewContext(base context.Context, ctx *app.RequestContext) *Context {
 	return c
 }
 
+func ContextFromRequestContext(ctx *app.RequestContext) (*Context, bool) {
+	if value, ok := ctx.Get(contextKey); ok {
+		if c, ok := value.(*Context); ok {
+			return c, true
+		}
+	}
+	return nil, false
+}
+
 func Wrap(handler HandlerFunc) app.HandlerFunc {
 	return func(base context.Context, ctx *app.RequestContext) {
 		c := NewContext(base, ctx)
