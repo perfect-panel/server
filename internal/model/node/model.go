@@ -18,6 +18,9 @@ type customServerLogicModel interface {
 	UpdateNodeSort(ctx context.Context, id int64, sort int64) error
 	UpdateServerSort(ctx context.Context, id int64, sort int64) error
 	QueryNodeTags(ctx context.Context) ([]string, error)
+	CountEnabledNodes(ctx context.Context) (int64, error)
+	QueryServerAddresses(ctx context.Context) ([]string, error)
+	QueryEnabledNodeProtocols(ctx context.Context) ([]string, error)
 	ClearNodeCache(ctx context.Context, params *FilterNodeParams) error
 }
 
@@ -162,6 +165,24 @@ func (m *customServerModel) QueryNodeTags(ctx context.Context) ([]string, error)
 	var tags []string
 	err := m.WithContext(ctx).Model(&Node{}).Pluck("tags", &tags).Error
 	return tags, err
+}
+
+func (m *customServerModel) CountEnabledNodes(ctx context.Context) (int64, error) {
+	var total int64
+	err := m.WithContext(ctx).Model(&Node{}).Where("enabled = ?", true).Count(&total).Error
+	return total, err
+}
+
+func (m *customServerModel) QueryServerAddresses(ctx context.Context) ([]string, error) {
+	var addresses []string
+	err := m.WithContext(ctx).Model(&Server{}).Pluck("address", &addresses).Error
+	return addresses, err
+}
+
+func (m *customServerModel) QueryEnabledNodeProtocols(ctx context.Context) ([]string, error) {
+	var protocols []string
+	err := m.WithContext(ctx).Model(&Node{}).Where("enabled = ?", true).Pluck("protocol", &protocols).Error
+	return protocols, err
 }
 
 // ClearNodeCache Clear Node Cache

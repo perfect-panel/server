@@ -89,6 +89,7 @@ type customUserLogicModel interface {
 	QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error)
 	QueryResisterUserTotalByMonthly(ctx context.Context, date time.Time) (int64, error)
 	QueryResisterUserTotal(ctx context.Context) (int64, error)
+	CountEnabledUsers(ctx context.Context) (int64, error)
 	QueryAdminUsers(ctx context.Context) ([]*User, error)
 	UpdateUserCache(ctx context.Context, data *User) error
 	UpdateUserSubscribeCache(ctx context.Context, data *Subscribe) error
@@ -245,6 +246,14 @@ func (m *customUserModel) QueryResisterUserTotal(ctx context.Context) (int64, er
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&User{}).Count(&total).Error
+	})
+	return total, err
+}
+
+func (m *customUserModel) CountEnabledUsers(ctx context.Context) (int64, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&User{}).Where("enable = ?", true).Count(&total).Error
 	})
 	return total, err
 }
