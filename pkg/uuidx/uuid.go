@@ -21,6 +21,11 @@ func NewUUID() uuid.UUID {
 	return id
 }
 
+// NewDeterministicUUID returns the same UUID for the same name.
+func NewDeterministicUUID(name string) uuid.UUID {
+	return uuid.NewV5(uuid.NamespaceURL, name)
+}
+
 // ParseUUIDSlice parses the UUID string slice to UUID slice.
 func ParseUUIDSlice(ids []string) []uuid.UUID {
 	var result []uuid.UUID

@@ -74,6 +74,22 @@ func TestParseUUIDString(t *testing.T) {
 	}
 }
 
+func TestNewDeterministicUUID(t *testing.T) {
+	first := NewDeterministicUUID("ppanel:test:name")
+	second := NewDeterministicUUID("ppanel:test:name")
+	other := NewDeterministicUUID("ppanel:test:other")
+
+	if first != second {
+		t.Fatalf("NewDeterministicUUID() generated different UUIDs for the same name: %s != %s", first, second)
+	}
+	if first == other {
+		t.Fatalf("NewDeterministicUUID() generated the same UUID for different names: %s", first)
+	}
+	if first.Version() != 5 {
+		t.Fatalf("NewDeterministicUUID() version = %d, want 5", first.Version())
+	}
+}
+
 func TestT1(t *testing.T) {
 	valMap := make(map[string]struct{})
 	num := 100

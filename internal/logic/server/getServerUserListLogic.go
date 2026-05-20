@@ -39,6 +39,62 @@ func (l *GetServerUserListLogic) ResponseMeta() ResponseMeta {
 	return l.response
 }
 
+func placeholderServerUser(serverID int64, protocol, secret string) types.ServerUser {
+	name := fmt.Sprintf("ppanel:server-user-placeholder:%d:%s:%s", serverID, strings.TrimSpace(protocol), secret)
+	return types.ServerUser{
+		Id:   1,
+		UUID: uuidx.NewDeterministicUUID(name).String(),
+	}
+}
+
+func mergeSubscribeLists(lists ...[]*subscribe.Subscribe) []*subscribe.Subscribe {
+	seen := make(map[int64]struct{})
+	result := make([]*subscribe.Subscribe, 0)
+	for _, list := range lists {
+		for _, item := range list {
+			if item == nil {
+				continue
+			}
+			if _, ok := seen[item.Id]; ok {
+				continue
+			}
+			seen[item.Id] = struct{}{}
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func (l *GetServerUserListLogic) queryMatchedSubscribes(nodeIds []int64, nodeTags []string) ([]*subscribe.Subscribe, error) {
+	var lists [][]*subscribe.Subscribe
+	if len(nodeIds) > 0 {
+		_, subs, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
+			Page: 1,
+			Size: 9999,
+			Node: nodeIds,
+		})
+		if err != nil {
+			return nil, err
+		}
+		lists = append(lists, subs)
+	}
+
+	nodeTags = tool.RemoveDuplicateElements(nodeTags...)
+	if len(nodeTags) > 0 {
+		_, subs, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
+			Page: 1,
+			Size: 9999,
+			Tags: nodeTags,
+		})
+		if err != nil {
+			return nil, err
+		}
+		lists = append(lists, subs)
+	}
+
+	return mergeSubscribeLists(lists...), nil
+}
+
 func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
 	cacheKey := fmt.Sprintf("%s%d", node.ServerUserListCacheKey, req.ServerId)
 	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
@@ -81,24 +137,14 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		}
 	}
 
-	_, subs, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
-		Page: 1,
-		Size: 9999,
-		Node: nodeIds,
-		Tags: nodeTag,
-	})
+	subs, err := l.queryMatchedSubscribes(nodeIds, nodeTag)
 	if err != nil {
 		l.Errorw("QuerySubscribeIdsByServerIdAndServerGroupId error", logger.Field("error", err.Error()))
 		return nil, err
 	}
 	if len(subs) == 0 {
 		return &types.GetServerUserListResponse{
-			Users: []types.ServerUser{
-				{
-					Id:   1,
-					UUID: uuidx.NewUUID().String(),
-				},
-			},
+			Users: []types.ServerUser{placeholderServerUser(req.ServerId, req.Protocol, l.svcCtx.Config.Node.NodeSecret)},
 		}, nil
 	}
 	users := make([]types.ServerUser, 0)
@@ -120,10 +166,7 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		}
 	}
 	if len(users) == 0 {
-		users = append(users, types.ServerUser{
-			Id:   1,
-			UUID: uuidx.NewUUID().String(),
-		})
+		users = append(users, placeholderServerUser(req.ServerId, req.Protocol, l.svcCtx.Config.Node.NodeSecret))
 	}
 	resp = &types.GetServerUserListResponse{
 		Users: users,
