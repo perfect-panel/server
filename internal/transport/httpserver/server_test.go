@@ -1,4 +1,4 @@
-package hertzserver
+package httpserver
 
 import (
 	"context"

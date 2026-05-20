@@ -1,42 +1,44 @@
 package server
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/server"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
-	"github.com/perfect-panel/server/pkg/result"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
 // GetServerConfigHandler Get server config
-func GetServerConfigHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
-		var req types.GetServerConfigRequest
-		_ = c.ShouldBind(&req)
-		_ = c.ShouldBindQuery(&req.ServerCommon)
-		validateErr := svcCtx.Validate(&req)
-		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+func GetServerConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		commonReq, err := serverCommonRequest(ctx)
+		if err != nil {
+			writeParamError(ctx, err)
+			return
+		}
+		req := types.GetServerConfigRequest{ServerCommon: commonReq}
+		if validateErr := svcCtx.Validate(&req); validateErr != nil {
+			writeParamError(ctx, validateErr)
 			return
 		}
 
-		l := server.NewGetServerConfigLogic(c.Request.Context(), svcCtx, server.RequestMeta{
-			IfNoneMatch: c.GetHeader("If-None-Match"),
+		l := server.NewGetServerConfigLogic(c, svcCtx, server.RequestMeta{
+			IfNoneMatch: string(ctx.GetHeader("If-None-Match")),
 		})
 		resp, err := l.GetServerConfig(&req)
-		for key, value := range l.ResponseMeta().Headers {
-			c.Header(key, value)
-		}
+		writeHeaders(ctx, l.ResponseMeta().Headers)
 		if err != nil {
 			if errors.Is(err, xerr.StatusNotModified) {
-				c.String(304, "Not Modified")
+				ctx.String(consts.StatusNotModified, "Not Modified")
 				return
 			}
-			c.String(404, "Not Found")
+			ctx.String(consts.StatusNotFound, "Not Found")
 			return
 		}
-		c.JSON(200, resp)
+		ctx.JSON(consts.StatusOK, resp)
 	}
 }

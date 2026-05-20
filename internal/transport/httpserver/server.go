@@ -1,4 +1,4 @@
-package hertzserver
+package httpserver
 
 import (
 	"context"
@@ -33,8 +33,8 @@ func newServer(svc *svc.ServiceContext, opts []config.Option) *Server {
 	engine := hertzx.Default(opts...)
 	engine.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, hertzx.Recovery())
 
+	handler.RegisterNativeHandlers(engine.Hertz(), svc)
 	handler.RegisterHandlers(engine, svc)
-	handler.RegisterSubscribeHandlers(engine, svc)
 	handler.RegisterTelegramHandlers(engine, svc)
 	handler.RegisterNotifyHandlers(engine, svc)
 	return &Server{h: engine.Hertz()}

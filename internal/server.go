@@ -10,7 +10,7 @@ import (
 
 	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/report"
-	"github.com/perfect-panel/server/internal/transport/hertzserver"
+	"github.com/perfect-panel/server/internal/transport/httpserver"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/pkg/proc"
@@ -48,7 +48,7 @@ func newTransportServer(svc *svc.ServiceContext, addr string) transportServer {
 			Certificates: []tls.Certificate{cert},
 		}
 	}
-	return hertzserver.New(svc, addr, tlsConfig)
+	return httpserver.New(svc, addr, tlsConfig)
 }
 
 func (m *Service) Start() {

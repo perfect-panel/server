@@ -71,6 +71,7 @@ func Wrap(handler HandlerFunc) app.HandlerFunc {
 
 func (c *Context) Next() {
 	c.ctx.Next(c.Request.Context())
+	c.syncResponseState()
 }
 
 func (c *Context) Abort() {
@@ -268,8 +269,30 @@ func (c *Context) Value(key interface{}) interface{} {
 }
 
 func (c *Context) flush() {
+	c.syncResponseState()
 	if c.Writer != nil {
 		copyHeaders(c.ctx, c.Writer.Header())
+	}
+}
+
+func (c *Context) syncResponseState() {
+	if c.Writer == nil || c.ctx == nil {
+		return
+	}
+	c.Writer.SyncFromHertz(c.ctx)
+}
+
+func (w *responseWriter) SyncFromHertz(ctx *app.RequestContext) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	status := ctx.Response.StatusCode()
+	if status != 0 {
+		w.status = status
+	}
+	if size := len(ctx.Response.Body()); size > 0 {
+		w.size = size
+		w.written = true
 	}
 }
 
@@ -315,6 +338,7 @@ type ResponseWriter interface {
 	WriteHeaderNow()
 	WriteString(string) (int, error)
 	Pusher() http.Pusher
+	SyncFromHertz(*app.RequestContext)
 }
 
 type responseWriter struct {

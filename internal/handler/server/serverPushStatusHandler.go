@@ -1,27 +1,31 @@
 package server
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/server"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
-	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Push server status
-func ServerPushStatusHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
-		var req types.ServerPushStatusRequest
-		_ = c.ShouldBind(&req)
-		_ = c.ShouldBindQuery(&req.ServerCommon)
-		validateErr := svcCtx.Validate(&req)
-		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+func ServerPushStatusHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		req := types.ServerPushStatusRequest{}
+		_ = ctx.BindJSON(&req)
+		commonReq, err := serverCommonRequest(ctx)
+		if err != nil {
+			writeParamError(ctx, err)
+			return
+		}
+		req.ServerCommon = commonReq
+		if validateErr := svcCtx.Validate(&req); validateErr != nil {
+			writeParamError(ctx, validateErr)
 			return
 		}
 
-		l := server.NewServerPushStatusLogic(c.Request.Context(), svcCtx)
-		err := l.ServerPushStatus(&req)
-		result.HttpResult(c, nil, err)
+		l := server.NewServerPushStatusLogic(c, svcCtx)
+		writeHTTPResult(ctx, nil, l.ServerPushStatus(&req))
 	}
 }

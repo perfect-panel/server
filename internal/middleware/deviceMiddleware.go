@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/svc"
 	pkgaes "github.com/perfect-panel/server/pkg/aes"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -258,6 +259,21 @@ func (rw *ResponseWriter) Size() int {
 
 func (rw *ResponseWriter) Written() bool {
 	return rw.size != noWritten
+}
+
+func (rw *ResponseWriter) SyncFromHertz(ctx *app.RequestContext) {
+	if writer, ok := rw.ResponseWriter.(interface {
+		SyncFromHertz(*app.RequestContext)
+	}); ok {
+		writer.SyncFromHertz(ctx)
+	}
+	status := ctx.Response.StatusCode()
+	if status != 0 {
+		rw.status = status
+	}
+	if size := len(ctx.Response.Body()); size > 0 {
+		rw.size = size
+	}
 }
 
 // Hijack implements the http.Hijacker interface.
