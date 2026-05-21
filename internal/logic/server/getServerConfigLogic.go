@@ -101,7 +101,7 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 	}
 	etag := tool.GenerateETag(c)
 	l.response.SetHeader("ETag", etag)
-	if err = l.svcCtx.Redis.Set(l.ctx, cacheKey, c, -1).Err(); err != nil {
+	if err = l.svcCtx.Redis.Set(l.ctx, cacheKey, c, node.ServerCacheTTL).Err(); err != nil {
 		l.Errorw("[GetServerConfig] redis set error", logger.Field("error", err.Error()))
 	}
 	//  Check If-None-Match header

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -40,9 +39,8 @@ func (m *customAuthModel) GetAuthListByPage(ctx context.Context) ([]*Auth, error
 
 // FindOneByMethod  find one by method
 func (m *customAuthModel) FindOneByMethod(ctx context.Context, method string) (*Auth, error) {
-	key := fmt.Sprintf("%s%s", cacheAuthMethodPrefix, method)
 	var data Auth
-	err := m.QueryCtx(ctx, &data, key, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Auth{}).Where("method = ?", method).First(v).Error
 	})
 

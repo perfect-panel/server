@@ -72,9 +72,8 @@ func (m *defaultAdsModel) Insert(ctx context.Context, data *Ads) error {
 }
 
 func (m *defaultAdsModel) FindOne(ctx context.Context, id int64) (*Ads, error) {
-	AdsIdKey := fmt.Sprintf("%s%v", cacheAdsIdPrefix, id)
 	var resp Ads
-	err := m.QueryCtx(ctx, &resp, AdsIdKey, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Ads{}).Where("id = ?", id).First(&resp).Error
 	})
 	return &resp, err

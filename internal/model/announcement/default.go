@@ -72,9 +72,8 @@ func (m *defaultAnnouncementModel) Insert(ctx context.Context, data *Announcemen
 }
 
 func (m *defaultAnnouncementModel) FindOne(ctx context.Context, id int64) (*Announcement, error) {
-	AnnouncementIdKey := fmt.Sprintf("%s%v", cacheAnnouncementIdPrefix, id)
 	var resp Announcement
-	err := m.QueryCtx(ctx, &resp, AnnouncementIdKey, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Announcement{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {

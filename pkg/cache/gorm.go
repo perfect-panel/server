@@ -55,10 +55,10 @@ func (cc CachedConn) DelCacheCtx(ctx context.Context, keys ...string) error {
 	return cc.cache.Del(ctx, keys...).Err()
 }
 
-// GetCache unmarshals cache with given key into v.
-func (cc CachedConn) GetCache(key string, v interface{}) error {
+// GetCacheCtx unmarshals cache with given key and context into v.
+func (cc CachedConn) GetCacheCtx(ctx context.Context, key string, v interface{}) error {
 	// query redis key
-	val, err := cc.cache.Get(context.Background(), key).Result()
+	val, err := cc.cache.Get(ctx, key).Result()
 	if err != nil {
 		return err
 	}
@@ -66,15 +66,27 @@ func (cc CachedConn) GetCache(key string, v interface{}) error {
 	return json.Unmarshal([]byte(val), v)
 }
 
-// SetCache sets cache with key and v.
-func (cc CachedConn) SetCache(key string, v interface{}) error {
+// SetCacheCtx sets cache with key, value, and context.
+func (cc CachedConn) SetCacheCtx(ctx context.Context, key string, v interface{}) error {
 	// marshal value
 	val, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 	// set redis key
-	return cc.cache.Set(context.Background(), key, val, cc.expiry).Err()
+	return cc.cache.Set(ctx, key, val, cc.expiry).Err()
+}
+
+// GetCache unmarshals cache with given key into v.
+// Delegates to GetCacheCtx with context.Background().
+func (cc CachedConn) GetCache(key string, v interface{}) error {
+	return cc.GetCacheCtx(context.Background(), key, v)
+}
+
+// SetCache sets cache with key and v.
+// Delegates to SetCacheCtx with context.Background().
+func (cc CachedConn) SetCache(key string, v interface{}) error {
+	return cc.SetCacheCtx(context.Background(), key, v)
 }
 
 // ExecCtx runs given exec on given keys, and returns execution result.
@@ -100,18 +112,53 @@ func (cc CachedConn) ExecNoCacheCtx(ctx context.Context, execCtx ExecCtxFn) (err
 }
 
 func (cc CachedConn) QueryCtx(ctx context.Context, v interface{}, key string, query QueryCtxFn) (err error) {
-	err = cc.GetCache(key, v)
+	err = cc.GetCacheCtx(ctx, key, v)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
+			// Cache miss (redis.Nil): query DB and cache result
 			err = query(cc.db.WithContext(ctx), v)
 			if err != nil {
 				return err
 			}
-			return cc.SetCache(key, v)
+			// Set cache best-effort; a successful DB read must not fail just
+			// because Redis is unavailable or the write times out.
+			_ = cc.SetCacheCtx(ctx, key, v)
+			return nil
 		}
+
+		// Non-redis.Nil errors: could be JSON unmarshal error (corrupt
+		// cache entry) or Redis connection/timeout read error.
+		//
+		// If JSON error: delete bad key best-effort, then fallback to DB.
+		// If Redis error: fallback to DB directly (no bad key to purge).
+		var jsonSynErr *json.SyntaxError
+		var jsonTypeErr *json.UnmarshalTypeError
+		if errors.As(err, &jsonSynErr) || errors.As(err, &jsonTypeErr) {
+			// Delete corrupt cache key best-effort
+			_ = cc.cache.Del(ctx, key).Err()
+		}
+
+		// Fallback to DB query
+		err = query(cc.db.WithContext(ctx), v)
+		if err != nil {
+			return err
+		}
+
+		// Set cache best-effort; do NOT fail the request if set fails.
+		if setErr := cc.SetCacheCtx(ctx, key, v); setErr != nil {
+			// TODO: consider logging setErr with structured logger
+		}
+		return nil
 	}
 	return
 }
+
+// TODO(notFoundExpiry): notFoundExpiry (negative caching of
+// gorm.ErrRecordNotFound) could be implemented here, but it requires
+// careful handling to preserve gorm.ErrRecordNotFound semantics at all
+// call sites.  Leave unimplemented for now — the generic cache-aside
+// path always queries DB on redis.Nil, so not-found behaviour is
+// unchanged.
 
 // QueryNoCacheCtx runs query with given sql statement, without affecting cache.
 func (cc CachedConn) QueryNoCacheCtx(ctx context.Context, v interface{}, query QueryCtxFn) (err error) {

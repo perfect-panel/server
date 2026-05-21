@@ -30,6 +30,9 @@ const InviteConfigKey = "system:invite_config"
 // TelegramConfigKey Telegram Config Key
 const TelegramConfigKey = "system:telegram_config"
 
+// AdminTelegramChatIdsKey cached admin Telegram chat ID list (not system config)
+const AdminTelegramChatIdsKey = "system:telegram_admin_chat_ids"
+
 // TosConfigKey Tos配置
 const TosConfigKey = "system:tos_config"
 

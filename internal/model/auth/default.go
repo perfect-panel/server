@@ -75,9 +75,8 @@ func (m *defaultAuthModel) Insert(ctx context.Context, data *Auth) error {
 }
 
 func (m *defaultAuthModel) FindOne(ctx context.Context, id int64) (*Auth, error) {
-	AuthIdKey := fmt.Sprintf("%s%v", cacheAuthIdPrefix, id)
 	var resp Auth
-	err := m.QueryCtx(ctx, &resp, AuthIdKey, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Auth{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {

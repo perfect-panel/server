@@ -24,8 +24,7 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 
 func (m *customPaymentModel) FindOneByPaymentToken(ctx context.Context, token string) (*Payment, error) {
 	var resp *Payment
-	key := cachePaymentTokenPrefix + token
-	err := m.QueryCtx(ctx, &resp, key, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Payment{}).Where("token = ?", token).First(v).Error
 	})
 	return resp, err
