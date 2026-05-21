@@ -1,4 +1,4 @@
-package main
+package mysql2postgres
 
 import (
 	"database/sql"

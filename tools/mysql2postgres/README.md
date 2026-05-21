@@ -19,6 +19,18 @@ target schema.
 
 ## Usage
 
+Preferred embedded command:
+
+```bash
+./ppanel migrate mysql2postgres \
+  --mysql 'user:pass@tcp(127.0.0.1:3306)/ppanel?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai' \
+  --postgres 'postgres://ppanel:pass@127.0.0.1:5432/ppanel?sslmode=disable' \
+  --truncate \
+  --yes
+```
+
+Development wrapper:
+
 ```bash
 go run ./tools/mysql2postgres \
   --mysql 'user:pass@tcp(127.0.0.1:3306)/ppanel?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai' \
