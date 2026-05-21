@@ -22,3 +22,7 @@ type Coupon struct {
 func (Coupon) TableName() string {
 	return "coupon"
 }
+
+func (c *Coupon) IsEnabled() bool {
+	return c != nil && c.Enable != nil && *c.Enable
+}

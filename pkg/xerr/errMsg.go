@@ -47,6 +47,7 @@ func init() {
 		CouponNotApplicable:     "Coupon does not match the order or conditions",
 		CouponInsufficientUsage: "Coupon has insufficient remaining uses",
 		CouponExpired:           "Coupon is expired",
+		CouponDisabled:          "Coupon is disabled",
 
 		// Subscribe
 		SubscribeExpired:                "Subscribe is expired",
