@@ -215,10 +215,10 @@ func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNo
 		// Scan all protocol variants of user list and config cache
 		patterns := []string{
 			fmt.Sprintf("%s%d:*", ServerUserListCacheKey, node.ServerId),
+			fmt.Sprintf("%s%d:*", ServerConfigCacheKey, node.ServerId),
 		}
-		if node.Protocol != "" {
-			patterns = append(patterns, fmt.Sprintf("%s%d:*", ServerConfigCacheKey, node.ServerId))
-		}
+		// Also delete legacy user-list key written before protocol was added to the key.
+		cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, node.ServerId))
 		for _, pattern := range patterns {
 			var cursor uint64
 			for {
@@ -252,6 +252,8 @@ func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64
 		fmt.Sprintf("%s%d:*", ServerUserListCacheKey, serverId),
 		fmt.Sprintf("%s%d:*", ServerConfigCacheKey, serverId),
 	}
+	// Also delete legacy user-list key written before protocol was added to the key.
+	cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, serverId))
 	for _, pattern := range patterns {
 		var cursor uint64
 		for {

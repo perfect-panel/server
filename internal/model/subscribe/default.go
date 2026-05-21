@@ -72,6 +72,7 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 		if err == nil {
 			for _, n := range nodes {
 				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+				keys = append(keys, fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, n.ServerId, n.Protocol))
 			}
 		}
 	}
@@ -84,6 +85,7 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 		if err == nil {
 			for _, n := range nodes {
 				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+				keys = append(keys, fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, n.ServerId, n.Protocol))
 			}
 		}
 	}
