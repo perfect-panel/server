@@ -33,10 +33,10 @@ func (l *ToggleUserSubscribeStatusLogic) ToggleUserSubscribeStatus(req *types.To
 	}
 
 	switch userSub.Status {
-	case 2: // active
+	case 1: // active
 		userSub.Status = 5 // set status to stopped
 	case 5: // stopped
-		userSub.Status = 2 // set status to active
+		userSub.Status = 1 // set status to active
 	default:
 		l.Errorw("invalid user subscribe status", logger.Field("userSubscribeId", req.UserSubscribeId), logger.Field("status", userSub.Status))
 		return errors.Wrapf(xerr.NewErrCodeMsg(xerr.ERROR, "invalid subscribe status"), "invalid user subscribe status: %d", userSub.Status)
