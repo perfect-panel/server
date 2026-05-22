@@ -128,15 +128,19 @@ func orderListSearchCondition(conn *gorm.DB) string {
 	authType := quoteColumn(conn, userAuthMethodsTable, "auth_type")
 	authIdentifier := quoteColumn(conn, userAuthMethodsTable, "auth_identifier")
 	return fmt.Sprintf(
-		"(%s LIKE ? ESCAPE '\\' OR %s LIKE ? ESCAPE '\\' OR %s LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM %s WHERE %s = %s AND %s = ? AND %s LIKE ? ESCAPE '\\'))",
+		"(%s LIKE ?%s OR %s LIKE ?%s OR %s LIKE ?%s OR EXISTS (SELECT 1 FROM %s WHERE %s = %s AND %s = ? AND %s LIKE ?%s))",
 		orderColumn(conn, "order_no"),
+		orm.LikeEscapeClause(),
 		orderColumn(conn, "trade_no"),
+		orm.LikeEscapeClause(),
 		orderColumn(conn, "coupon"),
+		orm.LikeEscapeClause(),
 		quoteTable(conn, userAuthMethodsTable),
 		authUserID,
 		orderColumn(conn, "user_id"),
 		authType,
 		authIdentifier,
+		orm.LikeEscapeClause(),
 	)
 }
 

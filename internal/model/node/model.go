@@ -117,7 +117,7 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 	}
 	if params.Search != "" {
 		pattern := orm.LikePrefixPattern(params.Search)
-		condition := "(name LIKE ? ESCAPE '\\' OR address LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\'"
+		condition := "(name LIKE ?" + orm.LikeEscapeClause() + " OR address LIKE ?" + orm.LikeEscapeClause() + " OR tags LIKE ?" + orm.LikeEscapeClause()
 		args := []interface{}{pattern, pattern, pattern}
 		if port, err := strconv.ParseUint(params.Search, 10, 16); err == nil {
 			condition += " OR port = ?"

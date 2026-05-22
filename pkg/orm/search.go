@@ -6,6 +6,12 @@ import (
 	"gorm.io/gorm"
 )
 
+const likeEscapeChar = "="
+
+func LikeEscapeClause() string {
+	return " ESCAPE '" + likeEscapeChar + "'"
+}
+
 func LikePrefixPattern(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -42,7 +48,7 @@ func likeSearch(fields []string, pattern string) func(db *gorm.DB) *gorm.DB {
 			if field == "" {
 				continue
 			}
-			conds = append(conds, field+" LIKE ? ESCAPE '\\'")
+			conds = append(conds, field+" LIKE ?"+LikeEscapeClause())
 			args = append(args, pattern)
 		}
 		if len(conds) == 0 {
@@ -53,6 +59,6 @@ func likeSearch(fields []string, pattern string) func(db *gorm.DB) *gorm.DB {
 }
 
 func escapeLike(value string) string {
-	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	replacer := strings.NewReplacer(likeEscapeChar, likeEscapeChar+likeEscapeChar, `%`, likeEscapeChar+`%`, `_`, likeEscapeChar+`_`)
 	return replacer.Replace(value)
 }

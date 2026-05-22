@@ -42,7 +42,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 	if req.Date == today || req.Date == "" {
 		now := time.Now()
 		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
-		end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
+		end := start.Add(24 * time.Hour)
 
 		userTraffic, err := l.svcCtx.Store.TrafficLog().QueryUserTrafficRanking(l.ctx, start, end)
 		if err != nil {
