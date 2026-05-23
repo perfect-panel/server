@@ -48,7 +48,7 @@ func (l *CreateSubscribeLogic) CreateSubscribe(req *types.CreateSubscribeRequest
 		SpeedLimit:        req.SpeedLimit,
 		DeviceLimit:       req.DeviceLimit,
 		Quota:             req.Quota,
-		Nodes:             tool.Int64SliceToString(req.Nodes),
+		Nodes:             tool.Int64SliceToString(req.Nodes.Int64s()),
 		NodeTags:          tool.StringSliceToString(req.NodeTags),
 		Show:              req.Show,
 		Sell:              req.Sell,

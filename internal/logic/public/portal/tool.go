@@ -4,6 +4,8 @@ import (
 	"github.com/perfect-panel/server/internal/model/coupon"
 	"github.com/perfect-panel/server/internal/model/payment"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/pkg/errors"
 )
 
 func getDiscount(discounts []types.SubscribeDiscount, inputMonths int64) float64 {
@@ -23,6 +25,13 @@ func calculateCoupon(amount int64, couponInfo *coupon.Coupon) int64 {
 	} else {
 		return min(couponInfo.Discount, amount)
 	}
+}
+
+func ensureCouponEnabled(couponInfo *coupon.Coupon) error {
+	if couponInfo.IsEnabled() {
+		return nil
+	}
+	return errors.Wrapf(xerr.NewErrCode(xerr.CouponDisabled), "coupon disabled")
 }
 
 func calculateFee(amount int64, config *payment.Payment) int64 {

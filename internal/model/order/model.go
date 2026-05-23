@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const userAuthMethodsTable = "user_auth_methods"
+
 type Details struct {
 	Id             int64                `gorm:"primaryKey"`
 	ParentId       int64                `gorm:"type:bigint;default:null;comment:Parent Order Id"`
@@ -93,21 +95,53 @@ func (m *customOrderModel) QueryOrderListByPage(ctx context.Context, page, size 
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		conn = conn.Model(&Order{})
-		if status > 0 {
-			conn = conn.Where("status = ?", status)
+		conn = applyOrderListFilters(conn, status, user, subscribe, search)
+		if err := conn.Count(&total).Error; err != nil {
+			return err
 		}
-		if user > 0 {
-			conn = conn.Where("user_id = ?", user)
-		}
-		if subscribe > 0 {
-			conn = conn.Where("subscribe_id = ?", subscribe)
-		}
-		if search != "" {
-			conn = conn.Scopes(orm.PrefixLike([]string{"order_no", "trade_no", "coupon"}, search))
-		}
-		return conn.Order("id desc").Preload("Subscribe").Preload("Payment").Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
+		return conn.Order(orderColumn(conn, "id") + " desc").Preload("Subscribe").Preload("Payment").Offset((page - 1) * size).Limit(size).Find(v).Error
 	})
 	return total, list, err
+}
+
+func applyOrderListFilters(conn *gorm.DB, status uint8, user, subscribe int64, search string) *gorm.DB {
+	if status > 0 {
+		conn = conn.Where(orderColumn(conn, "status")+" = ?", status)
+	}
+	if user > 0 {
+		conn = conn.Where(orderColumn(conn, "user_id")+" = ?", user)
+	}
+	if subscribe > 0 {
+		conn = conn.Where(orderColumn(conn, "subscribe_id")+" = ?", subscribe)
+	}
+	if search != "" {
+		pattern := orm.LikePrefixPattern(search)
+		if pattern != "" {
+			conn = conn.Where(orderListSearchCondition(conn), pattern, pattern, pattern, "email", pattern)
+		}
+	}
+	return conn
+}
+
+func orderListSearchCondition(conn *gorm.DB) string {
+	authUserID := quoteColumn(conn, userAuthMethodsTable, "user_id")
+	authType := quoteColumn(conn, userAuthMethodsTable, "auth_type")
+	authIdentifier := quoteColumn(conn, userAuthMethodsTable, "auth_identifier")
+	return fmt.Sprintf(
+		"(%s LIKE ?%s OR %s LIKE ?%s OR %s LIKE ?%s OR EXISTS (SELECT 1 FROM %s WHERE %s = %s AND %s = ? AND %s LIKE ?%s))",
+		orderColumn(conn, "order_no"),
+		orm.LikeEscapeClause(),
+		orderColumn(conn, "trade_no"),
+		orm.LikeEscapeClause(),
+		orderColumn(conn, "coupon"),
+		orm.LikeEscapeClause(),
+		quoteTable(conn, userAuthMethodsTable),
+		authUserID,
+		orderColumn(conn, "user_id"),
+		authType,
+		authIdentifier,
+		orm.LikeEscapeClause(),
+	)
 }
 
 // UpdateOrderStatus Update order status

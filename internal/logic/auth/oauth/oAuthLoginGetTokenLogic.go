@@ -342,6 +342,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 	}
 
 	var userInfo *user.User
+	var trialSubscribe *user.Subscribe
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		if email != "" {
 			l.Debugw("checking if email already exists",
@@ -398,8 +399,10 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 				logger.Field("request_id", requestID),
 				logger.Field("user_id", userInfo.Id),
 			)
-			if err := l.activeTrial(store, userInfo.Id, requestID); err != nil {
-				return err
+			var trialErr error
+			trialSubscribe, trialErr = l.activeTrial(store, userInfo.Id, requestID)
+			if trialErr != nil {
+				return trialErr
 			}
 		}
 
@@ -415,6 +418,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 		)
 		return userInfo, err
 	}
+	clearTrialSubscribeCache(l.ctx, l.svcCtx, trialSubscribe)
 
 	l.Infow("user registration completed successfully",
 		logger.Field("request_id", requestID),
@@ -793,7 +797,7 @@ func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, av
 	return userInfo, nil
 }
 
-func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64, requestID string) error {
+func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64, requestID string) (*user.Subscribe, error) {
 	l.Debugw("fetching trial subscription template",
 		logger.Field("request_id", requestID),
 		logger.Field("user_id", uid),
@@ -808,7 +812,7 @@ func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64,
 			logger.Field("trial_subscribe_id", l.svcCtx.Config.Register.TrialSubscribe),
 			logger.Field("error", err.Error()),
 		)
-		return err
+		return nil, err
 	}
 
 	startTime := time.Now()
@@ -848,7 +852,7 @@ func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64,
 			logger.Field("user_id", uid),
 			logger.Field("error", err.Error()),
 		)
-		return err
+		return nil, err
 	}
 
 	l.Infow("trial subscription activated successfully",
@@ -858,5 +862,5 @@ func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64,
 		logger.Field("expire_time", expireTime),
 		logger.Field("traffic", sub.Traffic),
 	)
-	return nil
+	return userSub, nil
 }

@@ -39,9 +39,8 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 
 // QueryTicketDetail returns the ticket details.
 func (m *customTicketModel) QueryTicketDetail(ctx context.Context, id int64) (*Details, error) {
-	key := fmt.Sprintf("%s%v", cacheTicketDetailPrefix, id)
 	var data *Details
-	err := m.QueryCtx(ctx, &data, key, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Ticket{}).Where("id = ?", id).Preload("Follows").First(v).Error
 	})
 	return data, err

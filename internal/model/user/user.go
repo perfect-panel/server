@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type User struct {
@@ -38,14 +39,41 @@ func (*User) TableName() string {
 }
 
 func UserTableName(db *gorm.DB) string {
-	if db != nil && db.Dialector.Name() == "postgres" {
-		return `"user"`
-	}
-	return "user"
+	return quoteTable(db, "user")
 }
 
 func UserColumn(db *gorm.DB, column string) string {
-	return UserTableName(db) + "." + column
+	return quoteColumn(db, "user", column)
+}
+
+func AuthMethodsTableName(db *gorm.DB) string {
+	return quoteTable(db, "user_auth_methods")
+}
+
+func AuthMethodsColumn(db *gorm.DB, column string) string {
+	return quoteColumn(db, "user_auth_methods", column)
+}
+
+func UserSubscribeTableName(db *gorm.DB) string {
+	return quoteTable(db, "user_subscribe")
+}
+
+func UserSubscribeColumn(db *gorm.DB, column string) string {
+	return quoteColumn(db, "user_subscribe", column)
+}
+
+func quoteTable(db *gorm.DB, table string) string {
+	if db != nil && db.Statement != nil {
+		return db.Statement.Quote(clause.Table{Name: table})
+	}
+	return table
+}
+
+func quoteColumn(db *gorm.DB, table, column string) string {
+	if db != nil && db.Statement != nil {
+		return db.Statement.Quote(clause.Column{Table: table, Name: column})
+	}
+	return table + "." + column
 }
 
 type Subscribe struct {

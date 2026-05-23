@@ -108,6 +108,16 @@ func (m *defaultUserModel) CountUserSubscribesBySubscribeIdAndStatus(ctx context
 	return total, err
 }
 
+func (m *defaultUserModel) CountUserSubscribesByUserAndSubscribe(ctx context.Context, userId, subscribeId int64) (int64, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Subscribe{}).
+			Where("user_id = ? AND subscribe_id = ?", userId, subscribeId).
+			Count(&total).Error
+	})
+	return total, err
+}
+
 // QueryUserSubscribe returns a list of records that meet the conditions.
 func (m *defaultUserModel) QueryUserSubscribe(ctx context.Context, userId int64, status ...int64) ([]*SubscribeDetails, error) {
 	var list []*SubscribeDetails

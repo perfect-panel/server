@@ -55,6 +55,18 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
+
+	if sub.Quota > 0 {
+		count, err := store.User().CountUserSubscribesByUserAndSubscribe(l.ctx, u.Id, req.SubscribeId)
+		if err != nil {
+			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count user subscribe error: %v", err.Error())
+		}
+		if count >= sub.Quota {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeQuotaLimit), "quota limit")
+		}
+	}
+
 	var discount float64 = 1
 	if sub.Discount != "" {
 		var dis []types.SubscribeDiscount
@@ -73,6 +85,9 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotExist), "coupon not found")
 			}
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
+		}
+		if err := ensureCouponEnabled(couponInfo); err != nil {
+			return nil, err
 		}
 		if couponInfo.Count > 0 && couponInfo.Count <= couponInfo.UsedCount {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponAlreadyUsed), "coupon used")
@@ -95,17 +110,6 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 	}
 	amount -= couponAmount
 
-	var deductionAmount int64
-	// Check user deduction amount
-	if u.GiftAmount > 0 {
-		if u.GiftAmount >= amount {
-			deductionAmount = amount
-			amount = 0
-		} else {
-			deductionAmount = u.GiftAmount
-			amount -= u.GiftAmount
-		}
-	}
 	var feeAmount int64
 	if req.Payment != 0 {
 		payment, err := store.Payment().FindOne(l.ctx, req.Payment)
@@ -118,6 +122,18 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 			feeAmount = calculateFee(amount, payment)
 		}
 		amount += feeAmount
+	}
+
+	var deductionAmount int64
+	// Gift amount is deducted after payment fee, because the fee is based on the payable cash amount.
+	if u.GiftAmount > 0 && amount > 0 {
+		if u.GiftAmount >= amount {
+			deductionAmount = amount
+			amount = 0
+		} else {
+			deductionAmount = u.GiftAmount
+			amount -= u.GiftAmount
+		}
 	}
 
 	resp = &types.PreOrderResponse{

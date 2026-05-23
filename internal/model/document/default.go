@@ -72,9 +72,8 @@ func (m *defaultDocumentModel) Insert(ctx context.Context, data *Document) error
 }
 
 func (m *defaultDocumentModel) FindOne(ctx context.Context, id int64) (*Document, error) {
-	DocumentIdKey := fmt.Sprintf("%s%v", cacheDocumentIdPrefix, id)
 	var resp Document
-	err := m.QueryCtx(ctx, &resp, DocumentIdKey, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Document{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {

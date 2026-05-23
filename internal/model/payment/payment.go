@@ -18,12 +18,24 @@ type Payment struct {
 	FeeMode     uint   `gorm:"type:tinyint(1);not null;default:0;comment:Fee Mode: 0: No Fee 1: Percentage 2: Fixed Amount 3: Percentage + Fixed Amount"`
 	FeePercent  int64  `gorm:"type:int;default:0;comment:Fee Percentage"`
 	FeeAmount   int64  `gorm:"type:int;default:0;comment:Fixed Fee Amount"`
+	Sort        int64  `gorm:"type:int;not null;default:0;comment:Sort"`
 	Enable      *bool  `gorm:"type:tinyint(1);not null;default:0;comment:Is Enabled"`
 	Token       string `gorm:"type:varchar(255);unique;not null;default:'';comment:Payment Token"`
 }
 
 func (*Payment) TableName() string {
 	return "payment"
+}
+
+func (l *Payment) BeforeCreate(tx *gorm.DB) error {
+	if l.Sort == 0 {
+		var maxSort int64
+		if err := tx.Model(&Payment{}).Select("COALESCE(MAX(sort), 0)").Scan(&maxSort).Error; err != nil {
+			return err
+		}
+		l.Sort = maxSort + 1
+	}
+	return nil
 }
 
 func (l *Payment) BeforeDelete(_ *gorm.DB) (err error) {

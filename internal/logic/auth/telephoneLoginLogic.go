@@ -10,7 +10,6 @@ import (
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/logic/common"
 	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -48,7 +47,23 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SmsNotEnabled), "sms login is not enabled")
 	}
 	loginStatus := false
-	var userInfo *user.User
+
+	authMethodInfo, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user telephone not exist: %v", req.Telephone)
+		}
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
+	}
+
+	userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, authMethodInfo.UserId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user telephone not exist: %v", req.Telephone)
+		}
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
+	}
+
 	// Record login status
 	defer func(svcCtx *svc.ServiceContext) {
 		if userInfo.Id != 0 {
@@ -75,22 +90,6 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r
 			}
 		}
 	}(l.svcCtx)
-
-	authMethodInfo, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
-	if err != nil {
-		if errors.As(err, gorm.ErrRecordNotFound) {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user telephone not exist: %v", req.Telephone)
-		}
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
-	}
-
-	userInfo, err = l.svcCtx.Store.User().FindOne(l.ctx, authMethodInfo.UserId)
-	if err != nil {
-		if errors.As(err, gorm.ErrRecordNotFound) {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user telephone not exist: %v", req.Telephone)
-		}
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
-	}
 
 	if req.Password == "" && req.TelephoneCode == "" {
 		return nil, xerr.NewErrCodeMsg(xerr.InvalidParams, "password and telephone code is empty")

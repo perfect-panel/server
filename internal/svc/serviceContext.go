@@ -56,8 +56,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	err = rds.Ping(context.Background()).Err()
 	if err != nil {
 		panic(err.Error())
-	} else {
-		_ = rds.FlushAll(context.Background()).Err()
 	}
 	authLimiter := limit.NewPeriodLimit(86400, 15, rds, config.SendCountLimitKeyPrefix, limit.Align())
 	store := repository.NewGormStore(db, rds)

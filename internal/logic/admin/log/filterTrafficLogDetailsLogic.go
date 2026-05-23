@@ -36,12 +36,12 @@ func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.Filter
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), " date parse error: %s", err.Error())
 		}
 		start = day
-		end = day.Add(24*time.Hour - time.Nanosecond)
+		end = day.Add(24 * time.Hour)
 	} else {
 		// query today
 		now := time.Now()
 		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		end = start.Add(24*time.Hour - time.Nanosecond)
+		end = start.Add(24 * time.Hour)
 	}
 	data, total, err := l.svcCtx.Store.TrafficLog().QueryTrafficLogDetails(l.ctx, &traffic.TrafficLogDetailsFilter{
 		ServerId:    req.ServerId,

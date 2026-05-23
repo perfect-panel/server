@@ -54,7 +54,7 @@ func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequ
 				l.Logger.Error("[GetSubscribeListLogic] JSON unmarshal failed: ", logger.Field("error", err.Error()), logger.Field("discount", item.Discount))
 			}
 		}
-		sub.Nodes = tool.StringToInt64Slice(item.Nodes)
+		sub.Nodes = types.StringInt64Slice(tool.StringToInt64Slice(item.Nodes))
 		sub.NodeTags = strings.Split(item.NodeTags, ",")
 		resultList = append(resultList, sub)
 	}

@@ -97,6 +97,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		Algo:              "default",
 		OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase,
 	}
+	var trialSubscribe *user.Subscribe
 	if referer != nil {
 		userInfo.RefererId = referer.Id
 	}
@@ -124,12 +125,18 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 
 		if l.svcCtx.Config.Register.EnableTrial {
 			// Active trial
-			if err = l.activeTrial(store, userInfo.Id); err != nil {
+			trialSubscribe, err = l.activeTrial(store, userInfo.Id)
+			if err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	clearTrialSubscribeCache(l.ctx, l.svcCtx, trialSubscribe)
+
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {
 		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)
@@ -217,10 +224,10 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	}, nil
 }
 
-func (l *UserRegisterLogic) activeTrial(store repository.Store, uid int64) error {
+func (l *UserRegisterLogic) activeTrial(store repository.Store, uid int64) (*user.Subscribe, error) {
 	sub, err := store.Subscribe().FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	userSub := &user.Subscribe{
 		UserId:      uid,
@@ -235,5 +242,5 @@ func (l *UserRegisterLogic) activeTrial(store repository.Store, uid int64) error
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
-	return store.User().InsertSubscribe(l.ctx, userSub)
+	return userSub, store.User().InsertSubscribe(l.ctx, userSub)
 }

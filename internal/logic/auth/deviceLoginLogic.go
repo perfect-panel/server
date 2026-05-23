@@ -139,6 +139,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 	)
 
 	var userInfo *user.User
+	var trialSubscribe *user.Subscribe
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Create new user
 		userInfo = &user.User{
@@ -197,8 +198,10 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 
 		// Activate trial if enabled
 		if l.svcCtx.Config.Register.EnableTrial {
-			if err := l.activeTrial(store, userInfo.Id); err != nil {
-				return err
+			var trialErr error
+			trialSubscribe, trialErr = l.activeTrial(store, userInfo.Id)
+			if trialErr != nil {
+				return trialErr
 			}
 		}
 
@@ -212,6 +215,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 		)
 		return nil, err
 	}
+	clearTrialSubscribeCache(l.ctx, l.svcCtx, trialSubscribe)
 
 	l.Infow("device registration completed successfully",
 		logger.Field("user_id", userInfo.Id),
@@ -245,7 +249,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 	return userInfo, nil
 }
 
-func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) error {
+func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) (*user.Subscribe, error) {
 	sub, err := store.Subscribe().FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
 	if err != nil {
 		l.Errorw("failed to find trial subscription template",
@@ -253,7 +257,7 @@ func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) err
 			logger.Field("trial_subscribe_id", l.svcCtx.Config.Register.TrialSubscribe),
 			logger.Field("error", err.Error()),
 		)
-		return err
+		return nil, err
 	}
 
 	startTime := time.Now()
@@ -280,7 +284,7 @@ func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) err
 			logger.Field("user_id", userId),
 			logger.Field("error", err.Error()),
 		)
-		return err
+		return nil, err
 	}
 
 	l.Infow("trial subscription activated successfully",
@@ -290,5 +294,5 @@ func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) err
 		logger.Field("traffic", sub.Traffic),
 	)
 
-	return nil
+	return userSub, nil
 }

@@ -27,6 +27,9 @@ type customServerLogicModel interface {
 }
 
 const (
+	// ServerCacheTTL TTL for node hot-path server caches (server config and user list)
+	ServerCacheTTL = 5 * time.Minute
+
 	// ServerUserListCacheKey Server User List Cache Key
 	ServerUserListCacheKey = "server:user:"
 
@@ -114,7 +117,7 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 	}
 	if params.Search != "" {
 		pattern := orm.LikePrefixPattern(params.Search)
-		condition := "(name LIKE ? ESCAPE '\\' OR address LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\'"
+		condition := "(name LIKE ?" + orm.LikeEscapeClause() + " OR address LIKE ?" + orm.LikeEscapeClause() + " OR tags LIKE ?" + orm.LikeEscapeClause()
 		args := []interface{}{pattern, pattern, pattern}
 		if port, err := strconv.ParseUint(params.Search, 10, 16); err == nil {
 			condition += " OR port = ?"
@@ -209,11 +212,17 @@ func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNo
 	}
 	var cacheKeys []string
 	for _, node := range nodes {
+		// Scan all protocol variants of user list and config cache
+		patterns := []string{
+			fmt.Sprintf("%s%d:*", ServerUserListCacheKey, node.ServerId),
+			fmt.Sprintf("%s%d:*", ServerConfigCacheKey, node.ServerId),
+		}
+		// Also delete legacy user-list key written before protocol was added to the key.
 		cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, node.ServerId))
-		if node.Protocol != "" {
+		for _, pattern := range patterns {
 			var cursor uint64
 			for {
-				keys, newCursor, err := m.Cache.Scan(ctx, cursor, fmt.Sprintf("%s%d*", ServerConfigCacheKey, node.ServerId), 100).Result()
+				keys, newCursor, err := m.Cache.Scan(ctx, cursor, pattern, 100).Result()
 				if err != nil {
 					return err
 				}
@@ -238,19 +247,27 @@ func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNo
 // ClearServerCache Clear Server Cache
 func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64) error {
 	var cacheKeys []string
+	// Scan all protocol variants of both user list and config cache
+	patterns := []string{
+		fmt.Sprintf("%s%d:*", ServerUserListCacheKey, serverId),
+		fmt.Sprintf("%s%d:*", ServerConfigCacheKey, serverId),
+	}
+	// Also delete legacy user-list key written before protocol was added to the key.
 	cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, serverId))
-	var cursor uint64
-	for {
-		keys, newCursor, err := m.Cache.Scan(ctx, 0, fmt.Sprintf("%s%d*", ServerConfigCacheKey, serverId), 100).Result()
-		if err != nil {
-			return err
-		}
-		if len(keys) > 0 {
-			cacheKeys = append(cacheKeys, keys...)
-		}
-		cursor = newCursor
-		if cursor == 0 {
-			break
+	for _, pattern := range patterns {
+		var cursor uint64
+		for {
+			keys, newCursor, err := m.Cache.Scan(ctx, cursor, pattern, 100).Result()
+			if err != nil {
+				return err
+			}
+			if len(keys) > 0 {
+				cacheKeys = append(cacheKeys, keys...)
+			}
+			cursor = newCursor
+			if cursor == 0 {
+				break
+			}
 		}
 	}
 

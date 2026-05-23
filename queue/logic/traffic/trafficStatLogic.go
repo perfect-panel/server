@@ -27,7 +27,7 @@ func (l *StatLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 	// 获取全部有效订阅
 	// 获取统计时间范围
 	start := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, time.Local)
-	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
+	end := start.Add(24 * time.Hour)
 
 	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
 		// 查询用户流量统计, 按用户和订阅分组

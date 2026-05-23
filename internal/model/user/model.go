@@ -108,6 +108,7 @@ type customUserLogicModel interface {
 	FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error)
 	FindUserSubscribesByStatus(ctx context.Context, status ...int64) ([]*Subscribe, error)
 	ActivatePendingSubscribesBySubscribeId(ctx context.Context, subscribeId int64) error
+	CountUserSubscribesByUserAndSubscribe(ctx context.Context, userId, subscribeId int64) (int64, error)
 	CountUserSubscribesBySubscribeIdAndStatus(ctx context.Context, subscribeId int64, status ...int64) (int64, error)
 	UpdateUserSubscribeWithTraffic(ctx context.Context, id, download, upload int64, tx ...*gorm.DB) error
 	QueryResisterUserTotalByDate(ctx context.Context, date time.Time) (int64, error)
@@ -171,42 +172,80 @@ func (m *customUserModel) QueryPageList(ctx context.Context, page, size int, fil
 	var list []*User
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		userTable := UserTableName(conn)
-		userIdColumn := UserColumn(conn, "id")
-		if filter != nil {
-			if filter.UserId != nil {
-				conn = conn.Where(userIdColumn+" =?", *filter.UserId)
-			}
-			if filter.Search != "" {
-				search := orm.LikePrefixPattern(filter.Search)
-				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_auth_methods ON %s = user_auth_methods.user_id", userIdColumn)).
-					Where("(user_auth_methods.auth_identifier LIKE ? ESCAPE '\\' OR "+UserColumn(conn, "refer_code")+" LIKE ? ESCAPE '\\')", search, search)
-			}
-			joinedUserSubscribe := false
-			if filter.UserSubscribeId != nil {
-				conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userIdColumn)).
-					Where("user_subscribe.id = ? AND user_subscribe.status IN ?", *filter.UserSubscribeId, []int64{0, 1})
-				joinedUserSubscribe = true
-			}
-			if filter.SubscribeId != nil {
-				if !joinedUserSubscribe {
-					conn = conn.Joins(fmt.Sprintf("LEFT JOIN user_subscribe ON %s = user_subscribe.user_id", userIdColumn))
-				}
-				conn = conn.Where("user_subscribe.subscribe_id = ? AND user_subscribe.status IN ?", *filter.SubscribeId, []int64{0, 1})
-			}
-			if filter.Order != "" {
-				switch strings.ToUpper(filter.Order) {
-				case "ASC", "DESC":
-					conn = conn.Order(fmt.Sprintf("%s %s", userIdColumn, strings.ToUpper(filter.Order)))
-				}
-			}
-			if filter.Unscoped {
-				conn = conn.Unscoped()
-			}
+		conn = applyUserPageFilters(conn.Model(&User{}), filter)
+		if err := conn.Count(&total).Error; err != nil {
+			return err
 		}
-		return conn.Model(&User{}).Group(userTable + ".id").Count(&total).Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error
+		return conn.Limit(size).Offset((page - 1) * size).Preload("UserDevices").Preload("AuthMethods").Find(&list).Error
 	})
 	return list, total, err
+}
+
+func applyUserPageFilters(conn *gorm.DB, filter *UserFilterParams) *gorm.DB {
+	userIdColumn := UserColumn(conn, "id")
+	if filter == nil {
+		return conn
+	}
+	if filter.UserId != nil {
+		conn = conn.Where(userIdColumn+" = ?", *filter.UserId)
+	}
+	if filter.Search != "" {
+		search := orm.LikePrefixPattern(filter.Search)
+		if search != "" {
+			conn = conn.Where(userSearchCondition(conn), search, search)
+		}
+	}
+	if filter.UserSubscribeId != nil {
+		conn = conn.Where(
+			fmt.Sprintf(
+				"EXISTS (SELECT 1 FROM %s WHERE %s = %s AND %s = ? AND %s IN ?)",
+				UserSubscribeTableName(conn),
+				UserSubscribeColumn(conn, "user_id"),
+				userIdColumn,
+				UserSubscribeColumn(conn, "id"),
+				UserSubscribeColumn(conn, "status"),
+			),
+			*filter.UserSubscribeId,
+			[]int64{0, 1},
+		)
+	}
+	if filter.SubscribeId != nil {
+		conn = conn.Where(
+			fmt.Sprintf(
+				"EXISTS (SELECT 1 FROM %s WHERE %s = %s AND %s = ? AND %s IN ?)",
+				UserSubscribeTableName(conn),
+				UserSubscribeColumn(conn, "user_id"),
+				userIdColumn,
+				UserSubscribeColumn(conn, "subscribe_id"),
+				UserSubscribeColumn(conn, "status"),
+			),
+			*filter.SubscribeId,
+			[]int64{0, 1},
+		)
+	}
+	if filter.Order != "" {
+		switch strings.ToUpper(filter.Order) {
+		case "ASC", "DESC":
+			conn = conn.Order(fmt.Sprintf("%s %s", userIdColumn, strings.ToUpper(filter.Order)))
+		}
+	}
+	if filter.Unscoped {
+		conn = conn.Unscoped()
+	}
+	return conn
+}
+
+func userSearchCondition(conn *gorm.DB) string {
+	return fmt.Sprintf(
+		"(%s LIKE ?%s OR EXISTS (SELECT 1 FROM %s WHERE %s = %s AND %s LIKE ?%s))",
+		UserColumn(conn, "refer_code"),
+		orm.LikeEscapeClause(),
+		AuthMethodsTableName(conn),
+		AuthMethodsColumn(conn, "user_id"),
+		UserColumn(conn, "id"),
+		AuthMethodsColumn(conn, "auth_identifier"),
+		orm.LikeEscapeClause(),
+	)
 }
 
 func emailRecipientQuery(conn *gorm.DB, filter *EmailRecipientFilter) *gorm.DB {
@@ -215,10 +254,12 @@ func emailRecipientQuery(conn *gorm.DB, filter *EmailRecipientFilter) *gorm.DB {
 	}
 	userID := UserColumn(conn, "id")
 	userCreatedAt := UserColumn(conn, "created_at")
+	authUserID := AuthMethodsColumn(conn, "user_id")
+	authType := AuthMethodsColumn(conn, "auth_type")
 	query := conn.Model(&AuthMethods{}).
 		Select("auth_identifier").
-		Joins(fmt.Sprintf("JOIN %s ON %s = user_auth_methods.user_id", UserTableName(conn), userID)).
-		Where("auth_type = ?", "email")
+		Joins(fmt.Sprintf("JOIN %s ON %s = %s", UserTableName(conn), userID, authUserID)).
+		Where(authType+" = ?", "email")
 
 	if filter.RegisterStartTime != 0 {
 		query = query.Where(userCreatedAt+" >= ?", time.UnixMilli(filter.RegisterStartTime))

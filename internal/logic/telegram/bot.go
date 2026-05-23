@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/logger"
-
+	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -66,7 +66,7 @@ func SendUserMessage(ctx context.Context, svcCtx *svc.ServiceContext, u user.Use
 func SendAdminMessage(ctx context.Context, svcCtx *svc.ServiceContext, text string, parseMode string) {
 	var adminTelegram []int64
 	f := false
-	adminTelegramJson, err := svcCtx.Redis.Get(ctx, "adminTelegram").Result()
+	adminTelegramJson, err := svcCtx.Redis.Get(ctx, config.AdminTelegramChatIdsKey).Result()
 	if err == nil {
 		err = json.Unmarshal([]byte(adminTelegramJson), &adminTelegram)
 		if err == nil {
@@ -85,7 +85,7 @@ func SendAdminMessage(ctx context.Context, svcCtx *svc.ServiceContext, text stri
 			}
 		}
 		val, _ := json.Marshal(adminTelegram)
-		_ = svcCtx.Redis.Set(ctx, "TelegramConfig", string(val), time.Duration(3600)*time.Second).Err()
+		_ = svcCtx.Redis.Set(ctx, config.AdminTelegramChatIdsKey, string(val), time.Duration(3600)*time.Second).Err()
 	}
 	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "sendMessage"), nil)
 	q := req.URL.Query()

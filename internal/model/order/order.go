@@ -1,6 +1,11 @@
 package order
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
 
 type Order struct {
 	Id             int64     `gorm:"primaryKey"`
@@ -36,4 +41,26 @@ type OrdersTotal struct {
 
 func (Order) TableName() string {
 	return "order"
+}
+
+func orderTableName(db *gorm.DB) string {
+	return quoteTable(db, Order{}.TableName())
+}
+
+func orderColumn(db *gorm.DB, column string) string {
+	return quoteColumn(db, Order{}.TableName(), column)
+}
+
+func quoteTable(db *gorm.DB, table string) string {
+	if db != nil && db.Statement != nil {
+		return db.Statement.Quote(clause.Table{Name: table})
+	}
+	return table
+}
+
+func quoteColumn(db *gorm.DB, table, column string) string {
+	if db != nil && db.Statement != nil {
+		return db.Statement.Quote(clause.Column{Table: table, Name: column})
+	}
+	return table + "." + column
 }

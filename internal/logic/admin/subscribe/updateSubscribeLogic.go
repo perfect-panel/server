@@ -43,7 +43,7 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *types.UpdateSubscribeRequest
 		discount = string(val)
 	}
 	// When NodeTags is set, clear Nodes to avoid AND-combined query returning wrong results (#94)
-	nodes := tool.Int64SliceToString(req.Nodes)
+	nodes := tool.Int64SliceToString(req.Nodes.Int64s())
 	if len(req.NodeTags) > 0 {
 		nodes = ""
 	}

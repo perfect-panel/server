@@ -15,7 +15,8 @@ import (
 
 var _ Model = (*customSubscribeModel)(nil)
 var (
-	cacheSubscribeIdPrefix = "cache:subscribe:id:"
+	cacheSubscribeIdPrefix       = "cache:subscribe:id:"
+	userSubscribeUserCachePrefix = "cache:user:subscribe:user:"
 )
 
 type (
@@ -71,6 +72,7 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 		if err == nil {
 			for _, n := range nodes {
 				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+				keys = append(keys, fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, n.ServerId, n.Protocol))
 			}
 		}
 	}
@@ -83,11 +85,31 @@ func (m *defaultSubscribeModel) getCacheKeys(data *Subscribe) []string {
 		if err == nil {
 			for _, n := range nodes {
 				keys = append(keys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+				keys = append(keys, fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, n.ServerId, n.Protocol))
 			}
 		}
 	}
 
 	return append(keys, fmt.Sprintf("%s%v", cacheSubscribeIdPrefix, data.Id))
+}
+
+func (m *defaultSubscribeModel) getUserSubscribeCacheKeys(ctx context.Context, subscribeId int64) ([]string, error) {
+	var userIds []int64
+	err := m.QueryNoCacheCtx(ctx, &userIds, func(conn *gorm.DB, v interface{}) error {
+		return conn.Table("user_subscribe").
+			Where("subscribe_id = ? AND status IN ?", subscribeId, []int64{0, 1}).
+			Distinct("user_id").
+			Pluck("user_id", &userIds).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, 0, len(userIds))
+	for _, userId := range userIds {
+		keys = append(keys, fmt.Sprintf("%s%d", userSubscribeUserCachePrefix, userId))
+	}
+	return keys, nil
 }
 
 func (m *defaultSubscribeModel) Insert(ctx context.Context, data *Subscribe, tx ...*gorm.DB) error {
@@ -119,13 +141,19 @@ func (m *defaultSubscribeModel) Update(ctx context.Context, data *Subscribe, tx 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
+	cacheKeys := m.getCacheKeys(old)
+	userSubscribeCacheKeys, err := m.getUserSubscribeCacheKeys(ctx, data.Id)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	cacheKeys = append(cacheKeys, userSubscribeCacheKeys...)
 	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		db := conn
 		if len(tx) > 0 {
 			db = tx[0]
 		}
 		return db.Save(data).Error
-	}, m.getCacheKeys(old)...)
+	}, cacheKeys...)
 	return err
 }
 
@@ -137,13 +165,19 @@ func (m *defaultSubscribeModel) Delete(ctx context.Context, id int64, tx ...*gor
 		}
 		return err
 	}
+	cacheKeys := m.getCacheKeys(data)
+	userSubscribeCacheKeys, err := m.getUserSubscribeCacheKeys(ctx, id)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	cacheKeys = append(cacheKeys, userSubscribeCacheKeys...)
 	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		db := conn
 		if len(tx) > 0 {
 			db = tx[0]
 		}
 		return db.Delete(&Subscribe{}, id).Error
-	}, m.getCacheKeys(data)...)
+	}, cacheKeys...)
 	return err
 }
 

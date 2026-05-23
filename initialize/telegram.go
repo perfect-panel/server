@@ -21,8 +21,6 @@ func Telegram(svc *svc.ServiceContext) {
 		logger.Errorf("[Init Telegram Config] Get Telegram Config Error: %s", err.Error())
 		return
 	}
-	var tg config.Telegram
-
 	tgConfig := new(auth.TelegramAuthConfig)
 	if err = tgConfig.Unmarshal(method.Config); err != nil {
 		logger.Errorf("[Init Telegram Config] Unmarshal Telegram Config Error: %s", err.Error())
@@ -34,7 +32,7 @@ func Telegram(svc *svc.ServiceContext) {
 		return
 	}
 
-	bot, err := tgbotapi.NewBotAPI(tg.BotToken)
+	bot, err := tgbotapi.NewBotAPI(tgConfig.BotToken)
 	if err != nil {
 		logger.Error("[Init Telegram Config] New Bot API Error: ", logger.Field("error", err.Error()))
 		return
@@ -72,10 +70,14 @@ func Telegram(svc *svc.ServiceContext) {
 		logger.Error("[Init Telegram Config] Get Bot Info Error: ", logger.Field("error", err.Error()))
 		return
 	}
-	svc.Config.Telegram.BotID = user.ID
-	svc.Config.Telegram.BotName = user.UserName
-	svc.Config.Telegram.EnableNotify = tg.EnableNotify
-	svc.Config.Telegram.WebHookDomain = tg.WebHookDomain
+	svc.Config.Telegram = config.Telegram{
+		Enable:        method.Enabled != nil && *method.Enabled,
+		BotID:         user.ID,
+		BotName:       user.UserName,
+		BotToken:      tgConfig.BotToken,
+		EnableNotify:  tgConfig.EnableNotify,
+		WebHookDomain: tgConfig.WebHookDomain,
+	}
 	svc.TelegramBot = bot
 
 	logger.Info("[Init Telegram Config] Webhook set success")

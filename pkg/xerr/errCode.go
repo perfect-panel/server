@@ -59,6 +59,7 @@ const (
 	CouponNotApplicable     uint32 = 50003 // Coupon does not match the order or conditions
 	CouponInsufficientUsage uint32 = 50004 // Coupon has insufficient remaining uses
 	CouponExpired           uint32 = 50005 // Coupon is expired
+	CouponDisabled          uint32 = 50006 // Coupon is disabled
 )
 
 // Subscribe

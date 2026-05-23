@@ -96,7 +96,7 @@ func (l *GetServerUserListLogic) queryMatchedSubscribes(nodeIds []int64, nodeTag
 }
 
 func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
-	cacheKey := fmt.Sprintf("%s%d", node.ServerUserListCacheKey, req.ServerId)
+	cacheKey := fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, req.ServerId, req.Protocol)
 	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 	if cache != "" {
 		etag := tool.GenerateETag([]byte(cache))
@@ -174,7 +174,7 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	val, _ := json.Marshal(resp)
 	etag := tool.GenerateETag(val)
 	l.response.SetHeader("ETag", etag)
-	err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), -1).Err()
+	err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), node.ServerCacheTTL).Err()
 	if err != nil {
 		l.Errorw("[ServerUserListCacheKey] redis set error", logger.Field("error", err.Error()))
 	}

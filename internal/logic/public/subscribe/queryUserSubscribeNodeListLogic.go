@@ -99,17 +99,24 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 	}
 	nodeIds := tool.StringToInt64Slice(subDetails.Nodes)
 	tags := strings.Split(subDetails.NodeTags, ",")
+	cleanTags := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag != "" {
+			cleanTags = append(cleanTags, tag)
+		}
+	}
+	tags = cleanTags
 
 	l.Debugf("[Generate Subscribe]nodes: %v, NodeTags: %v", nodeIds, tags)
 
 	enable := true
 
-	_, nodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
-		Page:    0,
-		Size:    1000,
-		NodeId:  nodeIds,
-		Enabled: &enable, // Only get enabled nodes
-	})
+	nodes, err := l.filterSubscribeNodes(nodeIds, tags, enable)
+	if err != nil {
+		l.Errorw("[Generate Subscribe]find server details error: %v", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server details error: %v", err.Error())
+	}
 
 	if len(nodes) > 0 {
 		var serverMapIds = make(map[int64]*node.Server)
@@ -153,13 +160,61 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 	}
 
 	l.Debugf("[Query Subscribe]found servers: %v", len(nodes))
-
-	if err != nil {
-		l.Errorw("[Generate Subscribe]find server details error: %v", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server details error: %v", err.Error())
-	}
 	logger.Debugf("[Generate Subscribe]found servers: %v", len(nodes))
 	return userSubscribeNodes, nil
+}
+
+func (l *QueryUserSubscribeNodeListLogic) filterSubscribeNodes(nodeIds []int64, tags []string, enable bool) ([]*node.Node, error) {
+	addNodes := func(result []*node.Node, seen map[int64]struct{}, items []*node.Node) []*node.Node {
+		for _, item := range items {
+			if item == nil {
+				continue
+			}
+			if _, ok := seen[item.Id]; ok {
+				continue
+			}
+			seen[item.Id] = struct{}{}
+			result = append(result, item)
+		}
+		return result
+	}
+
+	if len(nodeIds) == 0 && len(tags) == 0 {
+		_, nodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
+			Page:    0,
+			Size:    1000,
+			Enabled: &enable,
+		})
+		return nodes, err
+	}
+
+	seen := make(map[int64]struct{})
+	nodes := make([]*node.Node, 0)
+	if len(nodeIds) > 0 {
+		_, directNodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
+			Page:    0,
+			Size:    1000,
+			NodeId:  nodeIds,
+			Enabled: &enable,
+		})
+		if err != nil {
+			return nil, err
+		}
+		nodes = addNodes(nodes, seen, directNodes)
+	}
+	if len(tags) > 0 {
+		_, tagNodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
+			Page:    0,
+			Size:    1000,
+			Tag:     tags,
+			Enabled: &enable,
+		})
+		if err != nil {
+			return nil, err
+		}
+		nodes = addNodes(nodes, seen, tagNodes)
+	}
+	return nodes, nil
 }
 
 func (l *QueryUserSubscribeNodeListLogic) isSubscriptionExpired(userSub *user.Subscribe) bool {

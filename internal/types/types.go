@@ -347,6 +347,7 @@ type CreatePaymentMethodRequest struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent,omitempty"`
 	FeeAmount   int64       `json:"fee_amount,omitempty"`
+	Sort        int64       `json:"sort,omitempty"`
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
@@ -400,7 +401,7 @@ type CreateSubscribeRequest struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              *bool               `json:"show"`
 	Sell              *bool               `json:"sell"`
@@ -521,7 +522,7 @@ type DeleteUserDeivceRequest struct {
 }
 
 type DeleteUserSubscribeRequest struct {
-	UserSubscribeId int64 `json:"user_subscribe_id"`
+	UserSubscribeId int64 `json:"user_subscribe_id,string"`
 }
 
 type DeviceAuthticateConfig struct {
@@ -1419,6 +1420,7 @@ type PaymentConfig struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent,omitempty"`
 	FeeAmount   int64       `json:"fee_amount,omitempty"`
+	Sort        int64       `json:"sort,omitempty"`
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
@@ -1431,6 +1433,7 @@ type PaymentMethod struct {
 	FeeMode     uint   `json:"fee_mode"`
 	FeePercent  int64  `json:"fee_percent"`
 	FeeAmount   int64  `json:"fee_amount"`
+	Sort        int64  `json:"sort"`
 }
 
 type PaymentMethodDetail struct {
@@ -1444,6 +1447,7 @@ type PaymentMethodDetail struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent"`
 	FeeAmount   int64       `json:"fee_amount"`
+	Sort        int64       `json:"sort"`
 	Enable      bool        `json:"enable"`
 	NotifyURL   string      `json:"notify_url"`
 }
@@ -2125,7 +2129,7 @@ type Subscribe struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              bool                `json:"show"`
 	Sell              bool                `json:"sell"`
@@ -2463,6 +2467,7 @@ type UpdatePaymentMethodRequest struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent,omitempty"`
 	FeeAmount   int64       `json:"fee_amount,omitempty"`
+	Sort        int64       `json:"sort,omitempty"`
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
@@ -2509,7 +2514,7 @@ type UpdateSubscribeRequest struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              *bool               `json:"show"`
 	Sell              *bool               `json:"sell"`

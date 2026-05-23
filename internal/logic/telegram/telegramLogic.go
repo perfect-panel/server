@@ -109,7 +109,7 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 			}
 		} else {
 			method.AuthIdentifier = strconv.FormatInt(req.Message.Chat.ID, 10)
-			if err := l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, method); err != nil {
+			if err := l.svcCtx.Store.User().UpdateUserAuthMethods(l.ctx, method); err != nil {
 				l.Errorw("TelegramLogic start UpdateUserAuthMethod Error: ", logger.Field("error", err.Error()), logger.Field("userId", userId))
 				return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed!", req.Message.Chat.ID)
 			}

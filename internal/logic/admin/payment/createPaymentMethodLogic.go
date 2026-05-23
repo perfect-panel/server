@@ -49,6 +49,7 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 		FeeMode:     req.FeeMode,
 		FeePercent:  req.FeePercent,
 		FeeAmount:   req.FeeAmount,
+		Sort:        req.Sort,
 		Enable:      req.Enable,
 		Token:       random.KeyNew(8, 1),
 	}

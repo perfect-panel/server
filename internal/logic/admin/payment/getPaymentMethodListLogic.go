@@ -81,6 +81,7 @@ func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *types.GetPaymentMe
 			FeeMode:     v.FeeMode,
 			FeePercent:  v.FeePercent,
 			FeeAmount:   v.FeeAmount,
+			Sort:        v.Sort,
 			Enable:      *v.Enable,
 			NotifyURL:   notifyUrl,
 			Description: v.Description,

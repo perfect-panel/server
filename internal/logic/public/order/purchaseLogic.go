@@ -139,6 +139,9 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 			}
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
 		}
+		if err := ensureCouponEnabled(couponInfo); err != nil {
+			return nil, err
+		}
 		if couponInfo.Count != 0 && couponInfo.Count <= couponInfo.UsedCount {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon used")
 		}
@@ -151,26 +154,13 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 			l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
 		}
-		if count >= couponInfo.UserLimit {
+		if couponInfo.UserLimit > 0 && count >= couponInfo.UserLimit {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon limit exceeded")
 		}
 		coupon = calculateCoupon(amount, couponInfo)
 	}
 	// Calculate the handling fee
 	amount -= coupon
-	var deductionAmount int64
-	// Check user deduction amount
-	if u.GiftAmount > 0 {
-		if u.GiftAmount >= amount {
-			deductionAmount = amount
-			amount = 0
-			u.GiftAmount -= deductionAmount
-		} else {
-			deductionAmount = u.GiftAmount
-			amount -= u.GiftAmount
-			u.GiftAmount = 0
-		}
-	}
 	// find payment method
 	payment, err := store.Payment().FindOne(l.ctx, req.Payment)
 	if err != nil {
@@ -192,6 +182,19 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "order amount exceeds maximum limit")
 		}
 	}
+
+	var deductionAmount int64
+	// Gift amount is deducted after payment fee, because the fee is based on the payable cash amount.
+	if u.GiftAmount > 0 && amount > 0 {
+		if u.GiftAmount >= amount {
+			deductionAmount = amount
+			amount = 0
+		} else {
+			deductionAmount = u.GiftAmount
+			amount -= u.GiftAmount
+		}
+	}
+
 	// query user is new purchase or renewal
 	isNew, err := store.Order().IsUserEligibleForNewOrder(l.ctx, u.Id)
 	if err != nil {
@@ -219,9 +222,21 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	}
 	// Database transaction
 	err = store.InTx(l.ctx, func(txStore repository.Store) error {
+		if sub.Quota > 0 {
+			count, e := txStore.User().CountUserSubscribesByUserAndSubscribe(l.ctx, u.Id, req.SubscribeId)
+			if e != nil {
+				l.Errorw("[Purchase] Database query error", logger.Field("error", e.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
+				return e
+			}
+			if count >= sub.Quota {
+				return errors.Wrapf(xerr.NewErrCode(xerr.SubscribeQuotaLimit), "quota limit")
+			}
+		}
+
 		// update user deduction && Pre deduction ,Return after canceling the order
 		if orderInfo.GiftAmount > 0 {
 			// update user deduction && Pre deduction ,Return after canceling the order
+			u.GiftAmount -= orderInfo.GiftAmount
 			if e := txStore.User().Update(l.ctx, u); e != nil {
 				l.Errorw("[Purchase] Database update error", logger.Field("error", e.Error()), logger.Field("user", u))
 				return e
@@ -267,7 +282,10 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	})
 	if err != nil {
 		l.Errorw("[Purchase] Database insert error", logger.Field("error", err.Error()), logger.Field("orderInfo", orderInfo))
-
+		var codeErr *xerr.CodeError
+		if errors.As(err, &codeErr) {
+			return nil, err
+		}
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert order error: %v", err.Error())
 	}
 	// Deferred task

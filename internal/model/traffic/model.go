@@ -2,9 +2,12 @@ package traffic
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type customTrafficLogicModel interface {
@@ -42,33 +45,30 @@ func NewModel(conn *gorm.DB) Model {
 
 func (m *customTrafficModel) QueryServerTrafficByDay(ctx context.Context, serverId int64, date time.Time) (*TotalTraffic, error) {
 	var data TotalTraffic
-	start := date.Truncate(24 * time.Hour)
-	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
+	start, end := dayRange(date)
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("sum(download) as download, sum(upload) as upload").
-		Where("server_id = ? AND timestamp BETWEEN ? AND ?", serverId, start, end).
+		Select(totalTrafficSelect(m.Conn)).
+		Where(fmt.Sprintf("%s = ? AND %s >= ? AND %s < ?", trafficColumn(m.Conn, "server_id"), trafficColumn(m.Conn, "timestamp"), trafficColumn(m.Conn, "timestamp")), serverId, start, end).
 		Scan(&data).Error
 	return &data, err
 }
 
 func (m *customTrafficModel) QueryTrafficByDay(ctx context.Context, date time.Time) (*TotalTraffic, error) {
 	var data TotalTraffic
-	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.Local)
-	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
+	start, end := dayRange(date)
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("sum(download) as download, sum(upload) as upload").
-		Where("timestamp BETWEEN ? AND ?", start, end).
+		Select(totalTrafficSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
 		Scan(&data).Error
 	return &data, err
 }
 
 func (m *customTrafficModel) QueryTrafficByMonthly(ctx context.Context, date time.Time) (*TotalTraffic, error) {
 	var data TotalTraffic
-	start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.Local)
-	end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	start, end := monthRange(date)
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("sum(download) as download, sum(upload) as upload").
-		Where("timestamp BETWEEN ? AND ?", start, end).
+		Select(totalTrafficSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
 		Scan(&data).Error
 	return &data, err
 }
@@ -76,20 +76,19 @@ func (m *customTrafficModel) QueryTrafficByMonthly(ctx context.Context, date tim
 func (m *customTrafficModel) QueryTrafficSummary(ctx context.Context, start, end time.Time) (*TotalTraffic, error) {
 	var data TotalTraffic
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("COALESCE(SUM(upload), 0) AS upload, COALESCE(SUM(download), 0) AS download").
-		Where("timestamp >= ? AND timestamp < ?", start, end).
+		Select(totalTrafficSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
 		Scan(&data).Error
 	return &data, err
 }
 
 func (m *customTrafficModel) TopServersTrafficByDay(ctx context.Context, date time.Time, limit int) ([]ServerTrafficRanking, error) {
 	var summaries []ServerTrafficRanking
-	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.Local)
-	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
+	start, end := dayRange(date)
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		Group("server_id").
+		Select(serverTrafficRankingSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
+		Group(trafficColumn(m.Conn, "server_id")).
 		Order("total DESC").
 		Limit(limit).
 		Scan(&summaries).Error
@@ -98,12 +97,11 @@ func (m *customTrafficModel) TopServersTrafficByDay(ctx context.Context, date ti
 
 func (m *customTrafficModel) TopServersTrafficByMonthly(ctx context.Context, date time.Time, limit int) ([]ServerTrafficRanking, error) {
 	var summaries []ServerTrafficRanking
-	start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.Local)
-	end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	start, end := monthRange(date)
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		Group("server_id").
+		Select(serverTrafficRankingSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
+		Group(trafficColumn(m.Conn, "server_id")).
 		Order("total DESC").
 		Limit(limit).
 		Scan(&summaries).Error
@@ -112,12 +110,11 @@ func (m *customTrafficModel) TopServersTrafficByMonthly(ctx context.Context, dat
 
 func (m *customTrafficModel) TopUsersTrafficByDay(ctx context.Context, date time.Time, limit int) ([]UserTrafficRanking, error) {
 	var summaries []UserTrafficRanking
-	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.Local)
-	end := start.Add(24 * time.Hour).Add(-time.Nanosecond)
+	start, end := dayRange(date)
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		Group("user_id, subscribe_id"). // 修改这里，添加 subscribe_id 到 GROUP BY 子句
+		Select(userTrafficRankingSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
+		Group(trafficColumn(m.Conn, "user_id") + ", " + trafficColumn(m.Conn, "subscribe_id")).
 		Order("total DESC").
 		Limit(limit).
 		Scan(&summaries).Error
@@ -126,12 +123,11 @@ func (m *customTrafficModel) TopUsersTrafficByDay(ctx context.Context, date time
 
 func (m *customTrafficModel) TopUsersTrafficByMonthly(ctx context.Context, date time.Time, limit int) ([]UserTrafficRanking, error) {
 	var summaries []UserTrafficRanking
-	start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.Local)
-	end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	start, end := monthRange(date)
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload"). // 添加 subscribe_id 到 SELECT 列表
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		Group("user_id, subscribe_id"). // 修改这里，添加 subscribe_id 到 GROUP BY 子句
+		Select(userTrafficRankingSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
+		Group(trafficColumn(m.Conn, "user_id") + ", " + trafficColumn(m.Conn, "subscribe_id")).
 		Order("total DESC").
 		Limit(limit).
 		Scan(&summaries).Error
@@ -141,9 +137,9 @@ func (m *customTrafficModel) TopUsersTrafficByMonthly(ctx context.Context, date 
 func (m *customTrafficModel) QueryServerTrafficRanking(ctx context.Context, start, end time.Time) ([]ServerTrafficRanking, error) {
 	var summaries []ServerTrafficRanking
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("server_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		Group("server_id").
+		Select(serverTrafficRankingSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
+		Group(trafficColumn(m.Conn, "server_id")).
 		Order("total DESC").
 		Scan(&summaries).Error
 	return summaries, err
@@ -152,9 +148,9 @@ func (m *customTrafficModel) QueryServerTrafficRanking(ctx context.Context, star
 func (m *customTrafficModel) QueryUserTrafficRanking(ctx context.Context, start, end time.Time) ([]UserTrafficRanking, error) {
 	var summaries []UserTrafficRanking
 	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).
-		Select("user_id, subscribe_id, SUM(download + upload) AS total, SUM(download) AS download, SUM(upload) AS upload").
-		Where("timestamp BETWEEN ? AND ?", start, end).
-		Group("user_id, subscribe_id").
+		Select(userTrafficRankingSelect(m.Conn)).
+		Where(timeRangeCondition(m.Conn), start, end).
+		Group(trafficColumn(m.Conn, "user_id") + ", " + trafficColumn(m.Conn, "subscribe_id")).
 		Order("total DESC").
 		Scan(&summaries).Error
 	return summaries, err
@@ -184,7 +180,7 @@ func (m *customTrafficModel) QueryTrafficLogDetails(ctx context.Context, filter 
 		query = query.Where("server_id = ?", filter.ServerId)
 	}
 	if !filter.Start.IsZero() && !filter.End.IsZero() {
-		query = query.Where("timestamp BETWEEN ? AND ?", filter.Start, filter.End)
+		query = query.Where(timeRangeCondition(m.Conn), filter.Start, filter.End)
 	}
 	if filter.UserId != 0 {
 		query = query.Where("user_id = ?", filter.UserId)
@@ -203,5 +199,64 @@ func (m *customTrafficModel) QueryTrafficLogDetails(ctx context.Context, filter 
 }
 
 func (m *customTrafficModel) DeleteBefore(ctx context.Context, end time.Time) error {
-	return m.Conn.WithContext(ctx).Model(&TrafficLog{}).Where("timestamp <= ?", end).Delete(&TrafficLog{}).Error
+	return m.Conn.WithContext(ctx).Model(&TrafficLog{}).Where(trafficColumn(m.Conn, "timestamp")+" <= ?", end).Delete(&TrafficLog{}).Error
+}
+
+func dayRange(date time.Time) (time.Time, time.Time) {
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	return start, start.Add(24 * time.Hour)
+}
+
+func monthRange(date time.Time) (time.Time, time.Time) {
+	start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+	return start, start.AddDate(0, 1, 0)
+}
+
+func timeRangeCondition(db *gorm.DB) string {
+	column := trafficColumn(db, "timestamp")
+	return column + " >= ? AND " + column + " < ?"
+}
+
+func totalTrafficSelect(db *gorm.DB) string {
+	return sumIntExpr(db, trafficColumn(db, "download"), "download") + ", " +
+		sumIntExpr(db, trafficColumn(db, "upload"), "upload")
+}
+
+func serverTrafficRankingSelect(db *gorm.DB) string {
+	download := trafficColumn(db, "download")
+	upload := trafficColumn(db, "upload")
+	return fmt.Sprintf(
+		"%s AS server_id, %s, %s, %s",
+		trafficColumn(db, "server_id"),
+		sumIntExpr(db, download+" + "+upload, "total"),
+		sumIntExpr(db, download, "download"),
+		sumIntExpr(db, upload, "upload"),
+	)
+}
+
+func userTrafficRankingSelect(db *gorm.DB) string {
+	download := trafficColumn(db, "download")
+	upload := trafficColumn(db, "upload")
+	return fmt.Sprintf(
+		"%s AS user_id, %s AS subscribe_id, %s, %s, %s",
+		trafficColumn(db, "user_id"),
+		trafficColumn(db, "subscribe_id"),
+		sumIntExpr(db, download+" + "+upload, "total"),
+		sumIntExpr(db, download, "download"),
+		sumIntExpr(db, upload, "upload"),
+	)
+}
+
+func sumIntExpr(db *gorm.DB, expr, alias string) string {
+	if db != nil && db.Dialector.Name() == orm.DriverPostgres {
+		return fmt.Sprintf("COALESCE(SUM(%s), 0)::bigint AS %s", expr, alias)
+	}
+	return fmt.Sprintf("COALESCE(SUM(%s), 0) AS %s", expr, alias)
+}
+
+func trafficColumn(db *gorm.DB, column string) string {
+	if db != nil && db.Statement != nil {
+		return db.Statement.Quote(clause.Column{Table: TrafficLog{}.TableName(), Name: column})
+	}
+	return TrafficLog{}.TableName() + "." + column
 }

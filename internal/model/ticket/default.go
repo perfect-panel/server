@@ -72,9 +72,8 @@ func (m *defaultTicketModel) Insert(ctx context.Context, data *Ticket) error {
 }
 
 func (m *defaultTicketModel) FindOne(ctx context.Context, id int64) (*Ticket, error) {
-	TicketIdKey := fmt.Sprintf("%s%v", cacheTicketIdPrefix, id)
 	var resp Ticket
-	err := m.QueryCtx(ctx, &resp, TicketIdKey, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 
 		return conn.Model(&Ticket{}).Where("id = ?", id).First(&resp).Error
 	})
