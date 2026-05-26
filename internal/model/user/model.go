@@ -93,7 +93,7 @@ type customUserLogicModel interface {
 	FindOneSubscribe(ctx context.Context, id int64) (*Subscribe, error)
 	FindSubscribesByIds(ctx context.Context, ids []int64) ([]*Subscribe, error)
 	QueryMonthlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
-	QueryFirstResetSubscribeIds(ctx context.Context, subscribeIds []int64) ([]int64, error)
+	QueryFirstResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
 	QueryYearlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
 	ResetSubscribeTrafficByIds(ctx context.Context, ids []int64, tx ...*gorm.DB) error
 	FindTrafficExceededSubscribes(ctx context.Context) ([]*Subscribe, error)
