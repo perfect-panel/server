@@ -124,17 +124,13 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 			logger.Errorw("[ResetTraffic] Failed to get cache", logger.Field("error", err.Error()))
 		}
 		// Set default value if cache not found
-		cache = resetTrafficCache{
-			LastResetTime: time.Now().Add(-10 * time.Minute),
-		}
+		cache = resetTrafficCache{}
 		logger.Infow("[ResetTraffic] Using default cache value", logger.Field("lastResetTime", cache.LastResetTime))
 	} else {
 		// Parse JSON data
 		if err := json.Unmarshal([]byte(cacheData), &cache); err != nil {
 			logger.Errorw("[ResetTraffic] Failed to unmarshal cache", logger.Field("error", err.Error()))
-			cache = resetTrafficCache{
-				LastResetTime: time.Now().Add(-10 * time.Minute),
-			}
+			cache = resetTrafficCache{}
 		} else {
 			logger.Infow("[ResetTraffic] Cache loaded successfully", logger.Field("lastResetTime", cache.LastResetTime))
 		}
@@ -242,7 +238,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 	now := time.Now()
 
 	// Check if we already reset this month using cache
-	if cache.LastResetTime.Year() == now.Year() && cache.LastResetTime.Month() == now.Month() {
+	if firstDayResetAlreadyProcessed(now, cache) {
 		logger.Infow("[ResetTraffic] Already reset this month, skipping 1st reset",
 			logger.Field("lastResetTime", cache.LastResetTime),
 			logger.Field("currentTime", now))
@@ -269,7 +265,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 		}
 
 		// Get all active users with these subscriptions
-		users1stReset, err := store.User().QueryFirstResetSubscribeIds(ctx, reset1stSubIds)
+		users1stReset, err := store.User().QueryFirstResetSubscribeIds(ctx, reset1stSubIds, now)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query 1st reset users", logger.Field("error", err.Error()))
 			return err
@@ -307,6 +303,12 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 	}
 	logger.Infow("[ResetTraffic] 1st reset process completed")
 	return nil
+}
+
+func firstDayResetAlreadyProcessed(now time.Time, cache resetTrafficCache) bool {
+	return !cache.LastResetTime.IsZero() &&
+		cache.LastResetTime.Year() == now.Year() &&
+		cache.LastResetTime.Month() == now.Month()
 }
 
 // resetYear handles yearly reset based on subscription start date anniversary
