@@ -19,15 +19,16 @@ type Proxy struct {
 	Tags   []string
 
 	// Security Options
-	Security          string
-	SNI               string // Server Name Indication for TLS
-	AllowInsecure     bool   // Allow insecure connections (skip certificate verification)
-	Fingerprint       string // Client fingerprint for TLS connections
-	RealityServerAddr string // Reality server address
-	RealityServerPort int    // Reality server port
-	RealityPrivateKey string // Reality private key for authentication
-	RealityPublicKey  string // Reality public key for authentication
-	RealityShortId    string // Reality short ID for authentication
+	Security              string
+	SNI                   string // Server Name Indication for TLS
+	AllowInsecure         bool   // Allow insecure connections (skip certificate verification)
+	Fingerprint           string // Client fingerprint for TLS connections
+	CertFingerprintSha256 string // SHA-256 fingerprint of the server TLS certificate
+	RealityServerAddr     string // Reality server address
+	RealityServerPort     int    // Reality server port
+	RealityPrivateKey     string // Reality private key for authentication
+	RealityPublicKey      string // Reality public key for authentication
+	RealityShortId        string // Reality short ID for authentication
 	// Transport Options
 	Transport   string // Transport protocol (e.g., ws, http, grpc)
 	Host        string // For WebSocket/HTTP/HTTPS

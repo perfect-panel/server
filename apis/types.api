@@ -314,6 +314,8 @@ type (
 		SNI               string `json:"sni"`
 		AllowInsecure     *bool  `json:"allow_insecure"`
 		Fingerprint       string `json:"fingerprint"`
+		CertFingerprintSha256 string `json:"cert_fingerprint_sha256"`
+		ReportedCertFingerprintSha256 string `json:"reported_cert_fingerprint_sha256"`
 		RealityServerAddr string `json:"reality_server_addr"`
 		RealityServerPort int    `json:"reality_server_port"`
 		RealityPrivateKey string `json:"reality_private_key"`
@@ -830,6 +832,8 @@ type (
 		SNI                     string  `json:"sni,omitempty"`
 		AllowInsecure           bool    `json:"allow_insecure,omitempty"`
 		Fingerprint             string  `json:"fingerprint,omitempty"`
+		CertFingerprintSha256   string  `json:"cert_fingerprint_sha256,omitempty"`
+		ReportedCertFingerprintSha256 string `json:"reported_cert_fingerprint_sha256,omitempty"`
 		RealityServerAddr       string  `json:"reality_server_addr,omitempty"`
 		RealityServerPort       int     `json:"reality_server_port,omitempty"`
 		RealityPrivateKey       string  `json:"reality_private_key,omitempty"`

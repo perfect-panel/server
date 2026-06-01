@@ -15,16 +15,18 @@ const (
 )
 
 type SecurityConfig struct {
-	SNI                  string `json:"sni"`
-	AllowInsecure        *bool  `json:"allow_insecure"`
-	Fingerprint          string `json:"fingerprint"`
-	RealityServerAddress string `json:"reality_server_addr"`
-	RealityServerPort    int    `json:"reality_server_port"`
-	RealityPrivateKey    string `json:"reality_private_key"`
-	RealityPublicKey     string `json:"reality_public_key"`
-	RealityShortId       string `json:"reality_short_id"`
-	RealityMldsa65seed   string `json:"reality_mldsa65seed"`
-	PaddingScheme        string `json:"padding_scheme"`
+	SNI                           string `json:"sni"`
+	AllowInsecure                 *bool  `json:"allow_insecure"`
+	Fingerprint                   string `json:"fingerprint"`
+	CertFingerprintSha256         string `json:"cert_fingerprint_sha256"`
+	ReportedCertFingerprintSha256 string `json:"reported_cert_fingerprint_sha256"`
+	RealityServerAddress          string `json:"reality_server_addr"`
+	RealityServerPort             int    `json:"reality_server_port"`
+	RealityPrivateKey             string `json:"reality_private_key"`
+	RealityPublicKey              string `json:"reality_public_key"`
+	RealityShortId                string `json:"reality_short_id"`
+	RealityMldsa65seed            string `json:"reality_mldsa65seed"`
+	PaddingScheme                 string `json:"padding_scheme"`
 }
 
 type TransportConfig struct {

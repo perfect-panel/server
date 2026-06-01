@@ -45,6 +45,12 @@ func (l *CreateServerLogic) CreateServer(req *types.CreateServerRequest) error {
 		}
 		var protocol node.Protocol
 		tool.DeepCopy(&protocol, item)
+		if protocol.CertFingerprintSha256 != "" {
+			protocol.CertFingerprintSha256 = tool.NormalizeCertFingerprintSha256(protocol.CertFingerprintSha256)
+			if protocol.CertFingerprintSha256 == "" {
+				return errors.Wrapf(xerr.NewErrCodeMsg(xerr.InvalidParams, "cert_fingerprint_sha256 is invalid"), "cert_fingerprint_sha256 is invalid")
+			}
+		}
 
 		// VLESS Reality Key Generation
 		if protocol.Type == "vless" {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 )
 
 type Adapter struct {
@@ -110,6 +111,11 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 		}
 		for _, protocol := range protocols {
 			if protocol.Type == item.Protocol {
+				certFingerprintSha256 := protocol.CertFingerprintSha256
+				if certFingerprintSha256 == "" {
+					certFingerprintSha256 = protocol.ReportedCertFingerprintSha256
+				}
+				certFingerprintSha256 = tool.NormalizeCertFingerprintSha256(certFingerprintSha256)
 				proxies = append(
 					proxies,
 					Proxy{
@@ -123,6 +129,7 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 						SNI:                     protocol.SNI,
 						AllowInsecure:           protocol.AllowInsecure,
 						Fingerprint:             protocol.Fingerprint,
+						CertFingerprintSha256:   certFingerprintSha256,
 						RealityServerAddr:       protocol.RealityServerAddr,
 						RealityServerPort:       protocol.RealityServerPort,
 						RealityPrivateKey:       protocol.RealityPrivateKey,

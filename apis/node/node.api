@@ -84,10 +84,11 @@ type (
 	}
 	ServerPushStatusRequest {
 		ServerCommon
-		Cpu       float64 `json:"cpu"`
-		Mem       float64 `json:"mem"`
-		Disk      float64 `json:"disk"`
-		UpdatedAt int64   `json:"updated_at"`
+		Cpu                   float64 `json:"cpu"`
+		Mem                   float64 `json:"mem"`
+		Disk                  float64 `json:"disk"`
+		UpdatedAt             int64   `json:"updated_at"`
+		CertFingerprintSha256 string  `json:"cert_fingerprint_sha256,omitempty"`
 	}
 	OnlineUsersRequest {
 		ServerCommon
@@ -145,4 +146,3 @@ service ppanel {
 	@handler QueryServerProtocolConfig
 	get /:server_id (QueryServerConfigRequest) returns (QueryServerConfigResponse)
 }
-

@@ -52,6 +52,15 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 		// update address
 		data.Address = req.Address
 	}
+	oldProtocols, err := data.UnmarshalProtocols()
+	if err != nil {
+		l.Errorf("[UpdateServer] UnmarshalProtocols Error: %v", err.Error())
+		return errors.Wrapf(xerr.NewErrCodeMsg(xerr.InvalidParams, "protocols unmarshal error"), "protocols unmarshal error: %v", err)
+	}
+	oldProtocolMap := make(map[string]node.Protocol, len(oldProtocols))
+	for _, oldProtocol := range oldProtocols {
+		oldProtocolMap[oldProtocol.Type] = oldProtocol
+	}
 	protocols := make([]node.Protocol, 0)
 	for _, item := range req.Protocols {
 		if item.Type == "" {
@@ -59,6 +68,17 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 		}
 		var protocol node.Protocol
 		tool.DeepCopy(&protocol, item)
+		if protocol.CertFingerprintSha256 != "" {
+			protocol.CertFingerprintSha256 = tool.NormalizeCertFingerprintSha256(protocol.CertFingerprintSha256)
+			if protocol.CertFingerprintSha256 == "" {
+				return errors.Wrapf(xerr.NewErrCodeMsg(xerr.InvalidParams, "cert_fingerprint_sha256 is invalid"), "cert_fingerprint_sha256 is invalid")
+			}
+		}
+		if oldProtocol, ok := oldProtocolMap[protocol.Type]; ok &&
+			protocol.ReportedCertFingerprintSha256 == "" &&
+			isSameCertReportContext(oldProtocol, protocol) {
+			protocol.ReportedCertFingerprintSha256 = oldProtocol.ReportedCertFingerprintSha256
+		}
 
 		// VLESS Reality Key Generation
 		if protocol.Type == "vless" {
@@ -117,4 +137,11 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 		ServerId: []int64{req.Id},
 		Search:   "",
 	})
+}
+
+func isSameCertReportContext(oldProtocol, newProtocol node.Protocol) bool {
+	return oldProtocol.Port == newProtocol.Port &&
+		oldProtocol.Security == newProtocol.Security &&
+		oldProtocol.SNI == newProtocol.SNI &&
+		oldProtocol.CertMode == newProtocol.CertMode
 }

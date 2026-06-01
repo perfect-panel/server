@@ -28,6 +28,9 @@ func TestAdapterProxy(t *testing.T) {
 	if proxies[1].Name != "TestTrojan" || proxies[1].SNI != "tls.example.com" {
 		t.Fatalf("second proxy = %#v, want trojan proxy with SNI", proxies[1])
 	}
+	if proxies[1].CertFingerprintSha256 == "" {
+		t.Fatal("second proxy cert fingerprint is empty")
+	}
 }
 
 func getServers() []*node.Node {
@@ -44,12 +47,13 @@ func getServers() []*node.Node {
 			Cipher: "aes-256-gcm",
 		},
 		{
-			Type:      "trojan",
-			Port:      443,
-			Enable:    true,
-			Security:  "tls",
-			SNI:       "tls.example.com",
-			Transport: "tcp",
+			Type:                          "trojan",
+			Port:                          443,
+			Enable:                        true,
+			Security:                      "tls",
+			SNI:                           "tls.example.com",
+			Transport:                     "tcp",
+			ReportedCertFingerprintSha256: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
 		},
 	}); err != nil {
 		panic(err)
