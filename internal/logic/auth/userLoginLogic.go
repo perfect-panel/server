@@ -85,6 +85,11 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
 	}
 
+	// Check if user is enabled
+	if !*userInfo.Enable {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user account is disabled")
+	}
+
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {
 		bindLogic := NewBindDeviceLogic(l.ctx, l.svcCtx)

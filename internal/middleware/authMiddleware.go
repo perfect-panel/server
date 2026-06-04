@@ -68,6 +68,11 @@ func AuthenticateRequest(ctx context.Context, svc *svc.ServiceContext, token str
 		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Database Query Error")
 	}
 
+	// Check if user is enabled
+	if !*userInfo.Enable {
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "User Disabled")
+	}
+
 	paths := strings.Split(path, "/")
 	if tool.StringSliceContains(paths, "admin") && !*userInfo.IsAdmin {
 		logger.WithContext(ctx).Debug("[AuthMiddleware] Not Admin User", logger.Field("userId", userId), logger.Field("sessionId", sessionId))

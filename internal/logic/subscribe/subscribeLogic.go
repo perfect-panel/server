@@ -189,6 +189,16 @@ func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error)
 		return nil, errors.New("subscribe token invalid")
 	}
 	// =========================================================
+	// Check if user is enabled
+	userInfo, err := l.svc.Store.User().FindOne(l.ctx, userSub.UserId)
+	if err != nil {
+		l.Infow("[Generate Subscribe] failed to get user info", logger.Field("error", err.Error()), logger.Field("userId", userSub.UserId))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to get user info: %v", err.Error())
+	}
+	if !*userInfo.Enable {
+		l.Infow("[Generate Subscribe] user account is disabled", logger.Field("userId", userSub.UserId))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "User account is disabled")
+	}
 	// 修复结束 (Fix end)
 	// =========================================================
 
