@@ -507,13 +507,18 @@ func (l *ResetTrafficLogic) isRetryableError(err error) bool {
 }
 
 // clearCache clears the reset traffic cache
-func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscribe) {
+// Uses an independent background context with a per-item timeout so that a
+// long-running parent context deadline (e.g. asynq task timeout) does not
+// cause cache/log operations to fail mid-way through large batches.
+func (l *ResetTrafficLogic) clearCache(_ context.Context, list []*user.Subscribe) {
 	if len(list) != 0 {
 		subs := make(map[int64]bool)
 
 		for _, sub := range list {
 			if sub.SubscribeId > 0 {
-				err := l.svc.Store.User().ClearSubscribeCache(ctx, sub)
+				cacheCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				err := l.svc.Store.User().ClearSubscribeCache(cacheCtx, sub)
+				cancel()
 				if err != nil {
 					logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",
 						logger.Field("subscribeId", sub.SubscribeId),
@@ -524,29 +529,34 @@ func (l *ResetTrafficLogic) clearCache(ctx context.Context, list []*user.Subscri
 				}
 			}
 			// Insert traffic reset log
-			l.insertLog(ctx, sub.Id, sub.UserId)
+			l.insertLog(sub.Id, sub.UserId)
 		}
 
-		for sub, _ := range subs {
-			if err := l.svc.Store.Subscribe().ClearCache(ctx, sub); err != nil {
+		for sub := range subs {
+			subCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			if err := l.svc.Store.Subscribe().ClearCache(subCtx, sub); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to clear subscription cache",
 					logger.Field("subscribeId", sub),
 					logger.Field("error", err.Error()),
 				)
 			}
+			cancel()
 		}
 	}
 }
 
-// insertLog inserts a reset traffic log entry
-func (l *ResetTrafficLogic) insertLog(ctx context.Context, subId, userId int64) {
+// insertLog inserts a reset traffic log entry using an independent background
+// context so that asynq task deadline does not cancel log writes mid-batch.
+func (l *ResetTrafficLogic) insertLog(subId, userId int64) {
 	trafficLog := log.ResetSubscribe{
 		Type:      log.ResetSubscribeTypeAuto,
 		UserId:    userId,
 		Timestamp: time.Now().UnixMilli(),
 	}
 	content, _ := trafficLog.Marshal()
-	if err := l.svc.Store.Log().Insert(ctx, &log.SystemLog{
+	logCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := l.svc.Store.Log().Insert(logCtx, &log.SystemLog{
 		Type:     log.TypeResetSubscribe.Uint8(),
 		ObjectID: subId,
 		Date:     time.Now().Format(time.DateOnly),

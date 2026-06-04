@@ -55,7 +55,7 @@ func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPush
 	}
 
 	// Update server last reported time
-	now := time.Now()
+	now := time.Now().UTC() // Use UTC explicitly to avoid timezone mismatch with PostgreSQL session timezone (#146)
 	serverInfo.LastReportedAt = &now
 
 	err = l.svcCtx.Store.Node().UpdateServer(l.ctx, serverInfo)
