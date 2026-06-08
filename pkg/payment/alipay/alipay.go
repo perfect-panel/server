@@ -45,7 +45,7 @@ type Order struct {
 }
 
 func NewClient(c Config) *Client {
-	client, err := alipay.New(c.AppId, c.PrivateKey, c.Sandbox)
+	client, err := alipay.New(c.AppId, c.PrivateKey, !c.Sandbox)
 	if err != nil {
 		logger.Error("[Alipay] NewClient failed: ", logger.Field("errors", err), logger.Field("config", c))
 		return nil
