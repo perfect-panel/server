@@ -91,10 +91,31 @@ func (l *AlipayF2FConfig) Marshal() ([]byte, error) {
 }
 
 func (l *AlipayF2FConfig) Unmarshal(data []byte) error {
+	// First try to unmarshal into a map to handle string "true"/"false" for sandbox
+	var rawMap map[string]interface{}
+	if err := json.Unmarshal(data, &rawMap); err != nil {
+		return err
+	}
+	
+	// Convert sandbox field if it's a string
+	if sandboxVal, ok := rawMap["sandbox"]; ok {
+		switch v := sandboxVal.(type) {
+		case string:
+			rawMap["sandbox"] = v == "true" || v == "1"
+		case bool:
+			// Already a bool, no conversion needed
+		}
+	}
+	
+	// Re-marshal and unmarshal into the struct
+	convertedData, err := json.Marshal(rawMap)
+	if err != nil {
+		return err
+	}
 	type Alias AlipayF2FConfig
-	aux := (*Alias)(l)
-	return json.Unmarshal(data, &aux)
+	return json.Unmarshal(convertedData, (*Alias)(l))
 }
+
 
 type EPayConfig struct {
 	Pid  string `json:"pid"`
