@@ -64,7 +64,6 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 			l.Errorw("[UpdateUserBasicInfoLogic] Insert Balance Log Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId))
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Insert Balance Log Error")
 		}
-		userInfo.Balance = req.Balance
 	}
 
 	if userInfo.GiftAmount != req.GiftAmount {
@@ -95,7 +94,6 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 				l.Errorw("[UpdateUserBasicInfoLogic] Insert Balance Log Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId))
 				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Insert Balance Log Error")
 			}
-			userInfo.GiftAmount = req.GiftAmount
 		}
 	}
 
@@ -118,11 +116,19 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 			l.Errorw("[UpdateUserBasicInfoLogic] Insert Commission Log Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId))
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Insert Commission Log Error")
 		}
-		userInfo.Commission = req.Commission
 	}
-	tool.DeepCopy(userInfo, req)
+
+	// Apply basic field updates from request, but preserve already-set balance/gift/commission
+	userInfo.Balance = req.Balance
+	userInfo.GiftAmount = req.GiftAmount
+	userInfo.Commission = req.Commission
+	userInfo.Avatar = req.Avatar
+	userInfo.ReferCode = req.ReferCode
+	userInfo.RefererId = req.RefererId
 	userInfo.OnlyFirstPurchase = &req.OnlyFirstPurchase
 	userInfo.ReferralPercentage = req.ReferralPercentage
+	userInfo.Enable = &req.Enable
+	userInfo.IsAdmin = &req.IsAdmin
 
 	if req.Password != "" {
 		if userInfo.Id == 2 && isDemo {
