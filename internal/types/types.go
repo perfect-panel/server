@@ -2175,6 +2175,7 @@ type SubscribeConfig struct {
 	PanDomain       bool   `json:"pan_domain"`
 	UserAgentLimit  bool   `json:"user_agent_limit"`
 	UserAgentList   string `json:"user_agent_list"`
+	ShowTutorial    bool   `json:"show_tutorial"`
 }
 
 type SubscribeDiscount struct {

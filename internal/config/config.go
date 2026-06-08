@@ -68,6 +68,7 @@ type SubscribeConfig struct {
 	PanDomain       bool   `yaml:"PanDomain" default:"false"`
 	UserAgentLimit  bool   `yaml:"UserAgentLimit" default:"false"`
 	UserAgentList   string `yaml:"UserAgentList" default:""`
+	ShowTutorial    bool   `yaml:"ShowTutorial" default:"true"`
 }
 
 type RegisterConfig struct {
