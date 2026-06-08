@@ -10,6 +10,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -52,13 +53,17 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 		return nil
 	}
 
-	sub, err := store.Subscribe().FindOne(l.ctx, orderInfo.SubscribeId)
-	if err != nil {
-		l.Errorw("[CloseOrder] Find subscribe info failed",
-			logger.Field("error", err.Error()),
-			logger.Field("subscribeId", orderInfo.SubscribeId),
-		)
-		return nil
+	// Only query subscribe info if SubscribeId is valid
+	var sub *subscribe.Subscribe
+	if orderInfo.SubscribeId > 0 {
+		sub, err = store.Subscribe().FindOne(l.ctx, orderInfo.SubscribeId)
+		if err != nil {
+			l.Errorw("[CloseOrder] Find subscribe info failed",
+				logger.Field("error", err.Error()),
+				logger.Field("subscribeId", orderInfo.SubscribeId),
+			)
+			return nil
+		}
 	}
 
 	err = store.InTx(l.ctx, func(txStore repository.Store) error {
@@ -134,14 +139,17 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 			}
 			return nil
 		}
-		if sub.Inventory != -1 {
-			sub.Inventory++
-			if e := txStore.Subscribe().Update(l.ctx, sub); e != nil {
-				l.Errorw("[CloseOrder] Restore subscribe inventory failed",
-					logger.Field("error", e.Error()),
-					logger.Field("subscribeId", sub.Id),
-				)
-				return e
+		// Restore subscribe inventory if subscribe exists
+		if sub != nil {
+			if sub.Inventory != -1 {
+				sub.Inventory++
+				if e := txStore.Subscribe().Update(l.ctx, sub); e != nil {
+					l.Errorw("[CloseOrder] Restore subscribe inventory failed",
+						logger.Field("error", e.Error()),
+						logger.Field("subscribeId", sub.Id),
+					)
+					return e
+				}
 			}
 		}
 
