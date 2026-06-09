@@ -238,7 +238,11 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 
 func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, error) {
 	if l.isSubscriptionExpired(userSub) {
-		return l.createExpiredServers(), nil
+		return l.createNoticeServers("订阅已过期 / Subscribe Expired"), nil
+	}
+
+	if l.isTrafficExhausted(userSub) {
+		return l.createNoticeServers("流量已用尽 / Traffic Exhausted"), nil
 	}
 
 	subDetails, err := l.svc.Store.Subscribe().FindOne(l.ctx, userSub.SubscribeId)
@@ -280,19 +284,29 @@ func (l *SubscribeLogic) isSubscriptionExpired(userSub *user.Subscribe) bool {
 	return userSub.ExpireTime.Unix() < time.Now().Unix() && userSub.ExpireTime.Unix() != 0
 }
 
-func (l *SubscribeLogic) createExpiredServers() []*node.Node {
+// isTrafficExhausted reports whether the subscription has used up its traffic
+// quota. Traffic == 0 means unlimited. Mirrors the condition used by
+// FindTrafficExceededSubscribes (upload + download >= traffic AND traffic > 0).
+func (l *SubscribeLogic) isTrafficExhausted(userSub *user.Subscribe) bool {
+	return userSub.Traffic > 0 && userSub.Download+userSub.Upload >= userSub.Traffic
+}
+
+// createNoticeServers returns placeholder (non-functional) nodes whose names
+// carry a notice (e.g. expired / traffic exhausted) so clients display the
+// reason instead of silently failing.
+func (l *SubscribeLogic) createNoticeServers(message string) []*node.Node {
 	enable := true
 	host := l.getFirstHostLine()
 
 	return []*node.Node{
 		{
-			Name:    "Subscribe Expired",
+			Name:    message,
 			Tags:    "",
 			Port:    18080,
 			Address: "127.0.0.1",
 			Server: &node.Server{
 				Id:        1,
-				Name:      "Subscribe Expired",
+				Name:      message,
 				Protocols: "[{\"type\":\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
 			},
 			Protocol: "shadowsocks",
@@ -305,7 +319,7 @@ func (l *SubscribeLogic) createExpiredServers() []*node.Node {
 			Address: "127.0.0.1",
 			Server: &node.Server{
 				Id:        1,
-				Name:      "Subscribe Expired",
+				Name:      message,
 				Protocols: "[{\"type\":\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
 			},
 			Protocol: "shadowsocks",
