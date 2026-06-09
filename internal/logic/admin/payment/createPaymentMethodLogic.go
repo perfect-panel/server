@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	paymentModel "github.com/perfect-panel/server/internal/model/payment"
 	"github.com/perfect-panel/server/internal/repository"
@@ -70,7 +71,7 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 				SecretKey: cfg.SecretKey,
 				PublicKey: cfg.PublicKey,
 			})
-			url := fmt.Sprintf("%s/v1/notify/Stripe/%s", req.Domain, paymentMethod.Token)
+			url := fmt.Sprintf("%s/v1/notify/Stripe/%s", strings.TrimSuffix(req.Domain, "/"), paymentMethod.Token)
 			endpoint, err := client.CreateWebhookEndpoint(url)
 			if err != nil {
 				l.Errorw("[CreatePaymentMethod] create stripe webhook endpoint error", logger.Field("error", err.Error()))
