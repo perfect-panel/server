@@ -59,11 +59,11 @@ func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *types.GetPaymentMe
 			notifyUrl = v.Domain
 			if v.Domain != "" {
 				notifyUrl = strings.TrimSuffix(notifyUrl, "/")
-				// if is gateway mod, use gateway domain
 				if isGatewayMod {
-					notifyUrl += "/api/"
+					notifyUrl += "/api/v1/notify/" + v.Platform + "/" + v.Token
+				} else {
+					notifyUrl += "/v1/notify/" + v.Platform + "/" + v.Token
 				}
-				notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + v.Platform + "/" + v.Token
 			} else {
 				notifyUrl += "https://" + l.svcCtx.Config.Host
 				if isGatewayMod {
