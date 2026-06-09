@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
@@ -162,13 +163,13 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if pay.Domain != "" {
-		notifyUrl = pay.Domain + "/v1/notify/" + pay.Platform + "/" + pay.Token
+		notifyUrl = strings.TrimSuffix(pay.Domain, "/") + "/v1/notify/" + pay.Platform + "/" + pay.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
-		notifyUrl = "https://" + host + "/v1/notify/" + pay.Platform + "/" + pay.Token
+		notifyUrl = "https://" + strings.TrimSuffix(host, "/") + "/v1/notify/" + pay.Platform + "/" + pay.Token
 	}
 
 	// Initialize Alipay client with configuration
@@ -289,21 +290,21 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if config.Domain != "" {
-		notifyUrl = config.Domain
+		notifyUrl = strings.TrimSuffix(config.Domain, "/")
 		if isGatewayMod {
 			notifyUrl += "/api/"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
-		notifyUrl = "https://" + host
+		notifyUrl = "https://" + strings.TrimSuffix(host, "/")
 		if isGatewayMod {
 			notifyUrl += "/api"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	}
 
 	// Create payment URL for user redirection
@@ -349,22 +350,22 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if config.Domain != "" {
-		notifyUrl = config.Domain
+		notifyUrl = strings.TrimSuffix(config.Domain, "/")
 		if isGatewayMod {
 			notifyUrl += "/api/"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
 
-		notifyUrl = "https://" + host
+		notifyUrl = "https://" + strings.TrimSuffix(host, "/")
 		if isGatewayMod {
 			notifyUrl += "/api"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	}
 	// Create payment URL for user redirection
 	url := client.CreatePayUrl(epay.Order{

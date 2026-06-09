@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/perfect-panel/server/internal/report"
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
@@ -57,17 +58,18 @@ func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *types.GetPaymentMe
 		if paymentPlatform.ParsePlatform(v.Platform) != paymentPlatform.Balance {
 			notifyUrl = v.Domain
 			if v.Domain != "" {
+				notifyUrl = strings.TrimSuffix(notifyUrl, "/")
 				// if is gateway mod, use gateway domain
 				if isGatewayMod {
 					notifyUrl += "/api/"
 				}
-				notifyUrl += "/v1/notify/" + v.Platform + "/" + v.Token
+				notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + v.Platform + "/" + v.Token
 			} else {
 				notifyUrl += "https://" + l.svcCtx.Config.Host
 				if isGatewayMod {
-					notifyUrl += "/api/v1/notify/" + v.Platform + "/" + v.Token
+					notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/api/v1/notify/" + v.Platform + "/" + v.Token
 				} else {
-					notifyUrl += "/v1/notify/" + v.Platform + "/" + v.Token
+					notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + v.Platform + "/" + v.Token
 				}
 			}
 		}
