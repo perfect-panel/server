@@ -219,20 +219,12 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 		WebhookSecret: stripeConfig.WebhookSecret,
 	})
 
-	// Convert order amount to CNY using current exchange rate
-	amount, err := l.queryExchangeRate("CNY", info.Amount)
-	if err != nil {
-		l.Errorw("[PurchaseCheckout] queryExchangeRate error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "queryExchangeRate error: %s", err.Error())
-	}
-	convertAmount := int64(amount * 100) // Convert to cents for Stripe API
-
 	// Create Stripe payment sheet for client-side processing
 	result, err := client.CreatePaymentSheet(&stripe.Order{
 		OrderNo:   info.OrderNo,
 		Subscribe: strconv.FormatInt(info.SubscribeId, 10),
-		Amount:    convertAmount,
-		Currency:  "cny",
+		Amount:    info.Amount,
+		Currency:  strings.ToLower(l.svcCtx.Config.Currency.Unit),
 		Payment:   stripeConfig.Payment,
 	},
 		&stripe.User{
