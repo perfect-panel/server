@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	stderrors "errors"
 
 	"github.com/perfect-panel/server/internal/logic/nodeconfig"
 	"github.com/perfect-panel/server/internal/svc"
@@ -10,7 +9,6 @@ import (
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type GetServerNodeConfigLogic struct {
@@ -36,12 +34,8 @@ func (l *GetServerNodeConfigLogic) GetServerNodeConfig(req *types.GetServerNodeC
 
 	override, err := nodeStore.FindServerConfigOverride(l.ctx, req.ServerID)
 	if err != nil {
-		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			override = nil
-		} else {
-			l.Errorf("[GetServerNodeConfig] FindServerConfigOverride Error: %v", err.Error())
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server node config error: %v", err)
-		}
+		l.Errorf("[GetServerNodeConfig] FindServerConfigOverride Error: %v", err.Error())
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server node config error: %v", err)
 	}
 
 	global := nodeconfig.GlobalValues(l.svcCtx.Config.Node)
