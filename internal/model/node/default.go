@@ -97,15 +97,18 @@ func (m *defaultServerModel) DeleteServer(ctx context.Context, id int64, tx ...*
 }
 
 func (m *defaultServerModel) FindServerConfigOverride(ctx context.Context, serverId int64) (*ServerConfigOverride, error) {
-	var data ServerConfigOverride
-	err := m.WithContext(ctx).Model(&ServerConfigOverride{}).Where("server_id = ?", serverId).First(&data).Error
+	var data []ServerConfigOverride
+
+	err := m.WithContext(ctx).Model(&ServerConfigOverride{}).Where("server_id = ?", serverId).Limit(1).Find(&data).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
 		return nil, err
 	}
-	return &data, nil
+
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	return &data[0], nil
 }
 
 func (m *defaultServerModel) SaveServerConfigOverride(ctx context.Context, data *ServerConfigOverride, tx ...*gorm.DB) error {
