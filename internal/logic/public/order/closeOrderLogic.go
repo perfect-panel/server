@@ -204,6 +204,7 @@ func (l *CloseOrderLogic) queryAlipay(paymentConfig *payment.Payment, TradeNo st
 		PrivateKey:  config.PrivateKey,
 		PublicKey:   config.PublicKey,
 		InvoiceName: config.InvoiceName,
+		Sandbox:     config.Sandbox,
 	})
 	status, err := client.QueryTrade(l.ctx, TradeNo)
 	if err != nil {

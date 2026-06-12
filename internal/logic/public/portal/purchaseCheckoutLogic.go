@@ -179,6 +179,7 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 		PublicKey:   f2FConfig.PublicKey,
 		InvoiceName: f2FConfig.InvoiceName,
 		NotifyURL:   notifyUrl,
+		Sandbox:     f2FConfig.Sandbox,
 	})
 
 	// Convert order amount to CNY using current exchange rate

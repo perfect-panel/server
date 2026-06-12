@@ -45,12 +45,17 @@ func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
 		l.Logger.Error("[AlipayNotify] Unmarshal config failed", logger.Field("error", err.Error()))
 		return err
 	}
+	if err := r.ParseForm(); err != nil {
+		l.Logger.Error("[AlipayNotify] Parse form failed", logger.Field("error", err.Error()))
+		return err
+	}
 	client := alipay.NewClient(alipay.Config{
 		AppId:       config.AppId,
 		PrivateKey:  config.PrivateKey,
 		PublicKey:   config.PublicKey,
 		InvoiceName: config.InvoiceName,
 		NotifyURL:   data.Domain + "/v1/payment/alipay/notify",
+		Sandbox:     config.Sandbox,
 	})
 	notify, err := client.DecodeNotification(r.Form)
 	if err != nil {
