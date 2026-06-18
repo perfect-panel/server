@@ -134,6 +134,8 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 						ServiceName:             protocol.ServiceName,
 						Method:                  protocol.Cipher,
 						ServerKey:               protocol.ServerKey,
+						UoT:                     protocol.UoT,
+						UoTVersion:              protocol.UoTVersion,
 						Flow:                    protocol.Flow,
 						HopPorts:                protocol.HopPorts,
 						HopInterval:             protocol.HopInterval,
