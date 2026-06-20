@@ -43,7 +43,7 @@ func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequ
 		l.Errorw("[ServerPushStatus] UpdateNodeStatus error", logger.Field("error", err))
 		return errors.New("update node status failed")
 	}
-	now := time.Now().UTC() // Use UTC explicitly to avoid timezone mismatch with PostgreSQL session timezone (#146)
+	now := time.Now()
 	serverInfo.LastReportedAt = &now
 
 	err = l.svcCtx.Store.Node().UpdateServer(l.ctx, serverInfo)

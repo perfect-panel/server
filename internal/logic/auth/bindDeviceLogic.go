@@ -98,6 +98,11 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 			Verified:       true,
 		}
 		if err := store.User().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				// Concurrent request already created this auth method;
+				// propagate so the outer handler can retry gracefully.
+				return err
+			}
 			l.Errorw("failed to create device auth method",
 				logger.Field("user_id", userId),
 				logger.Field("identifier", identifier),
@@ -126,6 +131,42 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 
 		return nil
 	})
+
+	// Handle duplicate key from concurrent device creation.
+	// The transaction is rolled back, and another request has already committed
+	// the device record — re-read it and route to the appropriate path.
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		l.Infow("device concurrently created, retrying as existing device",
+			logger.Field("identifier", identifier),
+			logger.Field("user_id", userId),
+		)
+
+		deviceInfo, findErr := l.svcCtx.Store.User().FindOneDeviceByIdentifier(l.ctx, identifier)
+		if findErr != nil {
+			l.Errorw("failed to find device after concurrent creation",
+				logger.Field("identifier", identifier),
+				logger.Field("error", findErr.Error()),
+			)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find device after concurrent creation failed: %v", findErr)
+		}
+
+		// Already bound to current user — just update IP / UserAgent
+		if deviceInfo.UserId == userId {
+			deviceInfo.Ip = ip
+			deviceInfo.UserAgent = userAgent
+			if err := l.svcCtx.Store.User().UpdateDevice(l.ctx, deviceInfo); err != nil {
+				l.Errorw("failed to update device",
+					logger.Field("identifier", identifier),
+					logger.Field("error", err.Error()),
+				)
+				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update device failed: %v", err)
+			}
+			return nil
+		}
+
+		// Bound to another user — rebind
+		return l.rebindDeviceToNewUser(deviceInfo, ip, userAgent, userId)
+	}
 
 	if err != nil {
 		l.Errorw("device creation failed",

@@ -14,32 +14,18 @@ func (m *customUserModel) QueryMonthlyResetSubscribeIds(ctx context.Context, sub
 		return ids, nil
 	}
 	err := m.QueryNoCacheCtx(ctx, &ids, func(conn *gorm.DB, v interface{}) error {
-		query := conn.Model(&Subscribe{}).Select("id").
-			Where("subscribe_id IN ?", subscribeIds).
-			Where("status IN ?", []int64{1, 2}).
-			Where(expireDateAtLeast(conn, "month"))
-
-		if now.AddDate(0, 0, 1).Month() != now.Month() {
-			query = query.Where(extractDatePart(conn, "day")+" >= ?", now.Day())
-		} else {
-			query = query.Where(extractDatePart(conn, "day")+" = ?", now.Day())
-		}
-
-		return query.Find(&ids).Error
+		return monthlyResetSubscribeQuery(conn, subscribeIds, now).Find(&ids).Error
 	})
 	return ids, err
 }
 
-func (m *customUserModel) QueryFirstResetSubscribeIds(ctx context.Context, subscribeIds []int64) ([]int64, error) {
+func (m *customUserModel) QueryFirstResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error) {
 	var ids []int64
 	if len(subscribeIds) == 0 {
 		return ids, nil
 	}
 	err := m.QueryNoCacheCtx(ctx, &ids, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Select("id").
-			Where("subscribe_id IN ?", subscribeIds).
-			Where("status IN ?", []int64{1, 2}).
-			Find(&ids).Error
+		return resettableSubscribeQuery(conn, subscribeIds, now).Find(&ids).Error
 	})
 	return ids, err
 }
@@ -50,19 +36,7 @@ func (m *customUserModel) QueryYearlyResetSubscribeIds(ctx context.Context, subs
 		return ids, nil
 	}
 	err := m.QueryNoCacheCtx(ctx, &ids, func(conn *gorm.DB, v interface{}) error {
-		query := conn.Model(&Subscribe{}).Select("id").
-			Where("subscribe_id IN ?", subscribeIds).
-			Where(extractDatePart(conn, "month")+" = ?", int(now.Month())).
-			Where("status IN ?", []int64{1, 2}).
-			Where(expireDateAtLeast(conn, "year"))
-
-		if now.Month() == 2 && now.Day() == 28 {
-			query = query.Where(extractDatePart(conn, "day") + " IN (28, 29)")
-		} else {
-			query = query.Where(extractDatePart(conn, "day")+" = ?", now.Day())
-		}
-
-		return query.Find(&ids).Error
+		return yearlyResetSubscribeQuery(conn, subscribeIds, now).Find(&ids).Error
 	})
 	return ids, err
 }
@@ -85,26 +59,59 @@ func (m *customUserModel) ResetSubscribeTrafficByIds(ctx context.Context, ids []
 	})
 }
 
-func extractDatePart(db *gorm.DB, part string) string {
+func extractColumnDatePart(db *gorm.DB, column, part string) string {
 	if db.Dialector.Name() == "postgres" {
-		return fmt.Sprintf("EXTRACT(%s FROM expire_time)", part)
+		return fmt.Sprintf("EXTRACT(%s FROM %s)", part, column)
 	}
 	switch part {
 	case "month":
-		return "MONTH(expire_time)"
+		return fmt.Sprintf("MONTH(%s)", column)
 	default:
-		return "DAY(expire_time)"
+		return fmt.Sprintf("DAY(%s)", column)
 	}
 }
 
-func expireDateAtLeast(db *gorm.DB, unit string) string {
-	if db.Dialector.Name() == "postgres" {
-		return fmt.Sprintf("DATE(expire_time) >= CURRENT_DATE + INTERVAL '1 %s'", unit)
+func monthlyResetSubscribeQuery(conn *gorm.DB, subscribeIds []int64, now time.Time) *gorm.DB {
+	query := resettableSubscribeQuery(conn, subscribeIds, now)
+	condition, args := monthlyResetDateCondition(conn, now)
+	return query.Where(condition, args...)
+}
+
+func yearlyResetSubscribeQuery(conn *gorm.DB, subscribeIds []int64, now time.Time) *gorm.DB {
+	query := resettableSubscribeQuery(conn, subscribeIds, now)
+	condition, args := yearlyResetDateCondition(conn, now)
+	return query.Where(condition, args...)
+}
+
+func resettableSubscribeQuery(conn *gorm.DB, subscribeIds []int64, now time.Time) *gorm.DB {
+	return conn.Model(&Subscribe{}).Select("id").
+		Where("subscribe_id IN ?", subscribeIds).
+		Where("status IN ?", []int64{1, 2}).
+		Where("start_time <= ?", now).
+		Where("(expire_time IS NULL OR expire_time = ? OR expire_time > ?)", time.UnixMilli(0), now)
+}
+
+func monthlyResetDateCondition(db *gorm.DB, now time.Time) (string, []interface{}) {
+	dayExpr := extractColumnDatePart(db, "start_time", "day")
+	if isLastDayOfMonth(now) {
+		return dayExpr + " >= ?", []interface{}{now.Day()}
 	}
-	switch unit {
-	case "year":
-		return "TIMESTAMPDIFF(YEAR, CURDATE(), DATE(expire_time)) >= 1"
-	default:
-		return "TIMESTAMPDIFF(MONTH, CURDATE(), DATE(expire_time)) >= 1"
+	return dayExpr + " = ?", []interface{}{now.Day()}
+}
+
+func yearlyResetDateCondition(db *gorm.DB, now time.Time) (string, []interface{}) {
+	monthExpr := extractColumnDatePart(db, "start_time", "month")
+	dayExpr := extractColumnDatePart(db, "start_time", "day")
+	if now.Month() == time.February && now.Day() == 28 && !isLeapYear(now.Year()) {
+		return fmt.Sprintf("%s = ? AND %s IN ?", monthExpr, dayExpr), []interface{}{int(time.February), []int{28, 29}}
 	}
+	return fmt.Sprintf("%s = ? AND %s = ?", monthExpr, dayExpr), []interface{}{int(now.Month()), now.Day()}
+}
+
+func isLastDayOfMonth(t time.Time) bool {
+	return t.AddDate(0, 0, 1).Month() != t.Month()
+}
+
+func isLeapYear(year int) bool {
+	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
 }

@@ -70,26 +70,47 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *types.QueryUserSub
 
 // 计算下次重置时间
 func calculateNextResetTime(sub *types.UserSubscribe) int64 {
-	resetTime := time.UnixMilli(sub.ExpireTime)
 	now := time.Now()
+	return calculateNextResetTimeAt(sub, now)
+}
+
+func calculateNextResetTimeAt(sub *types.UserSubscribe, now time.Time) int64 {
 	switch sub.Subscribe.ResetCycle {
 	case 0:
 		return 0
 	case 1:
 		return time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location()).UnixMilli()
 	case 2:
-		if resetTime.Day() > now.Day() {
-			return time.Date(now.Year(), now.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
-		} else {
-			return time.Date(now.Year(), now.Month()+1, resetTime.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
+		startTime := resetBaseTime(sub)
+		target := validResetDate(now.Year(), now.Month(), startTime.Day(), now.Location())
+		if !target.After(now) {
+			target = validResetDate(now.Year(), now.Month()+1, startTime.Day(), now.Location())
 		}
+		return target.UnixMilli()
 	case 3:
-		targetTime := time.Date(now.Year(), resetTime.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location())
-		if targetTime.Before(now) {
-			targetTime = time.Date(now.Year()+1, resetTime.Month(), resetTime.Day(), 0, 0, 0, 0, now.Location())
+		startTime := resetBaseTime(sub)
+		targetTime := validResetDate(now.Year(), startTime.Month(), startTime.Day(), now.Location())
+		if !targetTime.After(now) {
+			targetTime = validResetDate(now.Year()+1, startTime.Month(), startTime.Day(), now.Location())
 		}
 		return targetTime.UnixMilli()
 	default:
 		return 0
 	}
+}
+
+func resetBaseTime(sub *types.UserSubscribe) time.Time {
+	if sub.StartTime > 0 {
+		return time.UnixMilli(sub.StartTime)
+	}
+	return time.UnixMilli(sub.ExpireTime)
+}
+
+func validResetDate(year int, month time.Month, day int, loc *time.Location) time.Time {
+	firstOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, loc)
+	lastDay := firstOfMonth.AddDate(0, 1, -1).Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	return time.Date(year, month, day, 0, 0, 0, 0, loc)
 }

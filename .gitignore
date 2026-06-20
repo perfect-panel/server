@@ -15,6 +15,7 @@ node_modules
 package-lock.json
 package.json
 /bin
+.local/
 
 # Local agent instructions
 AGENT.md
