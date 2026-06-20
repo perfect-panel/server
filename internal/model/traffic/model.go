@@ -192,6 +192,7 @@ func (m *customTrafficModel) QueryTrafficLogDetails(ctx context.Context, filter 
 	var list []*TrafficLog
 	var total int64
 	err := query.Count(&total).
+		Order("timestamp DESC").
 		Limit(filter.Size).
 		Offset((filter.Page - 1) * filter.Size).
 		Find(&list).Error
