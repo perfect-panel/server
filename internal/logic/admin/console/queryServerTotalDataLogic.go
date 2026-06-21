@@ -127,12 +127,14 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday user traffic rank log error", logger.Field("error", err.Error()))
 		}
-		for _, v := range rank.Rank {
-			yesterdayUserRankData = append(yesterdayUserRankData, types.UserTrafficData{
-				SID:      v.SubscribeId,
-				Upload:   v.Upload,
-				Download: v.Download,
-			})
+		for i := uint8(1); i <= 10; i++ {
+			if v, ok := rank.Rank[i]; ok {
+				yesterdayUserRankData = append(yesterdayUserRankData, types.UserTrafficData{
+					SID:      v.SubscribeId,
+					Upload:   v.Upload,
+					Download: v.Download,
+				})
+			}
 		}
 	}
 
@@ -183,9 +185,11 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 
 		// Collect yesterday server IDs not already fetched
 		yesterdayServerIDs := make([]int64, 0, len(rank.Rank))
-		for _, v := range rank.Rank {
-			if _, ok := serverMap[v.ServerId]; !ok {
-				yesterdayServerIDs = append(yesterdayServerIDs, v.ServerId)
+		for i := uint8(1); i <= 10; i++ {
+			if v, ok := rank.Rank[i]; ok {
+				if _, ok := serverMap[v.ServerId]; !ok {
+					yesterdayServerIDs = append(yesterdayServerIDs, v.ServerId)
+				}
 			}
 		}
 		if len(yesterdayServerIDs) > 0 {
@@ -196,17 +200,19 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 			}
 		}
 
-		for _, v := range rank.Rank {
-			name := ""
-			if serverName, ok := serverMap[v.ServerId]; ok {
-				name = serverName
+		for i := uint8(1); i <= 10; i++ {
+			if v, ok := rank.Rank[i]; ok {
+				name := ""
+				if serverName, ok := serverMap[v.ServerId]; ok {
+					name = serverName
+				}
+				yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
+					ServerId: v.ServerId,
+					Name:     name,
+					Upload:   v.Upload,
+					Download: v.Download,
+				})
 			}
-			yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
-				ServerId: v.ServerId,
-				Name:     name,
-				Upload:   v.Upload,
-				Download: v.Download,
-			})
 		}
 	}
 
