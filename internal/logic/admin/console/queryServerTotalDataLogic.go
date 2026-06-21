@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -127,14 +128,18 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		if err != nil {
 			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday user traffic rank log error", logger.Field("error", err.Error()))
 		}
-		for i := uint8(1); i <= 10; i++ {
-			if v, ok := rank.Rank[i]; ok {
-				yesterdayUserRankData = append(yesterdayUserRankData, types.UserTrafficData{
-					SID:      v.SubscribeId,
-					Upload:   v.Upload,
-					Download: v.Download,
-				})
-			}
+		// Extract and sort keys to maintain rank order
+		keys := make([]uint8, 0, len(rank.Rank))
+		for k := range rank.Rank {
+			keys = append(keys, k)
+		}
+		sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+		for _, k := range keys {
+			yesterdayUserRankData = append(yesterdayUserRankData, types.UserTrafficData{
+				SID:      rank.Rank[k].SubscribeId,
+				Upload:   rank.Rank[k].Upload,
+				Download: rank.Rank[k].Download,
+			})
 		}
 	}
 
@@ -183,13 +188,19 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 			l.Errorw("[QueryServerTotalDataLogic] Unmarshal yesterday server traffic rank log error", logger.Field("error", err.Error()))
 		}
 
+		// Extract and sort keys to maintain rank order
+		serverKeys := make([]uint8, 0, len(rank.Rank))
+		for k := range rank.Rank {
+			serverKeys = append(serverKeys, k)
+		}
+		sort.Slice(serverKeys, func(i, j int) bool { return serverKeys[i] < serverKeys[j] })
+
 		// Collect yesterday server IDs not already fetched
 		yesterdayServerIDs := make([]int64, 0, len(rank.Rank))
-		for i := uint8(1); i <= 10; i++ {
-			if v, ok := rank.Rank[i]; ok {
-				if _, ok := serverMap[v.ServerId]; !ok {
-					yesterdayServerIDs = append(yesterdayServerIDs, v.ServerId)
-				}
+		for _, k := range serverKeys {
+			v := rank.Rank[k]
+			if _, ok := serverMap[v.ServerId]; !ok {
+				yesterdayServerIDs = append(yesterdayServerIDs, v.ServerId)
 			}
 		}
 		if len(yesterdayServerIDs) > 0 {
@@ -200,19 +211,18 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 			}
 		}
 
-		for i := uint8(1); i <= 10; i++ {
-			if v, ok := rank.Rank[i]; ok {
-				name := ""
-				if serverName, ok := serverMap[v.ServerId]; ok {
-					name = serverName
-				}
-				yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
-					ServerId: v.ServerId,
-					Name:     name,
-					Upload:   v.Upload,
-					Download: v.Download,
-				})
+		for _, k := range serverKeys {
+			v := rank.Rank[k]
+			name := ""
+			if serverName, ok := serverMap[v.ServerId]; ok {
+				name = serverName
 			}
+			yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
+				ServerId: v.ServerId,
+				Name:     name,
+				Upload:   v.Upload,
+				Download: v.Download,
+			})
 		}
 	}
 
