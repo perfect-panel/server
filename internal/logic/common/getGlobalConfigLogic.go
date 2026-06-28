@@ -42,13 +42,13 @@ func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigRes
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetVerifyCodeConfig error: %v", err.Error())
 	}
 
-	tool.DeepCopy(&resp.Site, l.svcCtx.Config.Site, tool.CopyWithIgnoreEmpty(false))
-	tool.DeepCopy(&resp.Subscribe, l.svcCtx.Config.Subscribe, tool.CopyWithIgnoreEmpty(false))
-	tool.DeepCopy(&resp.Auth.Email, l.svcCtx.Config.Email, tool.CopyWithIgnoreEmpty(false))
-	tool.DeepCopy(&resp.Auth.Mobile, l.svcCtx.Config.Mobile, tool.CopyWithIgnoreEmpty(false))
-	tool.DeepCopy(&resp.Auth.Register, l.svcCtx.Config.Register, tool.CopyWithIgnoreEmpty(false))
-	tool.DeepCopy(&resp.Verify, l.svcCtx.Config.Verify, tool.CopyWithIgnoreEmpty(false))
-	tool.DeepCopy(&resp.Invite, l.svcCtx.Config.Invite, tool.CopyWithIgnoreEmpty(false))
+	tool.DeepCopy(&resp.Site, l.svcCtx.Config.Site)
+	tool.DeepCopy(&resp.Subscribe, l.svcCtx.Config.Subscribe)
+	tool.DeepCopy(&resp.Auth.Email, l.svcCtx.Config.Email)
+	tool.DeepCopy(&resp.Auth.Mobile, l.svcCtx.Config.Mobile)
+	tool.DeepCopy(&resp.Auth.Register, l.svcCtx.Config.Register)
+	tool.DeepCopy(&resp.Verify, l.svcCtx.Config.Verify)
+	tool.DeepCopy(&resp.Invite, l.svcCtx.Config.Invite)
 	tool.SystemConfigSliceReflectToStruct(currencyCfg, &resp.Currency)
 	tool.SystemConfigSliceReflectToStruct(verifyCodeCfg, &resp.VerifyCode)
 

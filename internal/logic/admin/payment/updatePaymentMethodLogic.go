@@ -43,7 +43,7 @@ func (l *UpdatePaymentMethodLogic) UpdatePaymentMethod(req *types.UpdatePaymentM
 		req.Sort = method.Sort
 	}
 	config := parsePaymentPlatformConfig(l.ctx, payment.ParsePlatform(req.Platform), req.Config)
-	tool.DeepCopy(method, req, tool.CopyWithIgnoreEmpty(false))
+	tool.DeepCopy(method, req)
 	method.Config = config
 	if err := paymentStore.Update(l.ctx, method); err != nil {
 		l.Errorw("update payment method error", logger.Field("id", req.Id), logger.Field("error", err.Error()))
