@@ -29,7 +29,7 @@ func DeepCopy[T, K any](destStruct T, srcStruct K, opts ...CopyOption) T {
 
 	option := copier.Option{
 		DeepCopy:    true,
-		IgnoreEmpty: true,
+		IgnoreEmpty: false,
 		Converters: []copier.TypeConverter{
 			{
 				SrcType: time.Time{},
@@ -58,7 +58,7 @@ func ShallowCopy[T, K interface{}](destStruct T, srcStruct K, opts ...CopyOption
 	var src = srcStruct
 
 	option := copier.Option{
-		IgnoreEmpty: true,
+		IgnoreEmpty: false,
 		Converters: []copier.TypeConverter{
 			{
 				SrcType: time.Time{},
