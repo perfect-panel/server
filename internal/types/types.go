@@ -1722,6 +1722,8 @@ type QueryServerConfigRequest struct {
 
 type QueryServerConfigResponse struct {
 	TrafficReportThreshold int64          `json:"traffic_report_threshold"`
+	PushInterval           int64          `json:"push_interval"`
+	PullInterval           int64          `json:"pull_interval"`
 	IPStrategy             string         `json:"ip_strategy"`
 	DNS                    []NodeDNS      `json:"dns"`
 	Block                  []string       `json:"block"`
