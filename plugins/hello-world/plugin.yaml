@@ -1,0 +1,10 @@
+name: hello-world
+version: 0.1.0
+description: 示例插件 - 返回 "Hello from Rust WASM!"
+author: PPanel
+main: plugin.wasm
+permissions:
+  - http_routes
+  - logging
+config:
+  greet_message: "Hello from Rust WASM plugin!"

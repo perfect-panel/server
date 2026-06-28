@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -10,6 +11,7 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 )
 
 // QueryServerProtocolConfigHandler Get Server Protocol Config
@@ -35,6 +37,21 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFun
 
 		l := server.NewQueryServerProtocolConfigLogic(c, svcCtx)
 		resp, err := l.QueryServerProtocolConfig(&req)
-		writeHTTPResult(ctx, resp, err)
+		if err != nil {
+			writeHTTPResult(ctx, nil, err)
+			return
+		}
+		body, err := json.Marshal(resp)
+		if err != nil {
+			writeHTTPResult(ctx, nil, err)
+			return
+		}
+		etag := tool.GenerateETag(body)
+		ctx.Header("ETag", etag)
+		if string(ctx.GetHeader("If-None-Match")) == etag {
+			ctx.SetStatusCode(consts.StatusNotModified)
+			return
+		}
+		writeHTTPResult(ctx, resp, nil)
 	}
 }

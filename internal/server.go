@@ -56,6 +56,13 @@ func (m *Service) Start() {
 		panic("config file path is nil")
 	}
 
+	// 等待插件管理器加载完成
+	if m.svc.PluginReady != nil {
+		if err := m.svc.PluginReady.WaitReady(context.Background()); err != nil {
+			logger.Errorf("plugin manager not ready: %s", err.Error())
+		}
+	}
+
 	// get server port
 	port := m.svc.Config.Port
 	host := m.svc.Config.Host

@@ -82,6 +82,8 @@ func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.Qu
 
 	return &types.QueryServerConfigResponse{
 		TrafficReportThreshold: l.svcCtx.Config.Node.TrafficReportThreshold,
+		PushInterval:           l.svcCtx.Config.Node.NodePushInterval,
+		PullInterval:           l.svcCtx.Config.Node.NodePullInterval,
 		IPStrategy:             nodeValues.IPStrategy,
 		DNS:                    nodeValues.DNS,
 		Block:                  nodeValues.Block,

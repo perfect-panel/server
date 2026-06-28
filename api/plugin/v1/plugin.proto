@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package ppanel.plugin.v1;
+
+option go_package = "github.com/perfect-panel/server/api/plugin/v1;pluginv1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/field_mask.proto";
+
+// ---- 基础类型 ----
+
+message Empty {}
+
+message BoolResult {
+  bool success = 1;
+  string error = 2;
+}
+
+// ---- Log ----
+
+message LogRequest {
+  string level = 1;              // "info" | "warn" | "error"
+  string message = 2;
+  map<string, string> fields = 3;
+}
+
+// ---- Config ----
+
+message ConfigGetRequest {
+  string key = 1;
+}
+
+message ConfigGetResponse {
+  string value = 1;
+  bool exists = 2;
+}
+
+// ---- Route ----
+
+message RegisterRouteRequest {
+  string method = 1;             // "GET" | "POST" | "PUT" | "DELETE"
+  string path = 2;               // "/stats" (自动加前缀 /v1/plugin/{name})
+  string handler = 3;            // WASM 导出函数名
+  repeated string middleware = 4;// "auth" | "device" | 自定义中间件名
+}
+
+// ---- Middleware ----
+
+message RegisterMiddlewareRequest {
+  string name = 1;               // 中间件名，供路由引用
+  string handler = 2;            // WASM 导出函数名
+}
+
+message MiddlewareResponse {
+  string action = 1;             // "next" | "abort" | "modify"
+  int32 status = 2;              // for abort
+  bytes body = 3;                // for abort
+  map<string, string> headers = 4; // headers to add (for next/modify) or return (for abort)
+}
+
+// ---- Queue ----
+
+message EnqueueTaskRequest {
+  string task_name = 1;          // asynq task type name
+  google.protobuf.Struct payload = 2;  // task payload
+}
+
+// ---- Database ----
+
+message DbQueryRequest {
+  string model = 1;              // "user" | "order" | "subscribe" | ...
+  string operation = 2;          // "find" | "list" | "create" | "update" | "delete"
+  google.protobuf.Struct conditions = 3;  // 动态条件
+  google.protobuf.FieldMask fields = 4;   // 指定返回字段
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message DbQueryResponse {
+  repeated google.protobuf.Struct rows = 1;
+  int64 total = 2;
+  string error = 3;
+}
+
+// ---- Redis ----
+
+message RedisGetRequest {
+  string key = 1;
+}
+
+message RedisGetResponse {
+  string value = 1;
+  bool exists = 2;
+}
+
+message RedisSetRequest {
+  string key = 1;
+  string value = 2;
+  int64 ttl_seconds = 3;
+}
+
+// ---- Event ----
+
+message EmitEventRequest {
+  string event = 1;
+  google.protobuf.Struct payload = 2;
+}
+
+message SubscribeEventRequest {
+  string event = 1;              // event name, "*" means all events
+  string handler = 2;            // WASM export name, default: on_<event>
+}
+
+// ---- HTTP Client ----
+
+message HttpRequestRequest {
+  string method = 1;
+  string url = 2;
+  map<string, string> headers = 3;
+  bytes body = 4;
+}
+
+message HttpRequestResponse {
+  int32 status = 1;
+  bytes body = 2;
+  map<string, string> headers = 3;
+}
+
+// ---- Scheduler ----
+
+message ScheduleTaskRequest {
+  string name = 1;
+  string cron = 2;               // "0 */6 * * *"
+  string handler = 3;            // WASM 导出函数名
+}
+
+// ---- Init (host → guest) ----
+
+message InitRequest {
+  string plugin_name = 1;
+  google.protobuf.Struct config = 2;    // 插件专属配置
+  HostConfig host_config = 3;
+}
+
+message HostConfig {
+  string site_name = 1;
+  string site_host = 2;
+  string currency_unit = 3;
+  string currency_symbol = 4;
+  bool debug = 5;
+}
+
+// ---- HTTP Handler (host → guest per-request) ----
+
+message HandleRequest {
+  string method = 1;
+  string path = 2;
+  map<string, StringList> query = 3;
+  map<string, StringList> headers = 4;
+  bytes body = 5;
+  RequestContext context = 6;
+}
+
+message StringList {
+  repeated string values = 1;
+}
+
+message RequestContext {
+  int64 user_id = 1;
+  bool is_admin = 2;
+  string client_ip = 3;
+}
+
+message HandleResponse {
+  int32 status = 1;
+  bytes body = 2;
+  map<string, string> headers = 3;
+}
+
+// ---- Async Runtime ----
+
+message AsyncSubmitRequest {
+  string op_type = 1;    // "http_get", "http_post", "db_query", "redis_get", "redis_set"
+  bytes params = 2;      // protobuf-encoded request (HttpRequestRequest, RedisGetRequest, etc.)
+}
+
+message AsyncSubmitResponse {
+  uint64 task_id = 1;
+}
+
+message AsyncResolveRequest {
+  uint64 task_id = 1;
+}
+
+message AsyncResolveResponse {
+  uint64 task_id = 1;
+  bool done = 2;
+  bytes result = 3;      // protobuf-encoded response (HttpRequestResponse, RedisGetResponse, etc.)
+  string error = 4;
+}
+
+message AsyncWaitAnyRequest {
+  // empty - blocks until any pending task completes
+}
+
+message AsyncWaitAnyResponse {
+  uint64 task_id = 1;    // the task that completed
+}

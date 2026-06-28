@@ -17,6 +17,7 @@ import (
 	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal"
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/plugin"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/conf"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -91,10 +92,23 @@ func getServers() *service.Group {
 
 	// init service context
 	ctx := svc.NewServiceContext(c)
+
+	// init plugin manager
+	pluginHostEnv := &plugin.HostEnv{
+		Config: c,
+		Redis:  plugin.NewRedisAdapter(ctx.Redis),
+		Store:  plugin.NewStoreAdapter(ctx.Store.DB()),
+		Queue:  plugin.NewQueueAdapter(ctx.Queue),
+	}
+	pluginMgr := plugin.NewManager(pluginHostEnv)
+	ctx.PluginReady = pluginMgr
+	ctx.PluginMgr = pluginMgr
+
 	services := service.NewServiceGroup()
 	services.Add(internal.NewService(ctx))
 	services.Add(queue.NewService(ctx))
 	services.Add(scheduler.NewService(ctx))
+	services.Add(pluginMgr)
 	return services
 }
 

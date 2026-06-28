@@ -1,4 +1,4 @@
-# PPanel Server
+# PPanel 服务端
 
 <div align="center">
 
@@ -8,93 +8,92 @@
 [![Docker](https://img.shields.io/badge/Docker-Available-blue)](Dockerfile)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/perfect-panel/server/release.yml)](.github/workflows/release.yml)
 
-**PPanel is a pure, professional, and perfect open-source proxy panel tool, designed for learning and practical use.**
+**PPanel 是一个纯净、专业、完美的开源代理面板工具，旨在成为您学习和实际使用的理想选择。**
 
-[English](README.md) | [中文](README_ZH.md) | [Report Bug](https://github.com/perfect-panel/server/issues/new) | [Request Feature](https://github.com/perfect-panel/server/issues/new)
+[中文](README.md) | [English](README_EN.md) | [报告问题](https://github.com/perfect-panel/server/issues/new) | [功能请求](https://github.com/perfect-panel/server/issues/new)
 
 </div>
 
-> **Article 1.**  
-> All human beings are born free and equal in dignity and rights.  
-> They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood.
+> **第一条**  
+> 人人生而自由，在尊严与权利上一律平等。  
+> 他们赋有理性与良知，应当以兄弟般的精神彼此相待。  
 >
-> **Article 12.**  
-> No one shall be subjected to arbitrary interference with his privacy, family, home or correspondence, nor to attacks upon his honour and reputation.  
-> Everyone has the right to the protection of the law against such interference or attacks.
+> **第十二条**  
+> 任何人的隐私、家庭、住宅和通信不得任意干涉，其名誉与荣誉不得加以攻击。  
+> 人人有权受到法律的保护，以免遭受这种干涉或攻击。  
 >
-> **Article 19.**  
-> Everyone has the right to freedom of opinion and expression; this right includes freedom to hold opinions without interference and to seek, receive and impart information and ideas through any media and regardless of frontiers.
+> **第十九条**  
+> 人人有思想与表达的自由；此项自由包括持有主张而不受干预，以及通过任何媒介、无论国界，自由寻求、接受和传播信息与思想。  
 >
-> *Source: [United Nations – Universal Declaration of Human Rights (UN.org)](https://www.un.org/sites/un2.un.org/files/2021/03/udhr.pdf)*
+> *来源： [United Nations – Universal Declaration of Human Rights (UN.org)](https://www.un.org/sites/un2.un.org/files/2021/03/udhr.pdf)*
 
-## 📋 Overview
+## 📋 概述
 
-PPanel Server is the backend component of the PPanel project, providing robust APIs and core functionality for managing
-proxy services. Built with Go, it emphasizes performance, security, and scalability.
+PPanel 服务端是 PPanel 项目的后端组件，为代理服务提供强大的 API 和核心功能。它基于 Go 语言开发，注重性能、安全性和可扩展性。
 
-### Key Features
+### 核心特性
 
-- **Multi-Protocol Support**: Supports Shadowsocks, V2Ray, Trojan, and more.
-- **Privacy First**: No user logs are collected, ensuring privacy and security.
-- **Minimalist Design**: Simple yet powerful, with complete business logic.
-- **User Management**: Full authentication and authorization system.
-- **Subscription System**: Manage user subscriptions and service provisioning.
-- **Payment Integration**: Supports multiple payment gateways.
-- **Order Management**: Track and process user orders.
-- **Ticket System**: Built-in customer support and issue tracking.
-- **Node Management**: Monitor and control server nodes.
-- **API Framework**: Comprehensive RESTful APIs for frontend integration.
+- **多协议支持**：支持 Shadowsocks、V2Ray、Trojan 等多种加密协议。
+- **隐私保护**：不收集用户日志，确保隐私和安全。
+- **极简设计**：简单易用，保留完整的业务逻辑。
+- **用户管理**：完善的认证和授权系统。
+- **订阅管理**：处理用户订阅和服务开通。
+- **支付集成**：支持多种支付网关。
+- **订单管理**：跟踪和处理用户订单。
+- **工单系统**：内置客户支持和问题跟踪。
+- **节点管理**：监控和控制服务器节点。
+- **API 框架**：提供全面的 RESTful API，供前端集成。
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### Prerequisites
+### 前提条件
 
-- **Go**: 1.21 or higher
-- **Docker**: Optional, for containerized deployment
-- **Git**: For cloning the repository
+- **Go**：1.21 或更高版本
+- **Docker**：可选，用于容器化部署
+- **Git**：用于克隆仓库
 
-### Installation from Source
+### 通过源代码运行
 
-1. **Clone the repository**:
+1. **克隆仓库**：
    ```bash
    git clone https://github.com/perfect-panel/ppanel-server.git
    cd ppanel-server
    ```
 
-2. **Install dependencies**:
+2. **安装依赖**：
    ```bash
    go mod download
    ```
 
-3. **Generate code**:
+3. **生成代码**：
    ```bash
    chmod +x script/generate.sh
    ./script/generate.sh
    ```
 
-4. **Build the project**:
+4. **构建项目**：
    ```bash
    make linux-amd64
    ```
 
-5. **Run the server**:
+5. **启动服务器**：
    ```bash
    ./ppanel-server-linux-amd64 run --config etc/ppanel.yaml
    ```
 
-### 🐳 Docker Deployment
+### 🐳 Docker 部署
 
-1. **Build the Docker image**:
+1. **构建 Docker 镜像**：
    ```bash
    docker buildx build --platform linux/amd64 -t ppanel-server:latest .
    ```
 
-2. **Run the container**:
+2. **运行容器**：
    ```bash
    docker run --rm -p 8080:8080 -v $(pwd)/etc:/app/etc ppanel-server:latest
    ```
 
-3. **Use Docker Compose** (create `docker-compose.yml`):
+3. **使用 Docker Compose**（创建 `docker-compose.yml`）：
    ```yaml
    version: '3.8'
    services:
@@ -107,130 +106,128 @@ proxy services. Built with Go, it emphasizes performance, security, and scalabil
        environment:
          - TZ=Asia/Shanghai
    ```
-   Run:
+   运行：
    ```bash
    docker-compose up -d
    ```
 
-4. **Pull from Docker Hub** (after CI/CD publishes):
+4. **从 Docker Hub 拉取**（CI/CD 发布后）：
    ```bash
    docker pull ppanel/ppanel-server:latest
    docker run --rm -p 8080:8080 ppanel/ppanel-server:latest
    ```
 
-## 📖 API Documentation
+## 📖 API 文档
 
-Explore the full API documentation:
+查看完整的 API 文档：
 
-- **Swagger**: [https://ppanel.dev/en-US/swagger/ppanel](https://ppanel.dev/swagger/ppanel)
+- **Swagger 文档**：[https://ppanel.dev/zh-CN/swagger/ppanel](https://ppanel.dev/zh-CN/swagger/ppanel)
 
-The documentation covers all endpoints, request/response formats, and authentication details.
+文档涵盖所有 API 端点、请求/响应格式及认证要求。
 
-## 🔗 Related Projects
+## 🔗 相关项目
 
-| Project          | Description                | Link                                                  |
-|------------------|----------------------------|-------------------------------------------------------|
-| PPanel Web       | Frontend for PPanel        | [GitHub](https://github.com/perfect-panel/frontend) |
-| PPanel User Web  | User interface for PPanel  | [Preview](https://user.ppanel.dev)                    |
-| PPanel Admin Web | Admin interface for PPanel | [Preview](https://admin.ppanel.dev)                   |
+| 项目               | 描述           | 链接                                                    |
+|------------------|--------------|-------------------------------------------------------|
+| PPanel Web       | PPanel 前端应用  | [GitHub](https://github.com/perfect-panel/frontend) |
+| PPanel User Web  | PPanel 用户界面  | [预览](https://user.ppanel.dev)                         |
+| PPanel Admin Web | PPanel 管理员界面 | [预览](https://admin.ppanel.dev)                        |
 
-## 🌐 Official Website
+## 🌐 官方网站
 
-Visit [ppanel.dev](https://ppanel.dev/) for more details.
+访问 [ppanel.dev](https://ppanel.dev) 获取更多信息。
 
-## 🏛 Architecture
+## 🏛 系统架构
 
-![Architecture Diagram](./doc/image/architecture-en.png)
+![Architecture Diagram](./doc/image/architecture-zh.png)
 
-## 📁 Directory Structure
+## 📁 目录结构
 
 ```
 .
-├── apis/             # API definition files
-├── cmd/              # Application entry point
-├── doc/              # Documentation
-├── etc/              # Configuration files (e.g., ppanel.yaml)
-├── generate/         # Code generation tools
-├── initialize/       # System initialization
-├── internal/         # Internal modules
-│   ├── config/       # Configuration parsing
-│   ├── handler/      # HTTP handlers
-│   ├── middleware/   # HTTP middleware
-│   ├── logic/        # Business logic
-│   ├── model/        # Data models
-│   ├── svc/          # Service layer
-│   └── types/        # Type definitions
-├── pkg/              # Utility code
-├── queue/            # Queue services
-├── scheduler/        # Scheduled tasks
-├── script/           # Build scripts
-├── go.mod            # Go module definition
-├── Makefile          # Build automation
-└── Dockerfile        # Docker configuration
+├── apis/             # API 定义文件
+├── cmd/              # 应用程序入口
+├── doc/              # 文档
+├── etc/              # 配置文件（如 ppanel.yaml）
+├── generate/         # 代码生成工具
+├── initialize/       # 系统初始化
+├── internal/         # 内部模块
+│   ├── config/       # 配置文件解析
+│   ├── handler/      # HTTP 处理程序
+│   ├── middleware/   # HTTP 中间件
+│   ├── logic/        # 业务逻辑
+│   ├── model/        # 数据模型
+│   ├── svc/          # 服务层
+│   └── types/        # 类型定义
+├── pkg/              # 公共工具代码
+├── queue/            # 队列服务
+├── scheduler/        # 定时任务
+├── script/           # 构建脚本
+├── go.mod            # Go 模块定义
+├── Makefile          # 构建自动化
+└── Dockerfile        # Docker 配置
 ```
 
-## 💻 Development
+## 💻 开发
 
-### Format API Files
+### 格式化 API 文件
 ```bash
 goctl api format --dir apis/user.api
 ```
 
-### Add a New API
+### 添加新 API
 
-1. Create a new API file in `apis/`.
-2. Import it in `apis/ppanel.api`.
-3. Regenerate code:
+1. 在 `apis/` 目录创建新的 API 文件。
+2. 在 `apis/ppanel.api` 中导入新 API。
+3. 重新生成代码：
    ```bash
    ./script/generate.sh
    ```
 
-### Build for Multiple Platforms
+### 多平台构建
 
-Use the `Makefile` to build for various platforms (e.g., Linux, Windows, macOS):
+使用 `Makefile` 构建多种平台（如 Linux、Windows、macOS）：
 
 ```bash
-make all  # Builds linux-amd64, darwin-amd64, windows-amd64
-make linux-arm64  # Build for specific platform
+make all  # 构建 linux-amd64、darwin-amd64、windows-amd64
+make linux-arm64  # 构建特定平台
 ```
 
-Supported platforms include:
+支持的平台包括：
 
-- Linux: `386`, `amd64`, `arm64`, `armv5-v7`, `mips`, `riscv64`, `loong64`, etc.
-- Windows: `386`, `amd64`, `arm64`, `armv7`
-- macOS: `amd64`, `arm64`
-- FreeBSD: `amd64`, `arm64`
+- Linux：`386`、`amd64`、`arm64`、`armv5-v7`、`mips`、`riscv64`、`loong64` 等
+- Windows：`386`、`amd64`、`arm64`、`armv7`
+- macOS：`amd64`、`arm64`
+- FreeBSD：`amd64`、`arm64`
 
-## 🤝 Contributing
+## 🤝 贡献
 
-Contributions are welcome! Please follow the [Contribution Guidelines](CONTRIBUTING.md) for bug fixes, features, or
-documentation improvements.
+欢迎各种贡献，包括功能开发、错误修复和文档改进。请查看[贡献指南](CONTRIBUTING_ZH.md)了解详情。
 
-## ✨ Special Thanks
+## ✨ 特别感谢
 
-A huge thank you to the following outstanding open-source projects that have provided invaluable support for this
-project's development! 🚀
+感谢以下优秀的开源项目，它们为本项目的开发提供了强大的支持！ 🚀
 
 <div style="overflow-x: auto;">
 <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
   <thead>
     <tr style="background-color: #f5f5f5;">
-      <th style="padding: 10px; text-align: center;">Project</th>
-      <th style="padding: 10px; text-align: left;">Description</th>
-      <th style="padding: 10px; text-align: center;">Project</th>
-      <th style="padding: 10px; text-align: left;">Description</th>
+      <th style="padding: 10px; text-align: center;">项目</th>
+      <th style="padding: 10px; text-align: left;">描述</th>
+      <th style="padding: 10px; text-align: center;">项目</th>
+      <th style="padding: 10px; text-align: left;">描述</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td align="center" style="padding: 15px; vertical-align: middle;">
-        <a href="https://www.cloudwego.io/docs/hertz/" style="text-decoration: none;">
+        <a href="https://www.cloudwego.io/zh/docs/hertz/" style="text-decoration: none;">
           <strong>Hertz</strong><br/>
           <img src="https://img.shields.io/github/stars/cloudwego/hertz?style=social" alt="Hertz Stars" />
         </a>
       </td>
       <td style="padding: 15px; vertical-align: middle;">
-        High-performance Go HTTP framework<br/>
+        高性能的 Go HTTP 框架<br/>
       </td>
       <td align="center" style="padding: 15px; vertical-align: middle;">
         <a href="https://gorm.io/" style="text-decoration: none;">
@@ -240,7 +237,7 @@ project's development! 🚀
         </a>
       </td>
       <td style="padding: 15px; vertical-align: middle;">
-        Powerful Go ORM framework<br/>
+        功能强大的 Go ORM 框架<br/>
       </td>
     </tr>
     <tr>
@@ -252,7 +249,7 @@ project's development! 🚀
         </a>
       </td>
       <td style="padding: 15px; vertical-align: middle;">
-        Asynchronous task queue for Go<br/>
+        Go 语言的异步任务队列<br/>
       </td>
       <td align="center" style="padding: 15px; vertical-align: middle;">
         <a href="https://goswagger.io/" style="text-decoration: none;">
@@ -262,7 +259,7 @@ project's development! 🚀
         </a>
       </td>
       <td style="padding: 15px; vertical-align: middle;">
-        Comprehensive Go Swagger toolkit<br/>
+        完整的 Go Swagger 工具集<br/>
       </td>
     </tr>
     <tr>
@@ -274,7 +271,7 @@ project's development! 🚀
         </a>
       </td>
       <td colspan="3" style="padding: 15px; vertical-align: middle;">
-        Go microservices framework (this project's API generator is built on Go-Zero)<br/>
+        Go 微服务框架（本项目的 API 生成器，基于 Go-Zero 实现）<br/>
       </td>
     </tr>
   </tbody>
@@ -283,8 +280,8 @@ project's development! 🚀
 
 ---
 
-🎉 **Salute to Open Source**: Thank you to the open-source community for making development simpler and more efficient!
-Please give these projects a ⭐ to support the open-source movement!
-## 📄 License
+🎉 **致敬开源**：感谢开源社区，让开发变得更简单、更高效！欢迎为这些项目点亮 ⭐，支持开源事业！
 
-This project is licensed under the [GPL-3.0 License](LICENSE).
+## 📄 许可证
+
+本项目采用 [GPL-3.0 许可证](LICENSE) 授权。

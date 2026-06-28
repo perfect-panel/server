@@ -41,6 +41,9 @@ type Store interface {
 	TrafficLog() traffic.Model
 	User() user.Model
 
+	// DB 返回底层 *gorm.DB，供插件系统等内部使用
+	DB() *gorm.DB
+
 	InTx(ctx context.Context, fn func(store Store) error) error
 }
 
@@ -67,6 +70,9 @@ type GormStore struct {
 	trafficLog   traffic.Model
 	user         user.Model
 }
+
+// DB 返回底层 *gorm.DB（供插件系统等内部使用）
+func (s *GormStore) DB() *gorm.DB { return s.db }
 
 func NewGormStore(db *gorm.DB, rds *redis.Client) *GormStore {
 	return &GormStore{
