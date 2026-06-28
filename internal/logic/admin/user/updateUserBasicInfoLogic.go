@@ -130,7 +130,8 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *types.UpdateUserBasi
 	userInfo.Enable = &req.Enable
 	userInfo.IsAdmin = &req.IsAdmin
 
-	if req.Password != "" {
+	// Ignore placeholder password values (e.g., "***") sent by frontend when password is not being changed
+	if req.Password != "" && req.Password != "***" {
 		if userInfo.Id == 2 && isDemo {
 			return errors.Wrapf(xerr.NewErrCodeMsg(503, "Demo mode does not allow modification of the admin user password"), "UpdateUserBasicInfo failed: cannot update admin user password in demo mode")
 		}
