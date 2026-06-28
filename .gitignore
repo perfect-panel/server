@@ -15,3 +15,17 @@ node_modules
 package-lock.json
 package.json
 /bin
+.local/
+
+# Local agent instructions
+AGENT.md
+AGENTS.md
+agent.md
+agents.md
+CLAUDE.md
+claude.md
+BRANCH_STRATEGY.md
+
+# Plugin WASM binaries (built elsewhere)
+plugins/**/*.wasm
+!plugins/**/.gitkeep

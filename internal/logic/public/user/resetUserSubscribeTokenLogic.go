@@ -40,7 +40,7 @@ func (l *ResetUserSubscribeTokenLogic) ResetUserSubscribeToken(req *types.ResetU
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	userSub, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, req.UserSubscribeId)
+	userSub, err := l.svcCtx.Store.User().FindOneUserSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("FindOneUserSubscribe failed:", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneUserSubscribe failed: %v", err.Error())
@@ -53,7 +53,7 @@ func (l *ResetUserSubscribeTokenLogic) ResetUserSubscribeToken(req *types.ResetU
 	var orderDetails *order.Details
 	// find order
 	if userSub.OrderId != 0 {
-		orderDetails, err = l.svcCtx.OrderModel.FindOneDetails(l.ctx, userSub.OrderId)
+		orderDetails, err = l.svcCtx.Store.Order().FindOneDetails(l.ctx, userSub.OrderId)
 		if err != nil {
 			l.Errorw("FindOneDetails failed:", logger.Field("error", err.Error()))
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneDetails failed: %v", err.Error())
@@ -68,18 +68,18 @@ func (l *ResetUserSubscribeTokenLogic) ResetUserSubscribeToken(req *types.ResetU
 	var newSub user.Subscribe
 	tool.DeepCopy(&newSub, userSub)
 
-	err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, &newSub)
+	err = l.svcCtx.Store.User().UpdateSubscribe(l.ctx, &newSub)
 	if err != nil {
 		l.Errorw("UpdateSubscribe failed:", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "UpdateSubscribe failed: %v", err.Error())
 	}
 	//clear user subscription cache
-	if err = l.svcCtx.UserModel.ClearSubscribeCache(l.ctx, &newSub); err != nil {
+	if err = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, &newSub); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}
 	// Clear subscription cache
-	if err = l.svcCtx.SubscribeModel.ClearCache(l.ctx, userSub.SubscribeId); err != nil {
+	if err = l.svcCtx.Store.Subscribe().ClearCache(l.ctx, userSub.SubscribeId); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSub.SubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}

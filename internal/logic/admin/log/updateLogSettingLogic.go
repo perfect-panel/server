@@ -5,14 +5,13 @@ import (
 	"reflect"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/system"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type UpdateLogSettingLogic struct {
@@ -34,20 +33,18 @@ func (l *UpdateLogSettingLogic) UpdateLogSetting(req *types.LogSetting) error {
 	v := reflect.ValueOf(*req)
 	// Get the reflection type of the structure
 	t := v.Type()
-	err := l.svcCtx.SystemModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		var err error
+	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+		systemStore := store.System()
 		for i := 0; i < v.NumField(); i++ {
 			// Get the field name
 			fieldName := t.Field(i).Name
 			// Get the field value to string
 			fieldValue := tool.ConvertValueToString(v.Field(i))
-			// Update the server config
-			err = db.Model(&system.System{}).Where("`category` = 'log' and `key` = ?", fieldName).Update("value", fieldValue).Error
-			if err != nil {
-				break
+			if err := systemStore.UpdateValueByCategoryKey(l.ctx, "log", fieldName, fieldValue); err != nil {
+				return err
 			}
 		}
-		return err
+		return nil
 	})
 	if err != nil {
 		l.Errorw("[UpdateLogSetting] update log setting error", logger.Field("error", err.Error()))

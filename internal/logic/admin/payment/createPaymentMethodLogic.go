@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/perfect-panel/server/pkg/payment/stripe"
-	"gorm.io/gorm"
-
-	"github.com/perfect-panel/server/pkg/random"
+	"strings"
 
 	paymentModel "github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
+	"github.com/perfect-panel/server/pkg/payment/stripe"
+	"github.com/perfect-panel/server/pkg/random"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -51,10 +50,11 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 		FeeMode:     req.FeeMode,
 		FeePercent:  req.FeePercent,
 		FeeAmount:   req.FeeAmount,
+		Sort:        req.Sort,
 		Enable:      req.Enable,
 		Token:       random.KeyNew(8, 1),
 	}
-	err = l.svcCtx.PaymentModel.Transaction(l.ctx, func(tx *gorm.DB) error {
+	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		if req.Platform == "Stripe" {
 			var cfg paymentModel.StripeConfig
 			if err = cfg.Unmarshal([]byte(paymentMethod.Config)); err != nil {
@@ -71,7 +71,7 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 				SecretKey: cfg.SecretKey,
 				PublicKey: cfg.PublicKey,
 			})
-			url := fmt.Sprintf("%s/v1/notify/Stripe/%s", req.Domain, paymentMethod.Token)
+			url := fmt.Sprintf("%s/v1/notify/Stripe/%s", strings.TrimSuffix(req.Domain, "/"), paymentMethod.Token)
 			endpoint, err := client.CreateWebhookEndpoint(url)
 			if err != nil {
 				l.Errorw("[CreatePaymentMethod] create stripe webhook endpoint error", logger.Field("error", err.Error()))
@@ -81,7 +81,7 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 			content, _ := cfg.Marshal()
 			paymentMethod.Config = string(content)
 		}
-		if err = tx.Model(&paymentModel.Payment{}).Create(paymentMethod).Error; err != nil {
+		if err = store.Payment().Insert(l.ctx, paymentMethod); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert payment method error: %s", err.Error())
 		}
 		return nil

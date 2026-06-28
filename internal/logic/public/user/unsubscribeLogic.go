@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
 	"github.com/perfect-panel/server/internal/model/user"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -43,7 +43,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 	}
 
 	// find user subscription by ID
-	userSub, err := l.svcCtx.UserModel.FindOneSubscribe(l.ctx, req.Id)
+	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("FindOneSubscribe failed", logger.Field("error", err.Error()), logger.Field("reqId", req.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())
@@ -64,15 +64,15 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 	}
 
 	// Process unsubscription in a database transaction to ensure data consistency
-	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
+	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Find and update subscription status to cancelled (status = 4)
 		userSub.Status = 4 // Set status to cancelled
-		if err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, userSub); err != nil {
+		if err = store.User().UpdateSubscribe(l.ctx, userSub); err != nil {
 			return err
 		}
 
 		// Query the original order information to determine refund strategy
-		orderInfo, err := l.svcCtx.OrderModel.FindOne(l.ctx, userSub.OrderId)
+		orderInfo, err := store.Order().FindOne(l.ctx, userSub.OrderId)
 		if err != nil {
 			return err
 		}
@@ -107,12 +107,12 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 			}
 			content, _ := balanceLog.Marshal()
 
-			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			if err := store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeBalance.Uint8(),
 				Date:     time.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
-			}).Error; err != nil {
+			}); err != nil {
 				return err
 			}
 		}
@@ -130,12 +130,12 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 			}
 			content, _ := giftLog.Marshal()
 
-			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			if err := store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				Date:     time.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
-			}).Error; err != nil {
+			}); err != nil {
 				return err
 			}
 			// Update user's gift amount
@@ -144,7 +144,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 
 		// Update user's regular balance and save changes to database
 		u.Balance = balance
-		return l.svcCtx.UserModel.Update(l.ctx, u)
+		return store.User().Update(l.ctx, u)
 	})
 
 	if err != nil {
@@ -153,12 +153,12 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 	}
 
 	//clear user subscription cache
-	if err = l.svcCtx.UserModel.ClearSubscribeCache(l.ctx, userSub); err != nil {
+	if err = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, userSub); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}
 	// Clear subscription cache
-	if err = l.svcCtx.SubscribeModel.ClearCache(l.ctx, userSub.SubscribeId); err != nil {
+	if err = l.svcCtx.Store.Subscribe().ClearCache(l.ctx, userSub.SubscribeId); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSub.SubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}

@@ -2,14 +2,18 @@ package order
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/pkg/orm"
 
 	"github.com/perfect-panel/server/internal/model/subscribe"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
+
+const userAuthMethodsTable = "user_auth_methods"
 
 type Details struct {
 	Id             int64                `gorm:"primaryKey"`
@@ -49,6 +53,7 @@ type OrdersTotalWithDate struct {
 
 type customOrderLogicModel interface {
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
+	CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error)
 	QueryOrderListByPage(ctx context.Context, page, size int, status uint8, user, subscribe int64, search string) (int64, []*Details, error)
 	FindOneDetails(ctx context.Context, id int64) (*Details, error)
 	FindOneDetailsByOrderNo(ctx context.Context, orderNo string) (*Details, error)
@@ -76,27 +81,67 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 	}
 }
 
+func (m *customOrderModel) CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error) {
+	var count int64
+	err := m.QueryNoCacheCtx(ctx, &count, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Order{}).Where("user_id = ? AND coupon = ?", userID, coupon).Count(&count).Error
+	})
+	return count, err
+}
+
 // QueryOrderListByPage Query order list by page
 func (m *customOrderModel) QueryOrderListByPage(ctx context.Context, page, size int, status uint8, user, subscribe int64, search string) (int64, []*Details, error) {
 	var list []*Details
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
 		conn = conn.Model(&Order{})
-		if status > 0 {
-			conn = conn.Where("status = ?", status)
+		conn = applyOrderListFilters(conn, status, user, subscribe, search)
+		if err := conn.Count(&total).Error; err != nil {
+			return err
 		}
-		if user > 0 {
-			conn = conn.Where("user_id = ?", user)
-		}
-		if subscribe > 0 {
-			conn = conn.Where("subscribe_id = ?", subscribe)
-		}
-		if search != "" {
-			conn = conn.Where("order_no like ? or trade_no like ? or coupon like ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
-		}
-		return conn.Order("id desc").Preload("Subscribe").Preload("Payment").Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
+		return conn.Order(orderColumn(conn, "id") + " desc").Preload("Subscribe").Preload("Payment").Offset((page - 1) * size).Limit(size).Find(v).Error
 	})
 	return total, list, err
+}
+
+func applyOrderListFilters(conn *gorm.DB, status uint8, user, subscribe int64, search string) *gorm.DB {
+	if status > 0 {
+		conn = conn.Where(orderColumn(conn, "status")+" = ?", status)
+	}
+	if user > 0 {
+		conn = conn.Where(orderColumn(conn, "user_id")+" = ?", user)
+	}
+	if subscribe > 0 {
+		conn = conn.Where(orderColumn(conn, "subscribe_id")+" = ?", subscribe)
+	}
+	if search != "" {
+		pattern := orm.LikePrefixPattern(search)
+		if pattern != "" {
+			conn = conn.Where(orderListSearchCondition(conn), pattern, pattern, pattern, "email", pattern)
+		}
+	}
+	return conn
+}
+
+func orderListSearchCondition(conn *gorm.DB) string {
+	authUserID := quoteColumn(conn, userAuthMethodsTable, "user_id")
+	authType := quoteColumn(conn, userAuthMethodsTable, "auth_type")
+	authIdentifier := quoteColumn(conn, userAuthMethodsTable, "auth_identifier")
+	return fmt.Sprintf(
+		"(%s LIKE ?%s OR %s LIKE ?%s OR %s LIKE ?%s OR EXISTS (SELECT 1 FROM %s WHERE %s = %s AND %s = ? AND %s LIKE ?%s))",
+		orderColumn(conn, "order_no"),
+		orm.LikeEscapeClause(),
+		orderColumn(conn, "trade_no"),
+		orm.LikeEscapeClause(),
+		orderColumn(conn, "coupon"),
+		orm.LikeEscapeClause(),
+		quoteTable(conn, userAuthMethodsTable),
+		authUserID,
+		orderColumn(conn, "user_id"),
+		authType,
+		authIdentifier,
+		orm.LikeEscapeClause(),
+	)
 }
 
 // UpdateOrderStatus Update order status
@@ -143,8 +188,8 @@ func (m *customOrderModel) QueryMonthlyOrders(ctx context.Context, date time.Tim
 			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, firstDay, lastDay, "balance").
 			Select(
 				"SUM(amount) as amount_total, " +
-					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
-					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
+					"SUM(CASE WHEN is_new THEN amount ELSE 0 END) as new_order_amount, " +
+					"SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) as renewal_order_amount",
 			).
 			Scan(v).Error
 	})
@@ -161,8 +206,8 @@ func (m *customOrderModel) QueryDateOrders(ctx context.Context, date time.Time) 
 			Where("status IN ? AND created_at BETWEEN ? AND ? AND method != ?", []int64{2, 5}, start, end, "balance").
 			Select(
 				"SUM(amount) as amount_total, " +
-					"SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) as new_order_amount, " +
-					"SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) as renewal_order_amount",
+					"SUM(CASE WHEN is_new THEN amount ELSE 0 END) as new_order_amount, " +
+					"SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) as renewal_order_amount",
 			).
 			Scan(v).Error
 	})
@@ -176,8 +221,8 @@ func (m *customOrderModel) QueryTotalOrders(ctx context.Context) (OrdersTotal, e
 		return conn.Model(&Order{}).
 			Select(`
 				SUM(amount) AS amount_total,
-				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
-				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
+				SUM(CASE WHEN is_new THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) AS renewal_order_amount
 			`).
 			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
 			Scan(&result).Error
@@ -198,8 +243,8 @@ func (m *customOrderModel) QueryMonthlyUserCounts(ctx context.Context, date time
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
 			Select(`
-				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
-				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+				COUNT(DISTINCT CASE WHEN is_new THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN NOT is_new THEN user_id END) AS renewal_users
 			`).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, firstDay, nextMonth, "balance").
@@ -219,8 +264,8 @@ func (m *customOrderModel) QueryDateUserCounts(ctx context.Context, date time.Ti
 	err := m.QueryNoCacheCtx(ctx, nil, func(conn *gorm.DB, _ interface{}) error {
 		return conn.Model(&Order{}).
 			Select(`
-				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
-				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+				COUNT(DISTINCT CASE WHEN is_new THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN NOT is_new THEN user_id END) AS renewal_users
 			`).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, start, nextDay, "balance").
@@ -236,8 +281,8 @@ func (m *customOrderModel) QueryTotalUserCounts(ctx context.Context) (int64, int
 		return conn.Model(&Order{}).
 			Where("status IN ? AND method != ?", []int64{2, 5}, "balance").
 			Select(`
-				COUNT(DISTINCT CASE WHEN is_new = 1 THEN user_id END) AS new_users,
-				COUNT(DISTINCT CASE WHEN is_new = 0 THEN user_id END) AS renewal_users
+				COUNT(DISTINCT CASE WHEN is_new THEN user_id END) AS new_users,
+				COUNT(DISTINCT CASE WHEN NOT is_new THEN user_id END) AS renewal_users
 			`).
 			Scan(&counts).Error
 	})
@@ -264,17 +309,18 @@ func (m *customOrderModel) QueryDailyOrdersList(ctx context.Context, date time.T
 		firstDay := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
 		// 第二天 00:00:00
 		nextDay := date.AddDate(0, 0, 1).Truncate(24 * time.Hour)
+		dateExpr := dateBucketExpr(conn, "created_at", "day")
 
 		return conn.Model(&Order{}).
-			Select(`
-				DATE_FORMAT(created_at, '%Y-%m-%d') AS date,
+			Select(fmt.Sprintf(`
+				%s AS date,
 				SUM(amount) AS amount_total,
-				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
-				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
-			`).
+				SUM(CASE WHEN is_new THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) AS renewal_order_amount
+			`, dateExpr)).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, firstDay, nextDay, "balance").
-			Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
+			Group(dateExpr).
 			Order("date ASC").
 			Scan(v).Error
 	})
@@ -290,19 +336,33 @@ func (m *customOrderModel) QueryMonthlyOrdersList(ctx context.Context, date time
 		start := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).AddDate(0, -5, 0)
 		// 下个月月初
 		end := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).AddDate(0, 1, 0)
+		dateExpr := dateBucketExpr(conn, "created_at", "month")
 
 		return conn.Model(&Order{}).
-			Select(`
-				DATE_FORMAT(created_at, '%Y-%m') AS date,
+			Select(fmt.Sprintf(`
+				%s AS date,
 				SUM(amount) AS amount_total,
-				SUM(CASE WHEN is_new = 1 THEN amount ELSE 0 END) AS new_order_amount,
-				SUM(CASE WHEN is_new = 0 THEN amount ELSE 0 END) AS renewal_order_amount
-			`).
+				SUM(CASE WHEN is_new THEN amount ELSE 0 END) AS new_order_amount,
+				SUM(CASE WHEN NOT is_new THEN amount ELSE 0 END) AS renewal_order_amount
+			`, dateExpr)).
 			Where("status IN ? AND created_at >= ? AND created_at < ? AND method != ?",
 				[]int64{2, 5}, start, end, "balance").
-			Group("DATE_FORMAT(created_at, '%Y-%m')").
+			Group(dateExpr).
 			Order("date ASC").
 			Scan(v).Error
 	})
 	return results, err
+}
+
+func dateBucketExpr(db *gorm.DB, column, bucket string) string {
+	if db.Dialector.Name() == "postgres" {
+		if bucket == "month" {
+			return fmt.Sprintf("TO_CHAR(%s, 'YYYY-MM')", column)
+		}
+		return fmt.Sprintf("TO_CHAR(%s, 'YYYY-MM-DD')", column)
+	}
+	if bucket == "month" {
+		return fmt.Sprintf("DATE_FORMAT(%s, '%%Y-%%m')", column)
+	}
+	return fmt.Sprintf("DATE_FORMAT(%s, '%%Y-%%m-%%d')", column)
 }

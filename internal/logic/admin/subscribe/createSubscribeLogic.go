@@ -48,7 +48,7 @@ func (l *CreateSubscribeLogic) CreateSubscribe(req *types.CreateSubscribeRequest
 		SpeedLimit:        req.SpeedLimit,
 		DeviceLimit:       req.DeviceLimit,
 		Quota:             req.Quota,
-		Nodes:             tool.Int64SliceToString(req.Nodes),
+		Nodes:             tool.Int64SliceToString(req.Nodes.Int64s()),
 		NodeTags:          tool.StringSliceToString(req.NodeTags),
 		Show:              req.Show,
 		Sell:              req.Sell,
@@ -59,7 +59,7 @@ func (l *CreateSubscribeLogic) CreateSubscribe(req *types.CreateSubscribeRequest
 		RenewalReset:      req.RenewalReset,
 		ShowOriginalPrice: req.ShowOriginalPrice,
 	}
-	err := l.svcCtx.SubscribeModel.Insert(l.ctx, sub)
+	err := l.svcCtx.Store.Subscribe().Insert(l.ctx, sub)
 	if err != nil {
 		l.Logger.Error("[CreateSubscribeLogic] create subscribe error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create subscribe error: %v", err.Error())

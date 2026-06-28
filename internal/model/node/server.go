@@ -39,7 +39,7 @@ func (m *Server) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (m *Server) BeforeDelete(tx *gorm.DB) error {
-	if err := tx.Exec("UPDATE `servers` SET sort = sort - 1 WHERE sort > ?", m.Sort).Error; err != nil {
+	if err := tx.Exec("UPDATE servers SET sort = sort - 1 WHERE sort > ?", m.Sort).Error; err != nil {
 		return err
 	}
 	return nil
@@ -120,6 +120,9 @@ type Protocol struct {
 	Cipher                  string `json:"cipher,omitempty"`
 	ServerKey               string `json:"server_key,omitempty"`
 	Flow                    string `json:"flow,omitempty"`
+	UoT                     bool   `json:"uot,omitempty"`                   // UDP over TCP
+	UoTVersion              int    `json:"uot_version,omitempty"`           // UoT version (1 or 2)
+	AcceptProxyProtocol     bool   `json:"accept_proxy_protocol,omitempty"` // accept proxy protocol
 	HopPorts                string `json:"hop_ports,omitempty"`
 	HopInterval             int    `json:"hop_interval,omitempty"`
 	ObfsPassword            string `json:"obfs_password,omitempty"`
@@ -181,7 +184,7 @@ func reorderSortWithServer(tx *gorm.DB) error {
 	}
 	for i, server := range servers {
 		if server.Sort != i+1 {
-			if err := tx.Exec("UPDATE `servers` SET sort = ? WHERE id = ?", i+1, server.Id).Error; err != nil {
+			if err := tx.Exec("UPDATE servers SET sort = ? WHERE id = ?", i+1, server.Id).Error; err != nil {
 				return err
 			}
 		}

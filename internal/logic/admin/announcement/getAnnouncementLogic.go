@@ -27,7 +27,7 @@ func NewGetAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 }
 
 func (l *GetAnnouncementLogic) GetAnnouncement(req *types.GetAnnouncementRequest) (resp *types.Announcement, err error) {
-	info, err := l.svcCtx.AnnouncementModel.FindOne(l.ctx, req.Id)
+	info, err := l.svcCtx.Store.Announcement().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[GetAnnouncement] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get announcement error: %v", err.Error())

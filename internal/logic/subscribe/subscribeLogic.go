@@ -1,6 +1,7 @@
 package subscribe
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/user"
 
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -25,28 +25,37 @@ import (
 
 //goland:noinspection GoNameStartsWithPackageName
 type SubscribeLogic struct {
-	ctx *gin.Context
-	svc *svc.ServiceContext
+	ctx     context.Context
+	svc     *svc.ServiceContext
+	request RequestMeta
 	logger.Logger
 }
 
-func NewSubscribeLogic(ctx *gin.Context, svc *svc.ServiceContext) *SubscribeLogic {
+type RequestMeta struct {
+	Host       string
+	RequestURI string
+	UserAgent  string
+	ClientIP   string
+}
+
+func NewSubscribeLogic(ctx context.Context, svc *svc.ServiceContext, request RequestMeta) *SubscribeLogic {
 	return &SubscribeLogic{
-		ctx:    ctx,
-		svc:    svc,
-		Logger: logger.WithContext(ctx.Request.Context()),
+		ctx:     ctx,
+		svc:     svc,
+		request: request,
+		Logger:  logger.WithContext(ctx),
 	}
 }
 
 func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.SubscribeResponse, err error) {
 	// query client list
-	clients, err := l.svc.ClientModel.List(l.ctx.Request.Context())
+	clients, err := l.svc.Store.Client().List(l.ctx)
 	if err != nil {
 		l.Errorw("[SubscribeLogic] Query client list failed", logger.Field("error", err.Error()))
 		return nil, err
 	}
 
-	userAgent := strings.ToLower(l.ctx.Request.UserAgent())
+	userAgent := strings.ToLower(l.request.UserAgent)
 
 	var targetApp, defaultApp *client.SubscribeApplication
 
@@ -84,7 +93,7 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		l.logSubscribeActivity(subscribeStatus, userSubscribe, req)
 	}()
 	// find subscribe info
-	subscribeInfo, err := l.svc.SubscribeModel.FindOne(l.ctx.Request.Context(), userSubscribe.SubscribeId)
+	subscribeInfo, err := l.svc.Store.Subscribe().FindOne(l.ctx, userSubscribe.SubscribeId)
 	if err != nil {
 		l.Errorw("[SubscribeLogic] Find subscribe info failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSubscribe.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Find subscribe info failed: %v", err.Error())
@@ -128,11 +137,11 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 
 	var formats = []string{"json", "yaml", "conf"}
 
+	headers := make(map[string]string)
 	for _, format := range formats {
 		if format == strings.ToLower(targetApp.OutputFormat) {
-			l.ctx.Header("content-disposition", fmt.Sprintf("attachment;filename*=UTF-8''%s.%s", url.QueryEscape(l.svc.Config.Site.SiteName), format))
-			l.ctx.Header("Content-Type", "application/octet-stream; charset=UTF-8")
-
+			headers["Content-Disposition"] = fmt.Sprintf("attachment;filename*=UTF-8''%s.%s", url.QueryEscape(l.svc.Config.Site.SiteName), format)
+			headers["Content-Type"] = "application/octet-stream; charset=UTF-8"
 		}
 	}
 
@@ -142,6 +151,7 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 			"upload=%d;download=%d;total=%d;expire=%d",
 			userSubscribe.Upload, userSubscribe.Download, userSubscribe.Traffic, userSubscribe.ExpireTime.Unix(),
 		),
+		Headers: headers,
 	}
 	subscribeStatus = true
 	return
@@ -149,7 +159,7 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 
 func (l *SubscribeLogic) getSubscribeV2URL() string {
 
-	uri := l.ctx.Request.RequestURI
+	uri := l.request.RequestURI
 	// is gateway mode, add /sub prefix
 	if report.IsGatewayMode() {
 		uri = "/sub" + uri
@@ -160,12 +170,12 @@ func (l *SubscribeLogic) getSubscribeV2URL() string {
 		return fmt.Sprintf("https://%s%s", domains[0], uri)
 	}
 	// use current request host
-	return fmt.Sprintf("https://%s%s", l.ctx.Request.Host, uri)
+	return fmt.Sprintf("https://%s%s", l.request.Host, uri)
 }
 
 // getUserSubscribe 是本次修改的核心部分
 func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
-	userSub, err := l.svc.UserModel.FindOneSubscribeByToken(l.ctx.Request.Context(), token)
+	userSub, err := l.svc.Store.User().FindOneSubscribeByToken(l.ctx, token)
 	if err != nil {
 		l.Infow("[Generate Subscribe]find subscribe error: %v", logger.Field("error", err.Error()), logger.Field("token", token))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
@@ -179,6 +189,16 @@ func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error)
 		return nil, errors.New("subscribe token invalid")
 	}
 	// =========================================================
+	// Check if user is enabled
+	userInfo, err := l.svc.Store.User().FindOne(l.ctx, userSub.UserId)
+	if err != nil {
+		l.Infow("[Generate Subscribe] failed to get user info", logger.Field("error", err.Error()), logger.Field("userId", userSub.UserId))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to get user info: %v", err.Error())
+	}
+	if !*userInfo.Enable {
+		l.Infow("[Generate Subscribe] user account is disabled", logger.Field("userId", userSub.UserId))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "User account is disabled")
+	}
 	// 修复结束 (Fix end)
 	// =========================================================
 
@@ -199,13 +219,13 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 	subscribeLog := log.Subscribe{
 		Token:           req.Token,
 		UserAgent:       req.UA,
-		ClientIP:        l.ctx.ClientIP(),
+		ClientIP:        l.request.ClientIP,
 		UserSubscribeId: userSub.Id,
 	}
 
 	content, _ := subscribeLog.Marshal()
 
-	err := l.svc.LogModel.Insert(l.ctx.Request.Context(), &log.SystemLog{
+	err := l.svc.Store.Log().Insert(l.ctx, &log.SystemLog{
 		Type:     log.TypeSubscribe.Uint8(),
 		ObjectID: userSub.UserId, // log user id
 		Date:     time.Now().Format(time.DateOnly),
@@ -218,10 +238,14 @@ func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *use
 
 func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, error) {
 	if l.isSubscriptionExpired(userSub) {
-		return l.createExpiredServers(), nil
+		return l.createNoticeServers("订阅已过期 / Subscribe Expired"), nil
 	}
 
-	subDetails, err := l.svc.SubscribeModel.FindOne(l.ctx.Request.Context(), userSub.SubscribeId)
+	if l.isTrafficExhausted(userSub) {
+		return l.createNoticeServers("流量已用尽 / Traffic Exhausted"), nil
+	}
+
+	subDetails, err := l.svc.Store.Subscribe().FindOne(l.ctx, userSub.SubscribeId)
 	if err != nil {
 		l.Errorw("[Generate Subscribe]find subscribe details error: %v", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe details error: %v", err.Error())
@@ -237,7 +261,7 @@ func (l *SubscribeLogic) getServers(userSub *user.Subscribe) ([]*node.Node, erro
 	}
 	enable := true
 	var nodes []*node.Node
-	_, nodes, err = l.svc.NodeModel.FilterNodeList(l.ctx.Request.Context(), &node.FilterNodeParams{
+	_, nodes, err = l.svc.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
 		Page:    1,
 		Size:    1000,
 		NodeId:  nodeIds,
@@ -260,19 +284,29 @@ func (l *SubscribeLogic) isSubscriptionExpired(userSub *user.Subscribe) bool {
 	return userSub.ExpireTime.Unix() < time.Now().Unix() && userSub.ExpireTime.Unix() != 0
 }
 
-func (l *SubscribeLogic) createExpiredServers() []*node.Node {
+// isTrafficExhausted reports whether the subscription has used up its traffic
+// quota. Traffic == 0 means unlimited. Mirrors the condition used by
+// FindTrafficExceededSubscribes (upload + download >= traffic AND traffic > 0).
+func (l *SubscribeLogic) isTrafficExhausted(userSub *user.Subscribe) bool {
+	return userSub.Traffic > 0 && userSub.Download+userSub.Upload >= userSub.Traffic
+}
+
+// createNoticeServers returns placeholder (non-functional) nodes whose names
+// carry a notice (e.g. expired / traffic exhausted) so clients display the
+// reason instead of silently failing.
+func (l *SubscribeLogic) createNoticeServers(message string) []*node.Node {
 	enable := true
 	host := l.getFirstHostLine()
 
 	return []*node.Node{
 		{
-			Name:    "Subscribe Expired",
+			Name:    message,
 			Tags:    "",
 			Port:    18080,
 			Address: "127.0.0.1",
 			Server: &node.Server{
 				Id:        1,
-				Name:      "Subscribe Expired",
+				Name:      message,
 				Protocols: "[{\"type\":\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
 			},
 			Protocol: "shadowsocks",
@@ -285,7 +319,7 @@ func (l *SubscribeLogic) createExpiredServers() []*node.Node {
 			Address: "127.0.0.1",
 			Server: &node.Server{
 				Id:        1,
-				Name:      "Subscribe Expired",
+				Name:      message,
 				Protocols: "[{\"type\":\"shadowsocks\",\"cipher\":\"aes-256-gcm\",\"port\":1}]",
 			},
 			Protocol: "shadowsocks",

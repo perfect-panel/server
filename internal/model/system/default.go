@@ -42,7 +42,7 @@ type (
 func newSystemModel(db *gorm.DB, c *redis.Client) *defaultSystemModel {
 	return &defaultSystemModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`System`",
+		table:      "System",
 	}
 }
 
@@ -61,7 +61,7 @@ func (m *defaultSystemModel) FindOneByKey(ctx context.Context, key string) (*Sys
 	system := new(System)
 	cacheKey := fmt.Sprintf("%s%v", cacheSystemKeyPrefix, key)
 	err := m.QueryCtx(ctx, system, cacheKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&System{}).Where("`key` = ?", key).First(v).Error
+		return conn.Model(&System{}).Scopes(WhereKey(key)).First(v).Error
 	})
 	return system, err
 }
@@ -77,7 +77,7 @@ func (m *defaultSystemModel) FindOne(ctx context.Context, id int64) (*System, er
 	SystemIdKey := fmt.Sprintf("%s%v", cacheSystemIdPrefix, id)
 	var resp System
 	err := m.QueryCtx(ctx, &resp, SystemIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&System{}).Where("`id` = ?", id).First(&resp).Error
+		return conn.Model(&System{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:

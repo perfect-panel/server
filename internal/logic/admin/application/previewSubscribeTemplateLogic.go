@@ -30,7 +30,7 @@ func NewPreviewSubscribeTemplateLogic(ctx context.Context, svcCtx *svc.ServiceCo
 
 func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.PreviewSubscribeTemplateRequest) (resp *types.PreviewSubscribeTemplateResponse, err error) {
 	enable := true
-	_, servers, err := l.svcCtx.NodeModel.FilterNodeList(l.ctx, &node.FilterNodeParams{
+	_, servers, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
 		Page:    1,
 		Size:    1000,
 		Preload: true,
@@ -41,7 +41,7 @@ func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.Prev
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindAllServer error: %v", err.Error())
 	}
 
-	data, err := l.svcCtx.ClientModel.FindOne(l.ctx, req.Id)
+	data, err := l.svcCtx.Store.Client().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("[PreviewSubscribeTemplateLogic] FindOne error: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneClient error: %v", err.Error())

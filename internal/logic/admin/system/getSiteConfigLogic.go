@@ -28,7 +28,7 @@ func NewGetSiteConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 func (l *GetSiteConfigLogic) GetSiteConfig() (resp *types.SiteConfig, err error) {
 	resp = &types.SiteConfig{}
 	// get site config from db
-	siteConfigs, err := l.svcCtx.SystemModel.GetSiteConfig(l.ctx)
+	siteConfigs, err := l.svcCtx.Store.System().GetSiteConfig(l.ctx)
 	if err != nil {
 		l.Logger.Error("[GetSiteConfig] Database query error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get site config failed: %v", err.Error())

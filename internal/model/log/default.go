@@ -47,9 +47,9 @@ func (m *defaultLogModel) FindOne(ctx context.Context, id int64) (*SystemLog, er
 }
 
 func (m *defaultLogModel) Update(ctx context.Context, data *SystemLog) error {
-	return m.WithContext(ctx).Where("`id` = ?", data.Id).Save(data).Error
+	return m.WithContext(ctx).Where("id = ?", data.Id).Save(data).Error
 }
 
 func (m *defaultLogModel) Delete(ctx context.Context, id int64) error {
-	return m.WithContext(ctx).Where("`id` = ?", id).Delete(&SystemLog{}).Error
+	return m.WithContext(ctx).Where("id = ?", id).Delete(&SystemLog{}).Error
 }

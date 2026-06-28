@@ -36,7 +36,7 @@ func (l *CreateUserTicketFollowLogic) CreateUserTicketFollow(req *types.CreateUs
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 	// query ticket
-	t, err := l.svcCtx.TicketModel.FindOne(l.ctx, req.TicketId)
+	t, err := l.svcCtx.Store.Ticket().FindOne(l.ctx, req.TicketId)
 	if err != nil {
 		l.Errorw("[CreateUserTicketFollow] Database query error", logger.Field("error", err.Error()), logger.Field("request", req))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query ticket failed: %v", err.Error())
@@ -47,7 +47,7 @@ func (l *CreateUserTicketFollowLogic) CreateUserTicketFollow(req *types.CreateUs
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "invalid access")
 	}
 	// insert follow
-	err = l.svcCtx.TicketModel.InsertTicketFollow(l.ctx, &ticket.Follow{
+	err = l.svcCtx.Store.Ticket().InsertTicketFollow(l.ctx, &ticket.Follow{
 		TicketId: req.TicketId,
 		From:     req.From,
 		Type:     req.Type,
@@ -57,7 +57,7 @@ func (l *CreateUserTicketFollowLogic) CreateUserTicketFollow(req *types.CreateUs
 		l.Errorw("[CreateUserTicketFollow] Database insert error", logger.Field("error", err.Error()), logger.Field("request", req))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create ticket follow failed: %v", err.Error())
 	}
-	err = l.svcCtx.TicketModel.UpdateTicketStatus(l.ctx, req.TicketId, u.Id, ticket.Pending)
+	err = l.svcCtx.Store.Ticket().UpdateTicketStatus(l.ctx, req.TicketId, u.Id, ticket.Pending)
 	if err != nil {
 		l.Errorw("[CreateUserTicketFollow] Database update error", logger.Field("error", err.Error()), logger.Field("status", ticket.Pending))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update ticket status failed: %v", err.Error())

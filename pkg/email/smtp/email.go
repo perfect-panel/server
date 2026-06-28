@@ -16,6 +16,7 @@ type Config struct {
 	User     string `json:"user"`
 	Pass     string `json:"pass"`
 	From     string `json:"from"`
+	ReplyTo  string `json:"reply_to"`
 	SSL      bool   `json:"ssl"`
 	SiteName string `json:"siteName"`
 }
@@ -37,6 +38,9 @@ func NewClient(conf *Config) *Client {
 func (m *Client) Send(to []string, subject, body string) error {
 	msg := gomail.NewMessage()
 	msg.SetAddressHeader("From", m.conf.From, m.conf.SiteName)
+	if m.conf.ReplyTo != "" {
+		msg.SetHeader("Reply-To", m.conf.ReplyTo)
+	}
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
 	msg.SetBody("text/html", body)

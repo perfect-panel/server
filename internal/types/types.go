@@ -347,6 +347,7 @@ type CreatePaymentMethodRequest struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent,omitempty"`
 	FeeAmount   int64       `json:"fee_amount,omitempty"`
+	Sort        int64       `json:"sort,omitempty"`
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
@@ -400,7 +401,7 @@ type CreateSubscribeRequest struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              *bool               `json:"show"`
 	Sell              *bool               `json:"sell"`
@@ -521,7 +522,7 @@ type DeleteUserDeivceRequest struct {
 }
 
 type DeleteUserSubscribeRequest struct {
-	UserSubscribeId int64 `json:"user_subscribe_id"`
+	UserSubscribeId int64 `json:"user_subscribe_id,string"`
 }
 
 type DeviceAuthticateConfig struct {
@@ -1272,12 +1273,56 @@ type NodeDNS struct {
 }
 
 type NodeOutbound struct {
-	Name     string   `json:"name"`
-	Protocol string   `json:"protocol"`
-	Address  string   `json:"address"`
-	Port     int64    `json:"port"`
-	Password string   `json:"password"`
-	Rules    []string `json:"rules"`
+	Name                 string   `json:"name"`
+	Protocol             string   `json:"protocol"`
+	Address              string   `json:"address"`
+	Port                 int64    `json:"port"`
+	User                 string   `json:"user,omitempty"`
+	Password             string   `json:"password"`
+	UUID                 string   `json:"uuid,omitempty"`
+	Cipher               string   `json:"cipher,omitempty"`
+	Security             string   `json:"security,omitempty"`
+	SNI                  string   `json:"sni,omitempty"`
+	AllowInsecure        bool     `json:"allow_insecure,omitempty"`
+	Fingerprint          string   `json:"fingerprint,omitempty"`
+	Transport            string   `json:"transport,omitempty"`
+	Host                 string   `json:"host,omitempty"`
+	Path                 string   `json:"path,omitempty"`
+	ServiceName          string   `json:"service_name,omitempty"`
+	Flow                 string   `json:"flow,omitempty"`
+	UoT                  bool     `json:"uot,omitempty"`
+	UoTVersion           int      `json:"uot_version,omitempty"`
+	CongestionController string   `json:"congestion_controller,omitempty"`
+	UDPStream            bool     `json:"udp_stream,omitempty"`
+	ReduceRtt            bool     `json:"reduce_rtt,omitempty"`
+	Heartbeat            int      `json:"heartbeat,omitempty"`
+	RealityPublicKey     string   `json:"reality_public_key,omitempty"`
+	RealityShortId       string   `json:"reality_short_id,omitempty"`
+	SpiderX              string   `json:"spider_x,omitempty"`
+	Settings             string   `json:"settings,omitempty"`
+	StreamSettings       string   `json:"stream_settings,omitempty"`
+	Rules                []string `json:"rules"`
+}
+
+type ServerNodeConfigValues struct {
+	IPStrategy string         `json:"ip_strategy"`
+	DNS        []NodeDNS      `json:"dns"`
+	Block      []string       `json:"block"`
+	Outbound   []NodeOutbound `json:"outbound"`
+}
+
+type ServerNodeConfigOverride struct {
+	InheritIPStrategy bool   `json:"inherit_ip_strategy"`
+	IPStrategy        string `json:"ip_strategy"`
+
+	InheritDNS bool      `json:"inherit_dns"`
+	DNS        []NodeDNS `json:"dns"`
+
+	InheritBlock bool     `json:"inherit_block"`
+	Block        []string `json:"block"`
+
+	InheritOutbound bool           `json:"inherit_outbound"`
+	Outbound        []NodeOutbound `json:"outbound"`
 }
 
 type NodeRelay struct {
@@ -1375,6 +1420,7 @@ type PaymentConfig struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent,omitempty"`
 	FeeAmount   int64       `json:"fee_amount,omitempty"`
+	Sort        int64       `json:"sort,omitempty"`
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
@@ -1387,6 +1433,7 @@ type PaymentMethod struct {
 	FeeMode     uint   `json:"fee_mode"`
 	FeePercent  int64  `json:"fee_percent"`
 	FeeAmount   int64  `json:"fee_amount"`
+	Sort        int64  `json:"sort"`
 }
 
 type PaymentMethodDetail struct {
@@ -1400,6 +1447,7 @@ type PaymentMethodDetail struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent"`
 	FeeAmount   int64       `json:"fee_amount"`
+	Sort        int64       `json:"sort"`
 	Enable      bool        `json:"enable"`
 	NotifyURL   string      `json:"notify_url"`
 }
@@ -1505,6 +1553,9 @@ type Protocol struct {
 	Cipher                  string  `json:"cipher,omitempty"`
 	ServerKey               string  `json:"server_key,omitempty"`
 	Flow                    string  `json:"flow,omitempty"`
+	UoT                     bool    `json:"uot,omitempty"`                   // UDP over TCP
+	UoTVersion              int     `json:"uot_version,omitempty"`           // UoT version (1 or 2)
+	AcceptProxyProtocol     bool    `json:"accept_proxy_protocol,omitempty"` // accept proxy protocol
 	HopPorts                string  `json:"hop_ports,omitempty"`
 	HopInterval             int     `json:"hop_interval,omitempty"`
 	ObfsPassword            string  `json:"obfs_password,omitempty"`
@@ -1677,6 +1728,21 @@ type QueryServerConfigResponse struct {
 	Outbound               []NodeOutbound `json:"outbound"`
 	Protocols              []Protocol     `json:"protocols"`
 	Total                  int64          `json:"total"`
+}
+
+type GetServerNodeConfigRequest struct {
+	ServerID int64 `form:"server_id" validate:"required"`
+}
+
+type GetServerNodeConfigResponse struct {
+	Global    ServerNodeConfigValues   `json:"global"`
+	Override  ServerNodeConfigOverride `json:"override"`
+	Effective ServerNodeConfigValues   `json:"effective"`
+}
+
+type UpdateServerNodeConfigRequest struct {
+	ServerID int64 `json:"server_id" validate:"required"`
+	ServerNodeConfigOverride
 }
 
 type QuerySubscribeGroupListResponse struct {
@@ -2066,7 +2132,7 @@ type Subscribe struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              bool                `json:"show"`
 	Sell              bool                `json:"sell"`
@@ -2112,6 +2178,7 @@ type SubscribeConfig struct {
 	PanDomain       bool   `json:"pan_domain"`
 	UserAgentLimit  bool   `json:"user_agent_limit"`
 	UserAgentList   string `json:"user_agent_list"`
+	ShowTutorial    bool   `json:"show_tutorial"`
 }
 
 type SubscribeDiscount struct {
@@ -2404,6 +2471,7 @@ type UpdatePaymentMethodRequest struct {
 	FeeMode     uint        `json:"fee_mode"`
 	FeePercent  int64       `json:"fee_percent,omitempty"`
 	FeeAmount   int64       `json:"fee_amount,omitempty"`
+	Sort        int64       `json:"sort,omitempty"`
 	Enable      *bool       `json:"enable" validate:"required"`
 }
 
@@ -2450,7 +2518,7 @@ type UpdateSubscribeRequest struct {
 	SpeedLimit        int64               `json:"speed_limit"`
 	DeviceLimit       int64               `json:"device_limit"`
 	Quota             int64               `json:"quota"`
-	Nodes             []int64             `json:"nodes"`
+	Nodes             StringInt64Slice    `json:"nodes"`
 	NodeTags          []string            `json:"node_tags"`
 	Show              *bool               `json:"show"`
 	Sell              *bool               `json:"sell"`

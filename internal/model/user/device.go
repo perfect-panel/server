@@ -12,7 +12,7 @@ func (m *customUserModel) FindOneDevice(ctx context.Context, id int64) (*Device,
 	deviceIdKey := fmt.Sprintf("%s%v", cacheUserDeviceIdPrefix, id)
 	var resp Device
 	err := m.QueryCtx(ctx, &resp, deviceIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`id` = ?", id).First(&resp).Error
+		return conn.Model(&Device{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:
@@ -26,7 +26,7 @@ func (m *customUserModel) FindOneDeviceByIdentifier(ctx context.Context, id stri
 	deviceIdKey := fmt.Sprintf("%s%v", cacheUserDeviceNumberPrefix, id)
 	var resp Device
 	err := m.QueryCtx(ctx, &resp, deviceIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`identifier` = ?", id).First(&resp).Error
+		return conn.Model(&Device{}).Where("identifier = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:
@@ -41,7 +41,7 @@ func (m *customUserModel) QueryDevicePageList(ctx context.Context, userId, subsc
 	var list []*Device
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`user_id` = ? and `subscribe_id` = ?", userId, subscribeId).Count(&total).Limit(size).Offset((page - 1) * size).Find(&list).Error
+		return conn.Model(&Device{}).Where("user_id = ? and subscribe_id = ?", userId, subscribeId).Count(&total).Limit(size).Offset((page - 1) * size).Find(&list).Error
 	})
 	return list, total, err
 }
@@ -51,7 +51,7 @@ func (m *customUserModel) QueryDeviceList(ctx context.Context, userId int64) ([]
 	var list []*Device
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Device{}).Where("`user_id` = ?", userId).Count(&total).Find(&list).Error
+		return conn.Model(&Device{}).Where("user_id = ?", userId).Count(&total).Find(&list).Error
 	})
 	return list, total, err
 }
@@ -94,6 +94,25 @@ func (m *customUserModel) InsertDevice(ctx context.Context, data *Device, tx ...
 		}
 	}()
 
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
+		return conn.Create(data).Error
+	})
+}
+
+func (m *customUserModel) FindDeviceOnlineRecord(ctx context.Context, userId int64, startTime, endTime string) (*DeviceOnlineRecord, error) {
+	var record DeviceOnlineRecord
+	err := m.QueryNoCacheCtx(ctx, &record, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&DeviceOnlineRecord{}).
+			Where("user_id = ? AND create_at >= ? AND create_at < ?", userId, startTime, endTime).
+			First(&record).Error
+	})
+	return &record, err
+}
+
+func (m *customUserModel) InsertDeviceOnlineRecord(ctx context.Context, data *DeviceOnlineRecord, tx ...*gorm.DB) error {
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]

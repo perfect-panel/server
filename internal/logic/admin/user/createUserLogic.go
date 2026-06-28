@@ -51,7 +51,7 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 
 	if req.TelephoneAreaCode != "" && req.Telephone != "" {
 		phone := fmt.Sprintf("%s-%s", req.TelephoneAreaCode, req.Telephone)
-		_, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "mobile", phone)
+		_, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phone)
 		if err == nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.TelephoneExist), "telephone exist")
 		}
@@ -61,7 +61,7 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 		})
 	}
 	if req.Email != "" {
-		_, err := l.svcCtx.UserModel.FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
+		_, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
 		if err == nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.EmailExist), "email exist")
 		}
@@ -76,7 +76,7 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 	// todo: get product id and duration
 	if req.RefererUser != "" {
 		// get referer user id
-		u, err := l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.RefererUser)
+		u, err := l.svcCtx.Store.User().FindOneByEmail(l.ctx, req.RefererUser)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "referer user not found: %v", err.Error())
@@ -86,7 +86,7 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 		newUser.RefererId = u.Id
 	}
 
-	err := l.svcCtx.UserModel.Insert(l.ctx, newUser)
+	err := l.svcCtx.Store.User().Insert(l.ctx, newUser)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert user failed: %v", err.Error())
 	}

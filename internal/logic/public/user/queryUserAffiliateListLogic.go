@@ -8,7 +8,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
@@ -36,11 +35,7 @@ func (l *QueryUserAffiliateListLogic) QueryUserAffiliateList(req *types.QueryUse
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	var data []*user.User
-	var total int64
-	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		return db.Model(&user.User{}).Order("id desc").Where("referer_id = ?", u.Id).Count(&total).Limit(req.Size).Offset((req.Page - 1) * req.Size).Find(&data).Error
-	})
+	data, total, err := l.svcCtx.Store.User().QueryAffiliateList(l.ctx, u.Id, req.Page, req.Size)
 	if err != nil {
 		l.Errorw("Query User Affiliate List failed: %v", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Affiliate List failed: %v", err.Error())
@@ -63,16 +58,24 @@ func (l *QueryUserAffiliateListLogic) QueryUserAffiliateList(req *types.QueryUse
 
 func GetAuthMethod(l *QueryUserAffiliateListLogic, item *user.User) user.AuthMethods {
 	authMethod := user.AuthMethods{}
-	authMethods, errs := l.svcCtx.UserModel.FindUserAuthMethods(l.ctx, item.Id)
-	if errs == nil && len(authMethods) > 0 {
+	authMethods := item.AuthMethods
+	if len(authMethods) == 0 {
+		methods, errs := l.svcCtx.Store.User().FindUserAuthMethods(l.ctx, item.Id)
+		if errs == nil {
+			for _, method := range methods {
+				authMethods = append(authMethods, *method)
+			}
+		}
+	}
+	if len(authMethods) > 0 {
 		for _, am := range authMethods {
 			if am.AuthType == "6" || am.AuthType == "7" {
-				authMethod = *am
+				authMethod = am
 				break
 			}
 		}
 		if authMethod.AuthIdentifier == "" {
-			authMethod = *authMethods[0]
+			authMethod = authMethods[0]
 		}
 
 		hideTextLength := len(authMethod.AuthIdentifier) / 3

@@ -1,27 +1,31 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/server"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Push online users
-func PushOnlineUsersHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		var req types.OnlineUsersRequest
-		_ = c.ShouldBind(&req)
-		_ = c.ShouldBindQuery(&req.ServerCommon)
-		validateErr := svcCtx.Validate(&req)
-		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+func PushOnlineUsersHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		req := types.OnlineUsersRequest{}
+		_ = ctx.BindJSON(&req)
+		commonReq, err := serverCommonRequest(ctx)
+		if err != nil {
+			writeParamError(ctx, err)
+			return
+		}
+		req.ServerCommon = commonReq
+		if validateErr := svcCtx.Validate(&req); validateErr != nil {
+			writeParamError(ctx, validateErr)
 			return
 		}
 
-		l := server.NewPushOnlineUsersLogic(c.Request.Context(), svcCtx)
-		err := l.PushOnlineUsers(&req)
-		result.HttpResult(c, nil, err)
+		l := server.NewPushOnlineUsersLogic(c, svcCtx)
+		writeHTTPResult(ctx, nil, l.PushOnlineUsers(&req))
 	}
 }

@@ -28,7 +28,7 @@ func NewGetServerProtocolsLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 
 func (l *GetServerProtocolsLogic) GetServerProtocols(req *types.GetServerProtocolsRequest) (resp *types.GetServerProtocolsResponse, err error) {
 	// find server
-	data, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.Id)
+	data, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("[GetServerProtocols] FindOneServer Error: %s", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "[GetServerProtocols] FindOneServer Error: %s", err.Error())

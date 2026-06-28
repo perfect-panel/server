@@ -51,7 +51,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
-			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeLogin.Uint8(),
 				Date:     time.Now().Format("2006-01-02"),
 				ObjectID: userInfo.Id,
@@ -66,7 +66,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 		}
 	}(l.svcCtx)
 
-	userInfo, err = l.svcCtx.UserModel.FindOneByEmail(l.ctx, req.Email)
+	userInfo, err = l.svcCtx.Store.User().FindOneByEmail(l.ctx, req.Email)
 
 	if userInfo.DeletedAt.Valid {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email deleted: %v", req.Email)
@@ -83,6 +83,11 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginRequest) (resp *types.Log
 	// Verify password
 	if !tool.MultiPasswordVerify(userInfo.Algo, userInfo.Salt, req.Password, userInfo.Password) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
+	}
+
+	// Check if user is enabled
+	if !*userInfo.Enable {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user account is disabled")
 	}
 
 	// Bind device to user if identifier is provided

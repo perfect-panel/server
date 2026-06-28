@@ -9,11 +9,10 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/xerr"
 
-	"gorm.io/gorm"
-
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -38,13 +37,14 @@ func NewResetTrafficLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Rese
 }
 
 func (l *ResetTrafficLogic) ResetTraffic(req *types.ResetTrafficOrderRequest) (resp *types.ResetTrafficOrderResponse, err error) {
+	store := l.svcCtx.Store
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 	// find user subscription
-	userSubscribe, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
+	userSubscribe, err := store.User().FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
 	if err != nil {
 		l.Errorw("[ResetTraffic] Database query error", logger.Field("error", err.Error()), logger.Field("UserSubscribeID", req.UserSubscribeID))
 		return nil, errors.Wrapf(err, "find user subscribe error: %v", err.Error())
@@ -68,7 +68,7 @@ func (l *ResetTrafficLogic) ResetTraffic(req *types.ResetTrafficOrderRequest) (r
 		}
 	}
 	// find payment method
-	payment, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
+	payment, err := store.Payment().FindOne(l.ctx, req.Payment)
 	if err != nil {
 		l.Errorw("[ResetTraffic] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(err, "find payment error: %v", err.Error())
@@ -96,11 +96,11 @@ func (l *ResetTrafficLogic) ResetTraffic(req *types.ResetTrafficOrderRequest) (r
 		SubscribeToken: userSubscribe.Token,
 	}
 	// Database transaction
-	err = l.svcCtx.DB.Transaction(func(db *gorm.DB) error {
+	err = store.InTx(l.ctx, func(txStore repository.Store) error {
 		// update user deduction && Pre deduction ,Return after canceling the order
 		if orderInfo.GiftAmount > 0 {
 			// update user deduction && Pre deduction ,Return after canceling the order
-			if err := l.svcCtx.UserModel.Update(l.ctx, u, db); err != nil {
+			if err := txStore.User().Update(l.ctx, u); err != nil {
 				l.Errorw("[ResetTraffic] Database update error", logger.Field("error", err.Error()), logger.Field("user", u))
 				return err
 			}
@@ -116,18 +116,18 @@ func (l *ResetTrafficLogic) ResetTraffic(req *types.ResetTrafficOrderRequest) (r
 			}
 			content, _ := giftLog.Marshal()
 
-			if err = db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			if err = txStore.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				Date:     time.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
-			}).Error; err != nil {
+			}); err != nil {
 				l.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", content))
 				return err
 			}
 		}
 		// insert order
-		return db.Model(&order.Order{}).Create(&orderInfo).Error
+		return txStore.Order().Insert(l.ctx, &orderInfo)
 	})
 	if err != nil {
 		l.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))

@@ -34,7 +34,7 @@ type (
 func newTrafficModel(db *gorm.DB) *defaultTrafficModel {
 	return &defaultTrafficModel{
 		Conn:  db,
-		table: "`traffic`",
+		table: "traffic",
 	}
 }
 
@@ -44,7 +44,7 @@ func (m *defaultTrafficModel) Insert(ctx context.Context, data *TrafficLog) erro
 
 func (m *defaultTrafficModel) FindOne(ctx context.Context, id int64) (*TrafficLog, error) {
 	var data TrafficLog
-	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).Where("`id` = ?", id).First(&data).Error
+	err := m.Conn.WithContext(ctx).Model(&TrafficLog{}).Where("id = ?", id).First(&data).Error
 	return &data, err
 }
 

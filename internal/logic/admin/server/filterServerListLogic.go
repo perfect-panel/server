@@ -31,7 +31,8 @@ func NewFilterServerListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequest) (resp *types.FilterServerListResponse, err error) {
-	total, data, err := l.svcCtx.NodeModel.FilterServerList(l.ctx, &node.FilterParams{
+	nodeStore := l.svcCtx.Store.Node()
+	total, data, err := nodeStore.FilterServerList(l.ctx, &node.FilterParams{
 		Page:   req.Page,
 		Size:   req.Size,
 		Search: req.Search,
@@ -57,7 +58,7 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 		tool.DeepCopy(&protocols, dst)
 		server.Protocols = protocols
 
-		nodeStatus, err := l.svcCtx.NodeModel.StatusCache(l.ctx, datum.Id)
+		nodeStatus, err := nodeStore.StatusCache(l.ctx, datum.Id)
 		if err != nil {
 			if !errors.Is(err, redis.Nil) {
 				l.Errorw("[handlerServerStatus] GetNodeStatus Error: ", logger.Field("error", err.Error()), logger.Field("node_id", datum.Id))
@@ -82,10 +83,12 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 
 func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.Protocol) []types.ServerOnlineUser {
 	result := make([]types.ServerOnlineUser, 0)
+	nodeStore := l.svcCtx.Store.Node()
+	userStore := l.svcCtx.Store.User()
 
 	for _, protocol := range protocols {
 		// query online user
-		data, err := l.svcCtx.NodeModel.OnlineUserSubscribe(l.ctx, id, protocol.Type)
+		data, err := nodeStore.OnlineUserSubscribe(l.ctx, id, protocol.Type)
 		if err != nil {
 			if !errors.Is(err, redis.Nil) {
 				l.Errorw("[handlerServerStatus] OnlineUserSubscribe Error: ", logger.Field("error", err.Error()), logger.Field("node_id", id), logger.Field("protocol", protocol.Type))
@@ -119,7 +122,7 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.
 			mapResult[item.SubscribeId] = exist
 		} else {
 			// get subscribe info
-			info, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, item.SubscribeId)
+			info, err := userStore.FindOneUserSubscribe(l.ctx, item.SubscribeId)
 			if err != nil {
 				if !errors.Is(err, gorm.ErrRecordNotFound) {
 					l.Errorw("[handlerServerStatus] FindOneSubscribe Error: ", logger.Field("error", err.Error()), logger.Field("subscribe_id", item.SubscribeId))

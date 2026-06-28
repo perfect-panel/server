@@ -12,7 +12,7 @@ import (
 
 func Site(ctx *svc.ServiceContext) {
 	logger.Debug("initialize site config")
-	configs, err := ctx.SystemModel.GetSiteConfig(context.Background())
+	configs, err := ctx.Store.System().GetSiteConfig(context.Background())
 	if err != nil {
 		panic(err)
 	}

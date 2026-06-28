@@ -34,7 +34,11 @@ func (l *UpdateUserPasswordLogic) UpdateUserPassword(req *types.UpdateUserPasswo
 	userInfo := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	//update the password
 	userInfo.Password = tool.EncodePassWord(req.Password)
-	if err := l.svcCtx.UserModel.Update(l.ctx, userInfo); err != nil {
+	// Reset algo to default, otherwise a migrated user (e.g. algo=md5salt/sha256salt)
+	// would be locked out: the new hash is pbkdf2 but verification would still use the
+	// old algorithm. Mirrors resetPasswordLogic and updateUserBasicInfoLogic.
+	userInfo.Algo = "default"
+	if err := l.svcCtx.Store.User().Update(l.ctx, userInfo); err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Update user password error")
 	}
 	return nil

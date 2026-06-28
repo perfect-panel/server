@@ -36,7 +36,7 @@ func (l *UpdateUserSubscribeNoteLogic) UpdateUserSubscribeNote(req *types.Update
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
-	userSub, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, req.UserSubscribeId)
+	userSub, err := l.svcCtx.Store.User().FindOneUserSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("FindOneUserSubscribe failed:", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneUserSubscribe failed: %v", err.Error())
@@ -51,20 +51,20 @@ func (l *UpdateUserSubscribeNoteLogic) UpdateUserSubscribeNote(req *types.Update
 	var newSub user.Subscribe
 	tool.DeepCopy(&newSub, userSub)
 
-	err = l.svcCtx.UserModel.UpdateSubscribe(l.ctx, &newSub)
+	err = l.svcCtx.Store.User().UpdateSubscribe(l.ctx, &newSub)
 	if err != nil {
 		l.Errorw("UpdateSubscribe failed:", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "UpdateSubscribe failed: %v", err.Error())
 	}
 
 	// Clear user subscription cache
-	if err = l.svcCtx.UserModel.ClearSubscribeCache(l.ctx, &newSub); err != nil {
+	if err = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, &newSub); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}
 
 	// Clear subscription cache
-	if err = l.svcCtx.SubscribeModel.ClearCache(l.ctx, userSub.SubscribeId); err != nil {
+	if err = l.svcCtx.Store.Subscribe().ClearCache(l.ctx, userSub.SubscribeId); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSub.SubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}

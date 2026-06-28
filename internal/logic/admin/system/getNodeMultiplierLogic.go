@@ -27,7 +27,7 @@ func NewGetNodeMultiplierLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *GetNodeMultiplierLogic) GetNodeMultiplier() (resp *types.GetNodeMultiplierResponse, err error) {
-	data, err := l.svcCtx.SystemModel.FindNodeMultiplierConfig(l.ctx)
+	data, err := l.svcCtx.Store.System().FindNodeMultiplierConfig(l.ctx)
 	if err != nil {
 		l.Logger.Error("Get Node Multiplier Config Error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get Node Multiplier Config Error: %s", err.Error())

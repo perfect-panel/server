@@ -34,7 +34,7 @@ func (l *BatchDeleteUserLogic) BatchDeleteUser(req *types.BatchDeleteUserRequest
 		return errors.Wrapf(xerr.NewErrCodeMsg(503, "Demo mode does not allow deletion of the admin user"), "BatchDeleteUser failed: cannot delete admin user in demo mode")
 	}
 
-	err := l.svcCtx.UserModel.BatchDeleteUser(l.ctx, req.Ids)
+	err := l.svcCtx.Store.User().BatchDeleteUser(l.ctx, req.Ids)
 	if err != nil {
 		l.Logger.Error("[BatchDeleteUserLogic] BatchDeleteUser failed: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "BatchDeleteUser failed: %v", err.Error())

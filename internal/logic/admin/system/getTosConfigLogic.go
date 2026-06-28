@@ -28,7 +28,7 @@ func NewGetTosConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetT
 func (l *GetTosConfigLogic) GetTosConfig() (resp *types.TosConfig, err error) {
 	resp = &types.TosConfig{}
 	// get tos config from db
-	configs, err := l.svcCtx.SystemModel.GetTosConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetTosConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetTosConfig] GetTosConfig error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetTosConfig error: %v", err.Error())

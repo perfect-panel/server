@@ -6,6 +6,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -41,16 +42,6 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *types.CommissionWithdr
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserCommissionNotEnough), "User %d has insufficient commission balance", u.Id)
 	}
 
-	tx := l.svcCtx.DB.WithContext(l.ctx).Begin()
-
-	// update user commission balance
-	u.Commission -= req.Amount
-	if err = l.svcCtx.UserModel.Update(l.ctx, u, tx); err != nil {
-		tx.Rollback()
-		l.Errorf("Failed to update user %d commission balance: %v", u.Id, err)
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Failed to update user %d commission balance: %v", u.Id, err)
-	}
-
 	// create withdrawal log
 	logInfo := log.Commission{
 		Type:      log.CommissionTypeConvertBalance,
@@ -60,41 +51,43 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *types.CommissionWithdr
 	b, err := logInfo.Marshal()
 
 	if err != nil {
-		tx.Rollback()
 		l.Errorf("Failed to marshal commission log for user %d: %v", u.Id, err)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Failed to marshal commission log for user %d: %v", u.Id, err)
 	}
 
-	err = tx.Model(log.SystemLog{}).Create(&log.SystemLog{
-		Type:      log.TypeCommission.Uint8(),
-		Date:      time.Now().Format("2006-01-02"),
-		ObjectID:  u.Id,
-		Content:   string(b),
-		CreatedAt: time.Now(),
-	}).Error
+	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+		updatedUser := *u
+		updatedUser.Commission -= req.Amount
+		if err = store.User().Update(l.ctx, &updatedUser); err != nil {
+			l.Errorf("Failed to update user %d commission balance: %v", u.Id, err)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Failed to update user %d commission balance: %v", u.Id, err)
+		}
 
+		if err = store.Log().Insert(l.ctx, &log.SystemLog{
+			Type:      log.TypeCommission.Uint8(),
+			Date:      time.Now().Format("2006-01-02"),
+			ObjectID:  u.Id,
+			Content:   string(b),
+			CreatedAt: time.Now(),
+		}); err != nil {
+			l.Errorf("Failed to create commission log for user %d: %v", u.Id, err)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create commission log for user %d: %v", u.Id, err)
+		}
+
+		if err = store.User().InsertWithdrawal(l.ctx, &user.Withdrawal{
+			UserId:  u.Id,
+			Amount:  req.Amount,
+			Content: req.Content,
+			Status:  0,
+			Reason:  "",
+		}); err != nil {
+			l.Errorf("Failed to create withdrawal log for user %d: %v", u.Id, err)
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create withdrawal log for user %d: %v", u.Id, err)
+		}
+		return nil
+	})
 	if err != nil {
-		tx.Rollback()
-		l.Errorf("Failed to create commission log for user %d: %v", u.Id, err)
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create commission log for user %d: %v", u.Id, err)
-	}
-
-	err = tx.Model(&user.Withdrawal{}).Create(&user.Withdrawal{
-		UserId:  u.Id,
-		Amount:  req.Amount,
-		Content: req.Content,
-		Status:  0,
-		Reason:  "",
-	}).Error
-
-	if err != nil {
-		tx.Rollback()
-		l.Errorf("Failed to create withdrawal log for user %d: %v", u.Id, err)
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create withdrawal log for user %d: %v", u.Id, err)
-	}
-	if err = tx.Commit().Error; err != nil {
-		l.Errorf("Transaction commit failed for user %d withdrawal: %v", u.Id, err)
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Transaction commit failed for user %d withdrawal: %v", u.Id, err)
+		return nil, err
 	}
 
 	return &types.WithdrawalLog{

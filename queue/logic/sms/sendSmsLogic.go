@@ -66,7 +66,7 @@ func (l *SendSmsLogic) ProcessTask(ctx context.Context, task *asynq.Task) error 
 	logger.WithContext(ctx).Info("[SendSmsLogic] Send sms", logger.Field("telephone", payload.Telephone), logger.Field("content", createSms.Content))
 
 	content, _ := createSms.Marshal()
-	err = l.svcCtx.LogModel.Insert(ctx, &log.SystemLog{
+	err = l.svcCtx.Store.Log().Insert(ctx, &log.SystemLog{
 		Type:     log.TypeMobileMessage.Uint8(),
 		Date:     time.Now().Format("2006-01-02"),
 		ObjectID: 0,

@@ -27,7 +27,7 @@ func NewGetCurrencyConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *GetCurrencyConfigLogic) GetCurrencyConfig() (resp *types.CurrencyConfig, err error) {
-	configs, err := l.svcCtx.SystemModel.GetCurrencyConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetCurrencyConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetCurrencyConfigLogic] GetCurrencyConfig error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetCurrencyConfig error: %v", err.Error())

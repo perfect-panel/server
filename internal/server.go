@@ -5,27 +5,22 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
+	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/report"
+	"github.com/perfect-panel/server/internal/transport/httpserver"
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/perfect-panel/server/pkg/proc"
 	"github.com/perfect-panel/server/pkg/trace"
 
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
-	"github.com/gin-gonic/gin"
-	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/handler"
-	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
 )
 
 type Service struct {
-	server *http.Server
+	server transportServer
 	svc    *svc.ServiceContext
 }
 
@@ -35,32 +30,25 @@ func NewService(svc *svc.ServiceContext) *Service {
 	}
 }
 
-func initServer(svc *svc.ServiceContext) *gin.Engine {
+type transportServer interface {
+	Start()
+	Shutdown(ctx context.Context) error
+}
 
-	// start init system config
-	initialize.StartInitSystemConfig(svc)
-	// init gin server
-	r := gin.Default()
-	r.RemoteIPHeaders = []string{"X-Original-Forwarded-For", "X-Forwarded-For", "X-Real-IP"}
-	// init session
-	sessionStore, err := redis.NewStore(10, "tcp", svc.Config.Redis.Host, svc.Config.Redis.Pass, []byte(svc.Config.JwtAuth.AccessSecret))
-	if err != nil {
-		logger.Errorw("init session error", logger.Field("error", err.Error()))
-		panic(err)
+func newTransportServer(svc *svc.ServiceContext, addr string) transportServer {
+	var tlsConfig *tls.Config
+	if svc.Config.TLS.Enable {
+		cert, err := tls.LoadX509KeyPair(svc.Config.TLS.CertFile, svc.Config.TLS.KeyFile)
+		if err != nil {
+			logger.Errorf("load tls certificate error: %s", err.Error())
+			return nil
+		}
+		tlsConfig = &tls.Config{
+			MinVersion:   tls.VersionTLS12,
+			Certificates: []tls.Certificate{cert},
+		}
 	}
-	r.Use(sessions.Sessions("ppanel", sessionStore))
-	// use cors middleware
-	r.Use(middleware.TraceMiddleware(svc), middleware.LoggerMiddleware(svc), middleware.CorsMiddleware, gin.Recovery())
-
-	// register handlers
-	handler.RegisterHandlers(r, svc)
-	// register subscribe handler
-	handler.RegisterSubscribeHandlers(r, svc)
-	// register telegram handler
-	handler.RegisterTelegramHandlers(r, svc)
-	// register notify handler
-	handler.RegisterNotifyHandlers(r, svc)
-	return r
+	return httpserver.New(svc, addr, tlsConfig)
 }
 
 func (m *Service) Start() {
@@ -68,8 +56,13 @@ func (m *Service) Start() {
 		panic("config file path is nil")
 	}
 
-	// init service
-	r := initServer(m.svc)
+	// 等待插件管理器加载完成
+	if m.svc.PluginReady != nil {
+		if err := m.svc.PluginReady.WaitReady(context.Background()); err != nil {
+			logger.Errorf("plugin manager not ready: %s", err.Error())
+		}
+	}
+
 	// get server port
 	port := m.svc.Config.Port
 	host := m.svc.Config.Host
@@ -93,12 +86,10 @@ func (m *Service) Start() {
 	}
 
 	serverAddr := fmt.Sprintf("%v:%d", host, port)
-	m.server = &http.Server{
-		Addr:    serverAddr,
-		Handler: r,
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-		},
+	initialize.StartInitSystemConfig(m.svc)
+	m.server = newTransportServer(m.svc, serverAddr)
+	if m.server == nil {
+		return
 	}
 	trace.StartAgent(trace.Config{
 		Name:    "ppanel",
@@ -110,15 +101,7 @@ func (m *Service) Start() {
 	})
 	m.svc.Restart = m.Restart
 	logger.Infof("server start at %v", serverAddr)
-	if m.svc.Config.TLS.Enable {
-		if err := m.server.ListenAndServeTLS(m.svc.Config.TLS.CertFile, m.svc.Config.TLS.KeyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Errorf("server start error: %s", err.Error())
-		}
-	} else {
-		if err := m.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Errorf("server start error: %s", err.Error())
-		}
-	}
+	m.server.Start()
 }
 
 func (m *Service) Stop() {

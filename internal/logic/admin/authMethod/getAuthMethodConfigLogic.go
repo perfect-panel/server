@@ -28,7 +28,7 @@ func NewGetAuthMethodConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *GetAuthMethodConfigLogic) GetAuthMethodConfig(req *types.GetAuthMethodConfigRequest) (resp *types.AuthMethodConfig, err error) {
-	method, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, req.Method)
+	method, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, req.Method)
 	if err != nil {
 		l.Errorw("find one by method failed", logger.Field("method", req.Method), logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find one by method failed: %v", err.Error())

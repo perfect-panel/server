@@ -67,6 +67,7 @@ type (
 		PanDomain       bool   `json:"pan_domain"`
 		UserAgentLimit  bool   `json:"user_agent_limit"`
 		UserAgentList   string `json:"user_agent_list"`
+		ShowTutorial    bool   `json:"show_tutorial"`
 	}
 	VerifyCodeConfig {
 		VerifyCodeExpireTime int64 `json:"verify_code_expire_time"`
@@ -174,12 +175,35 @@ type (
 		Domains []string `json:"domains"`
 	}
 	NodeOutbound {
-		Name     string   `json:"name"`
-		Protocol string   `json:"protocol"`
-		Address  string   `json:"address"`
-		Port     int64    `json:"port"`
-		Password string   `json:"password"`
-		Rules    []string `json:"rules"`
+		Name                 string   `json:"name"`
+		Protocol             string   `json:"protocol"`
+		Address              string   `json:"address"`
+		Port                 int64    `json:"port"`
+		User                 string   `json:"user,omitempty"`
+		Password             string   `json:"password"`
+		UUID                 string   `json:"uuid,omitempty"`
+		Cipher               string   `json:"cipher,omitempty"`
+		Security             string   `json:"security,omitempty"`
+		SNI                  string   `json:"sni,omitempty"`
+		AllowInsecure        bool     `json:"allow_insecure,omitempty"`
+		Fingerprint          string   `json:"fingerprint,omitempty"`
+		Transport            string   `json:"transport,omitempty"`
+		Host                 string   `json:"host,omitempty"`
+		Path                 string   `json:"path,omitempty"`
+		ServiceName          string   `json:"service_name,omitempty"`
+		Flow                 string   `json:"flow,omitempty"`
+		UoT                  bool     `json:"uot,omitempty"`
+		UoTVersion           int      `json:"uot_version,omitempty"`
+		CongestionController string   `json:"congestion_controller,omitempty"`
+		UDPStream            bool     `json:"udp_stream,omitempty"`
+		ReduceRtt            bool     `json:"reduce_rtt,omitempty"`
+		Heartbeat            int      `json:"heartbeat,omitempty"`
+		RealityPublicKey     string   `json:"reality_public_key,omitempty"`
+		RealityShortId       string   `json:"reality_short_id,omitempty"`
+		SpiderX              string   `json:"spider_x,omitempty"`
+		Settings             string   `json:"settings,omitempty"`
+		StreamSettings       string   `json:"stream_settings,omitempty"`
+		Rules                []string `json:"rules"`
 	}
 	InviteConfig {
 		ForcedInvite       bool  `json:"forced_invite"`
@@ -221,7 +245,7 @@ type (
 		SpeedLimit        int64               `json:"speed_limit"`
 		DeviceLimit       int64               `json:"device_limit"`
 		Quota             int64               `json:"quota"`
-		Nodes             []int64             `json:"nodes"`
+		Nodes             []string            `json:"nodes"`
 		NodeTags          []string            `json:"node_tags"`
 		Show              bool                `json:"show"`
 		Sell              bool                `json:"sell"`
@@ -349,6 +373,7 @@ type (
 		FeeMode     uint   `json:"fee_mode"`
 		FeePercent  int64  `json:"fee_percent"`
 		FeeAmount   int64  `json:"fee_amount"`
+		Sort        int64  `json:"sort"`
 	}
 	PaymentConfig {
 		Id          int64       `json:"id" validate:"required"`
@@ -361,6 +386,7 @@ type (
 		FeeMode     uint        `json:"fee_mode"`
 		FeePercent  int64       `json:"fee_percent,omitempty"`
 		FeeAmount   int64       `json:"fee_amount,omitempty"`
+		Sort        int64       `json:"sort,omitempty"`
 		Enable      *bool       `json:"enable" validate:"required"`
 	}
 	PaymentMethodDetail {
@@ -374,6 +400,7 @@ type (
 		FeeMode     uint        `json:"fee_mode"`
 		FeePercent  int64       `json:"fee_percent"`
 		FeeAmount   int64       `json:"fee_amount"`
+		Sort        int64       `json:"sort"`
 		Enable      bool        `json:"enable"`
 		NotifyURL   string      `json:"notify_url"`
 	}
@@ -850,4 +877,3 @@ type (
 		UserSubscribeId int64 `json:"user_subscribe_id"`
 	}
 )
-

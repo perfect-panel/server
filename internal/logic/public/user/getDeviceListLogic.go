@@ -28,7 +28,7 @@ func NewGetDeviceListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 
 func (l *GetDeviceListLogic) GetDeviceList() (resp *types.GetDeviceListResponse, err error) {
 	userInfo := l.ctx.Value(constant.CtxKeyUser).(*user.User)
-	list, count, err := l.svcCtx.UserModel.QueryDeviceList(l.ctx, userInfo.Id)
+	list, count, err := l.svcCtx.Store.User().QueryDeviceList(l.ctx, userInfo.Id)
 	userRespList := make([]types.UserDevice, 0)
 	tool.DeepCopy(&userRespList, list)
 	resp = &types.GetDeviceListResponse{

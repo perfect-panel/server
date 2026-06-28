@@ -3,9 +3,11 @@ package subscribe
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type FilterParams struct {
@@ -34,6 +36,13 @@ type customSubscribeLogicModel interface {
 	FilterList(ctx context.Context, params *FilterParams) (int64, []*Subscribe, error)
 	ClearCache(ctx context.Context, id ...int64) error
 	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
+	QueryResetCycleSubscribeIds(ctx context.Context, resetCycle int) ([]int64, error)
+	UpdateSort(ctx context.Context, data []*Subscribe) error
+	QueryGroupList(ctx context.Context) (int64, []*Group, error)
+	CreateGroup(ctx context.Context, data *Group) error
+	UpdateGroup(ctx context.Context, data *Group) error
+	DeleteGroup(ctx context.Context, id int64) error
+	BatchDeleteGroup(ctx context.Context, ids []int64) error
 }
 
 // NewModel returns a model for the database table.
@@ -49,6 +58,14 @@ func (m *customSubscribeModel) QuerySubscribeMinSortByIds(ctx context.Context, i
 		return conn.Model(&Subscribe{}).Where("id IN ?", ids).Select("COALESCE(MIN(sort), 0)").Scan(v).Error
 	})
 	return minSort, err
+}
+
+func (m *customSubscribeModel) QueryResetCycleSubscribeIds(ctx context.Context, resetCycle int) ([]int64, error) {
+	var ids []int64
+	err := m.QueryNoCacheCtx(ctx, &ids, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Subscribe{}).Select("id").Where("reset_cycle = ?", resetCycle).Find(&ids).Error
+	})
+	return ids, err
 }
 
 func (m *customSubscribeModel) ClearCache(ctx context.Context, ids ...int64) error {
@@ -67,6 +84,48 @@ func (m *customSubscribeModel) ClearCache(ctx context.Context, ids ...int64) err
 	return m.CachedConn.DelCacheCtx(ctx, cacheKeys...)
 }
 
+func (m *customSubscribeModel) UpdateSort(ctx context.Context, data []*Subscribe) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Save(data).Error
+	}, m.batchGetCacheKeys(data...)...)
+}
+
+func (m *customSubscribeModel) QueryGroupList(ctx context.Context) (int64, []*Group, error) {
+	var list []*Group
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &list, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Group{}).Count(&total).Find(v).Error
+	})
+	return total, list, err
+}
+
+func (m *customSubscribeModel) CreateGroup(ctx context.Context, data *Group) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Create(data).Error
+	})
+}
+
+func (m *customSubscribeModel) UpdateGroup(ctx context.Context, data *Group) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Where("id = ?", data.Id).Save(data).Error
+	})
+}
+
+func (m *customSubscribeModel) DeleteGroup(ctx context.Context, id int64) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Where("id = ?", id).Delete(&Group{}).Error
+	})
+}
+
+func (m *customSubscribeModel) BatchDeleteGroup(ctx context.Context, ids []int64) error {
+	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Group{}).Where("id IN ?", ids).Delete(&Group{}).Error
+	})
+}
+
 // FilterList Filter Subscribe List
 func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterParams) (int64, []*Subscribe, error) {
 	if params == nil {
@@ -82,14 +141,16 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 		query := conn.Model(&Subscribe{})
 
 		if params.Search != "" {
-			s := "%" + params.Search + "%"
-			query = query.Where("`name` LIKE ? OR `description` LIKE ?", s, s)
+			query = query.Scopes(orm.ContainsLike([]string{"name", "description"}, params.Search))
 		}
 		if params.Show {
-			query = query.Where("`show` = true")
+			query = query.Where(clause.Eq{
+				Column: clause.Column{Name: "show"},
+				Value:  true,
+			})
 		}
 		if params.Sell {
-			query = query.Where("`sell` = true")
+			query = query.Where("sell = true")
 		}
 
 		if len(params.Ids) > 0 {
@@ -142,15 +203,5 @@ func (m *customSubscribeModel) FilterList(ctx context.Context, params *FilterPar
 }
 
 func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if len(values) == 0 {
-			return db
-		}
-
-		query := db.Where("1=0")
-		for _, v := range values {
-			query = query.Or("FIND_IN_SET(?, "+field+")", v)
-		}
-		return query
-	}
+	return orm.CommaSeparatedContains(field, values)
 }

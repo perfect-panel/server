@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/logic/nodeconfig"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -26,7 +27,7 @@ func NewQueryServerProtocolConfigLogic(ctx context.Context, svcCtx *svc.ServiceC
 
 func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.QueryServerConfigRequest) (resp *types.QueryServerConfigResponse, err error) {
 	// find server
-	data, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerID)
+	data, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerID)
 	if err != nil {
 		l.Errorf("[GetServerProtocols] FindOneServer Error: %s", err.Error())
 		return nil, err
@@ -40,6 +41,15 @@ func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.Qu
 		return nil, err
 	}
 	tool.DeepCopy(&protocols, dst)
+
+	// only return enabled protocols for node distribution
+	var enabledProtocols []types.Protocol
+	for _, p := range protocols {
+		if p.Enable {
+			enabledProtocols = append(enabledProtocols, p)
+		}
+	}
+	protocols = enabledProtocols
 
 	// filter by req.Protocols
 
@@ -57,36 +67,25 @@ func (l *QueryServerProtocolConfigLogic) QueryServerProtocolConfig(req *types.Qu
 		protocols = filtered
 	}
 
-	var dns []types.NodeDNS
-	if len(l.svcCtx.Config.Node.DNS) > 0 {
-		for _, d := range l.svcCtx.Config.Node.DNS {
-			dns = append(dns, types.NodeDNS{
-				Proto:   d.Proto,
-				Address: d.Address,
-				Domains: d.Domains,
-			})
-		}
+	nodeValues := nodeconfig.GlobalValues(l.svcCtx.Config.Node)
+	override, err := l.svcCtx.Store.Node().FindServerConfigOverride(l.ctx, req.ServerID)
+	if err != nil {
+		l.Errorf("[GetServerProtocols] FindServerConfigOverride Error: %s", err.Error())
+		return nil, err
 	}
-	var outbound []types.NodeOutbound
-	if len(l.svcCtx.Config.Node.Outbound) > 0 {
-		for _, o := range l.svcCtx.Config.Node.Outbound {
-			outbound = append(outbound, types.NodeOutbound{
-				Name:     o.Name,
-				Protocol: o.Protocol,
-				Address:  o.Address,
-				Port:     o.Port,
-				Password: o.Password,
-				Rules:    o.Rules,
-			})
+	if override != nil {
+		if err = nodeconfig.ApplyOverride(&nodeValues, override); err != nil {
+			l.Errorf("[GetServerProtocols] ApplyOverride Error: %s", err.Error())
+			return nil, err
 		}
 	}
 
 	return &types.QueryServerConfigResponse{
 		TrafficReportThreshold: l.svcCtx.Config.Node.TrafficReportThreshold,
-		IPStrategy:             l.svcCtx.Config.Node.IPStrategy,
-		DNS:                    dns,
-		Block:                  l.svcCtx.Config.Node.Block,
-		Outbound:               outbound,
+		IPStrategy:             nodeValues.IPStrategy,
+		DNS:                    nodeValues.DNS,
+		Block:                  nodeValues.Block,
+		Outbound:               nodeValues.Outbound,
 		Protocols:              protocols,
 		Total:                  int64(len(protocols)),
 	}, nil

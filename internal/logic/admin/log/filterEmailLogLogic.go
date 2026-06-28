@@ -27,7 +27,7 @@ func NewFilterEmailLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fi
 }
 
 func (l *FilterEmailLogLogic) FilterEmailLog(req *types.FilterLogParams) (resp *types.FilterEmailLogResponse, err error) {
-	data, total, err := l.svcCtx.LogModel.FilterSystemLog(l.ctx, &log.FilterParams{
+	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:   req.Page,
 		Size:   req.Size,
 		Type:   log.TypeEmailMessage.Uint8(),

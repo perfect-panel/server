@@ -28,7 +28,7 @@ func NewGetInviteConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 func (l *GetInviteConfigLogic) GetInviteConfig() (*types.InviteConfig, error) {
 	resp := &types.InviteConfig{}
 	// get invite config from db
-	configs, err := l.svcCtx.SystemModel.GetInviteConfig(l.ctx)
+	configs, err := l.svcCtx.Store.System().GetInviteConfig(l.ctx)
 	if err != nil {
 		l.Errorw("[GetInviteConfigLogic] get invite config error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get invite config error: %v", err.Error())

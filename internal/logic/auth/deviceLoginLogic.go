@@ -8,6 +8,7 @@ import (
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/jwt"
@@ -52,7 +53,7 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
-			if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+			if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeLogin.Uint8(),
 				Date:     time.Now().Format("2006-01-02"),
 				ObjectID: userInfo.Id,
@@ -68,7 +69,7 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 	}()
 
 	// Check if device exists by identifier
-	deviceInfo, err := l.svcCtx.UserModel.FindOneDeviceByIdentifier(l.ctx, req.Identifier)
+	deviceInfo, err := l.svcCtx.Store.User().FindOneDeviceByIdentifier(l.ctx, req.Identifier)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Device not found, create new user and device
@@ -85,7 +86,7 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 		}
 	} else {
 		// Device found, get user info
-		userInfo, err = l.svcCtx.UserModel.FindOne(l.ctx, deviceInfo.UserId)
+		userInfo, err = l.svcCtx.Store.User().FindOne(l.ctx, deviceInfo.UserId)
 		if err != nil {
 			l.Errorw("query user failed",
 				logger.Field("user_id", deviceInfo.UserId),
@@ -138,12 +139,13 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 	)
 
 	var userInfo *user.User
-	err := l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
+	var trialSubscribe *user.Subscribe
+	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Create new user
 		userInfo = &user.User{
 			OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase,
 		}
-		if err := db.Create(userInfo).Error; err != nil {
+		if err := store.User().Insert(l.ctx, userInfo); err != nil {
 			l.Errorw("failed to create user",
 				logger.Field("error", err.Error()),
 			)
@@ -152,7 +154,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 
 		// Update refer code
 		userInfo.ReferCode = uuidx.UserInviteCode(userInfo.Id)
-		if err := db.Model(&user.User{}).Where("id = ?", userInfo.Id).Update("refer_code", userInfo.ReferCode).Error; err != nil {
+		if err := store.User().Update(l.ctx, userInfo); err != nil {
 			l.Errorw("failed to update refer code",
 				logger.Field("user_id", userInfo.Id),
 				logger.Field("error", err.Error()),
@@ -167,7 +169,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 			AuthIdentifier: req.Identifier,
 			Verified:       true,
 		}
-		if err := db.Create(authMethod).Error; err != nil {
+		if err := store.User().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
 			l.Errorw("failed to create device auth method",
 				logger.Field("user_id", userInfo.Id),
 				logger.Field("identifier", req.Identifier),
@@ -185,7 +187,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 			Enabled:    true,
 			Online:     false,
 		}
-		if err := db.Create(deviceInfo).Error; err != nil {
+		if err := store.User().InsertDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to insert device",
 				logger.Field("user_id", userInfo.Id),
 				logger.Field("identifier", req.Identifier),
@@ -196,8 +198,10 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 
 		// Activate trial if enabled
 		if l.svcCtx.Config.Register.EnableTrial {
-			if err := l.activeTrial(userInfo.Id, db); err != nil {
-				return err
+			var trialErr error
+			trialSubscribe, trialErr = l.activeTrial(store, userInfo.Id)
+			if trialErr != nil {
+				return trialErr
 			}
 		}
 
@@ -211,6 +215,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 		)
 		return nil, err
 	}
+	clearTrialSubscribeCache(l.ctx, l.svcCtx, trialSubscribe)
 
 	l.Infow("device registration completed successfully",
 		logger.Field("user_id", userInfo.Id),
@@ -228,7 +233,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 	}
 	content, _ := registerLog.Marshal()
 
-	if err := l.svcCtx.LogModel.Insert(l.ctx, &log.SystemLog{
+	if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 		Type:     log.TypeRegister.Uint8(),
 		Date:     time.Now().Format("2006-01-02"),
 		ObjectID: userInfo.Id,
@@ -244,20 +249,20 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 	return userInfo, nil
 }
 
-func (l *DeviceLoginLogic) activeTrial(userId int64, db *gorm.DB) error {
-	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
+func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) (*user.Subscribe, error) {
+	sub, err := store.Subscribe().FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
 	if err != nil {
 		l.Errorw("failed to find trial subscription template",
 			logger.Field("user_id", userId),
 			logger.Field("trial_subscribe_id", l.svcCtx.Config.Register.TrialSubscribe),
 			logger.Field("error", err.Error()),
 		)
-		return err
+		return nil, err
 	}
 
 	startTime := time.Now()
 	expireTime := tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, startTime)
-	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v", userId))
+	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", userId, uuidx.NewUUID().String()))
 	subscribeUUID := uuidx.NewUUID().String()
 
 	userSub := &user.Subscribe{
@@ -274,12 +279,12 @@ func (l *DeviceLoginLogic) activeTrial(userId int64, db *gorm.DB) error {
 		Status:      1,
 	}
 
-	if err := db.Create(userSub).Error; err != nil {
+	if err := store.User().InsertSubscribe(l.ctx, userSub); err != nil {
 		l.Errorw("failed to insert trial subscription",
 			logger.Field("user_id", userId),
 			logger.Field("error", err.Error()),
 		)
-		return err
+		return nil, err
 	}
 
 	l.Infow("trial subscription activated successfully",
@@ -289,5 +294,5 @@ func (l *DeviceLoginLogic) activeTrial(userId int64, db *gorm.DB) error {
 		logger.Field("traffic", sub.Traffic),
 	)
 
-	return nil
+	return userSub, nil
 }

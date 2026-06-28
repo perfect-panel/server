@@ -41,7 +41,7 @@ type (
 func newPaymentModel(db *gorm.DB, c *redis.Client) *defaultPaymentModel {
 	return &defaultPaymentModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`Payment`",
+		table:      "Payment",
 	}
 }
 
@@ -78,10 +78,9 @@ func (m *defaultPaymentModel) Insert(ctx context.Context, data *Payment, tx ...*
 }
 
 func (m *defaultPaymentModel) FindOne(ctx context.Context, id int64) (*Payment, error) {
-	PaymentIdKey := fmt.Sprintf("%s%v", cachePaymentIdPrefix, id)
 	var resp Payment
-	err := m.QueryCtx(ctx, &resp, PaymentIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Payment{}).Where("`id` = ?", id).First(&resp).Error
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Payment{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:

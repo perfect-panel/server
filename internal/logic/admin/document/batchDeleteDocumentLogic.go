@@ -27,7 +27,7 @@ func NewBatchDeleteDocumentLogic(ctx context.Context, svcCtx *svc.ServiceContext
 
 func (l *BatchDeleteDocumentLogic) BatchDeleteDocument(req *types.BatchDeleteDocumentRequest) error {
 	for _, id := range req.Ids {
-		if err := l.svcCtx.DocumentModel.Delete(l.ctx, id); err != nil {
+		if err := l.svcCtx.Store.Document().Delete(l.ctx, id); err != nil {
 			l.Errorw("[BatchDeleteDocument] Database Error", logger.Field("error", err.Error()))
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "failed to delete document: %v", err.Error())
 		}

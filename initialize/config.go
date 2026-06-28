@@ -9,20 +9,17 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/perfect-panel/server/internal/report"
-	"github.com/perfect-panel/server/pkg/logger"
-	"gorm.io/driver/mysql"
-
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/perfect-panel/server/initialize/migrate"
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/pkg/conf"
+	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-	"gorm.io/gorm"
 )
 
 //go:embed templates/*.html
@@ -34,8 +31,8 @@ var configPath string
 func Config(path string) (chan bool, *http.Server) {
 	// Set the configuration file path
 	configPath = path
-	// Create a new Gin instance
-	r := gin.Default()
+	// Create a new Hertz-compatible instance.
+	r := hertzx.Default()
 	// get server port
 	port := 8080
 	host := "127.0.0.1"
@@ -68,10 +65,11 @@ func Config(path string) (chan bool, *http.Server) {
 
 	r.GET("/init", handleInit)
 	r.POST("/init/config", handleInitConfig)
+	r.POST("/init/database/test", HandleDatabaseTest)
 	r.POST("/init/mysql/test", HandleMySQLTest)
 	r.POST("/init/redis/test", HandleRedisTest)
 	// Handle 404
-	r.NoRoute(func(c *gin.Context) {
+	r.NoRoute(func(c *hertzx.Context) {
 		c.Redirect(http.StatusFound, "/init")
 	})
 
@@ -85,10 +83,10 @@ func Config(path string) (chan bool, *http.Server) {
 	return initStatus, server
 }
 
-func handleInit(c *gin.Context) {
+func handleInit(c *hertzx.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
 }
-func handleInitConfig(c *gin.Context) {
+func handleInitConfig(c *hertzx.Context) {
 	// Load configuration file
 
 	var cfg config.File
@@ -97,18 +95,19 @@ func handleInitConfig(c *gin.Context) {
 		AdminEmail    string `json:"adminEmail"`
 		AdminPassword string `json:"adminPassword"`
 
-		MysqlHost     string `json:"mysqlHost"`
-		MysqlPort     string `json:"mysqlPort"`
-		MysqlDatabase string `json:"mysqlDatabase"`
-		MysqlUser     string `json:"mysqlUser"`
-		MysqlPassword string `json:"mysqlPassword"`
+		DatabaseDriver string `json:"databaseDriver"`
+		MysqlHost      string `json:"mysqlHost"`
+		MysqlPort      string `json:"mysqlPort"`
+		MysqlDatabase  string `json:"mysqlDatabase"`
+		MysqlUser      string `json:"mysqlUser"`
+		MysqlPassword  string `json:"mysqlPassword"`
 
 		RedisHost     string `json:"redisHost"`
 		RedisPort     string `json:"redisPort"`
 		RedisPassword string `json:"redisPassword"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, hertzx.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
@@ -119,11 +118,18 @@ func handleInitConfig(c *gin.Context) {
 	cfg.Debug = false
 	// jwt secret
 	cfg.JwtAuth.AccessSecret = uuid.New().String()
-	// mysql
-	cfg.MySQL.Addr = fmt.Sprintf("%s:%s", request.MysqlHost, request.MysqlPort)
-	cfg.MySQL.Dbname = request.MysqlDatabase
-	cfg.MySQL.Username = request.MysqlUser
-	cfg.MySQL.Password = request.MysqlPassword
+	// database
+	dbConfig, err := buildDatabaseConfig(request.DatabaseDriver, request.MysqlHost, request.MysqlPort, request.MysqlDatabase, request.MysqlUser, request.MysqlPassword)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, hertzx.H{
+			"code": 400,
+			"msg":  err.Error(),
+			"data": nil,
+		})
+		c.Abort()
+		return
+	}
+	cfg.SetDatabaseConfig(dbConfig)
 	// redis
 	cfg.Redis.Host = fmt.Sprintf("%s:%s", request.RedisHost, request.RedisPort)
 	cfg.Redis.Pass = request.RedisPassword
@@ -131,7 +137,7 @@ func handleInitConfig(c *gin.Context) {
 	// save config
 	fileData, err := yaml.Marshal(cfg)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, hertzx.H{
 			"code": 500,
 			"msg":  "Configuration initialization failed",
 			"data": nil,
@@ -140,33 +146,26 @@ func handleInitConfig(c *gin.Context) {
 		return
 	}
 
-	// create mysql connection
-	db, err := orm.ConnectMysql(orm.Mysql{
-		Config: orm.Config{
-			Addr:          fmt.Sprintf("%s:%s", request.MysqlHost, request.MysqlPort),
-			Username:      request.MysqlUser,
-			Password:      request.MysqlPassword,
-			Dbname:        request.MysqlDatabase,
-			Config:        "charset%3Dutf8mb4%26parseTime%3Dtrue%26loc%3DLocal",
-			MaxIdleConns:  10,
-			MaxOpenConns:  10,
-			SlowThreshold: 1000,
-		},
-	})
+	// create database connection
+	dbClient := orm.Mysql{Config: dbConfig}
+	db, err := orm.ConnectDatabase(dbClient)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, hertzx.H{
 			"code": 500,
-			"msg":  "MySQL connection failed",
+			"msg":  "Database connection failed",
 			"data": nil,
 		})
 		c.Abort()
 		return
 	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", request.MysqlUser, request.MysqlPassword, request.MysqlHost, request.MysqlPort, request.MysqlDatabase)
+	sqlDB, err := db.DB()
+	if err == nil {
+		defer sqlDB.Close()
+	}
 	// migrate database
-	if err = migrate.Migrate(dsn).Up(); err != nil {
-		logger.Errorf("[Init Mysql] Migrate failed: %v", err.Error())
-		c.JSON(http.StatusOK, gin.H{
+	if err = migrate.Migrate(dbClient.Driver(), dbClient.MigrationDsn()).Up(); err != nil {
+		logger.Errorf("[Init Database] Migrate failed: %v", err.Error())
+		c.JSON(http.StatusOK, hertzx.H{
 			"code": 500,
 			"msg":  "Database migration failed",
 			"data": nil,
@@ -177,8 +176,8 @@ func handleInitConfig(c *gin.Context) {
 
 	// create admin user
 	if err = migrate.CreateAdminUser(request.AdminEmail, request.AdminPassword, db); err != nil {
-		logger.Errorf("[Init Mysql] Create admin user failed: %v", err.Error())
-		c.JSON(http.StatusOK, gin.H{
+		logger.Errorf("[Init Database] Create admin user failed: %v", err.Error())
+		c.JSON(http.StatusOK, hertzx.H{
 			"code": 500,
 			"msg":  "Admin user creation failed",
 			"data": nil,
@@ -189,7 +188,7 @@ func handleInitConfig(c *gin.Context) {
 
 	// write to file
 	if err = os.WriteFile(configPath, fileData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, hertzx.H{
 			"code": 500,
 			"msg":  "Configuration initialization failed",
 			"data": nil,
@@ -198,7 +197,7 @@ func handleInitConfig(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, hertzx.H{
 		"code":   200,
 		"msg":    "Configuration initialized",
 		"status": true,
@@ -206,8 +205,13 @@ func handleInitConfig(c *gin.Context) {
 	initStatus <- true
 }
 
-func HandleMySQLTest(c *gin.Context) {
+func HandleMySQLTest(c *hertzx.Context) {
+	HandleDatabaseTest(c)
+}
+
+func HandleDatabaseTest(c *hertzx.Context) {
 	var request struct {
+		Driver   string `json:"driver"`
 		Host     string `json:"host"`
 		Port     string `json:"port"`
 		Database string `json:"database"`
@@ -215,7 +219,7 @@ func HandleMySQLTest(c *gin.Context) {
 		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, hertzx.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
@@ -223,23 +227,34 @@ func HandleMySQLTest(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", request.User, request.Password, request.Host, request.Port, request.Database)
 	var status = true
 	var message string
 	var tx *sql.DB
 	var tables []string
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	dbConfig, err := buildDatabaseConfig(request.Driver, request.Host, request.Port, request.Database, request.User, request.Password)
 	if err != nil {
-		logger.Errorf("connect mysql failed, err: %v\n", err.Error())
+		c.JSON(http.StatusOK, hertzx.H{
+			"code":   200,
+			"msg":    err.Error(),
+			"status": false,
+		})
+		return
+	}
+	db, err := orm.ConnectDatabase(orm.Mysql{Config: dbConfig})
+	if err != nil {
+		logger.Errorf("connect database failed, err: %v\n", err.Error())
 		status = false
-		message = "MySQL connection failed"
+		message = "Database connection failed"
 		goto result
 	}
 	tx, _ = db.DB()
+	if tx != nil {
+		defer tx.Close()
+	}
 	if err := tx.Ping(); err != nil {
-		logger.Errorf("ping mysql failed, err: %v\n", err.Error())
+		logger.Errorf("ping database failed, err: %v\n", err.Error())
 		status = false
-		message = "MySQL connection failed"
+		message = "Database connection failed"
 	}
 
 	tables, err = db.Migrator().GetTables()
@@ -256,21 +271,46 @@ func HandleMySQLTest(c *gin.Context) {
 	}
 
 result:
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, hertzx.H{
 		"code":   200,
 		"msg":    message,
 		"status": status,
 	})
 }
 
-func HandleRedisTest(c *gin.Context) {
+func buildDatabaseConfig(driver, host, port, database, user, password string) (orm.Config, error) {
+	normalizedDriver := orm.NormalizeDriver(driver)
+	switch normalizedDriver {
+	case orm.DriverMySQL, orm.DriverPostgres:
+	default:
+		return orm.Config{}, fmt.Errorf("unsupported database driver: %s", driver)
+	}
+	cfg := orm.Config{
+		Driver:        normalizedDriver,
+		Addr:          fmt.Sprintf("%s:%s", host, port),
+		Username:      user,
+		Password:      password,
+		Dbname:        database,
+		MaxIdleConns:  10,
+		MaxOpenConns:  10,
+		SlowThreshold: orm.DefaultSlowThresholdMs,
+	}
+	if normalizedDriver == orm.DriverPostgres {
+		cfg.Config = orm.DefaultPostgresConfig
+	} else {
+		cfg.Config = orm.DefaultMySQLConfig
+	}
+	return cfg, nil
+}
+
+func HandleRedisTest(c *hertzx.Context) {
 	var request struct {
 		Host     string `json:"host"`
 		Port     string `json:"port"`
 		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, hertzx.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
@@ -279,14 +319,14 @@ func HandleRedisTest(c *gin.Context) {
 		return
 	}
 	if err := tool.RedisPing(fmt.Sprintf("%s:%s", request.Host, request.Port), request.Password, 0); err != nil {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, hertzx.H{
 			"code":   200,
 			"msg":    nil,
 			"status": false,
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, hertzx.H{
 		"code":   200,
 		"msg":    nil,
 		"status": true,

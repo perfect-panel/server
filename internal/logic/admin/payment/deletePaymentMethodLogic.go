@@ -26,7 +26,7 @@ func NewDeletePaymentMethodLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *DeletePaymentMethodLogic) DeletePaymentMethod(req *types.DeletePaymentMethodRequest) error {
-	if err := l.svcCtx.PaymentModel.Delete(l.ctx, req.Id); err != nil {
+	if err := l.svcCtx.Store.Payment().Delete(l.ctx, req.Id); err != nil {
 		l.Errorw("delete payment method error", logger.Field("id", req.Id), logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete payment method error: %s", err.Error())
 	}

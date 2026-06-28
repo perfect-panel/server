@@ -12,10 +12,12 @@ type Config struct {
 	Host          string          `yaml:"Host" default:"0.0.0.0"`
 	Port          int             `yaml:"Port" default:"8080"`
 	Debug         bool            `yaml:"Debug" default:"false"`
+	Transport     TransportConfig `yaml:"Transport"`
 	TLS           TLS             `yaml:"TLS"`
 	JwtAuth       JwtAuth         `yaml:"JwtAuth"`
 	Logger        logger.LogConf  `yaml:"Logger"`
-	MySQL         orm.Config      `yaml:"MySQL"`
+	Database      orm.Config      `yaml:"Database"`
+	MySQL         *orm.Config     `yaml:"MySQL,omitempty"` // Deprecated: use Database.
 	Redis         RedisConfig     `yaml:"Redis"`
 	Site          SiteConfig      `yaml:"Site"`
 	Node          NodeConfig      `yaml:"Node"`
@@ -30,6 +32,7 @@ type Config struct {
 	Telegram      Telegram        `yaml:"Telegram"`
 	Log           Log             `yaml:"Log"`
 	Currency      Currency        `yaml:"Currency"`
+	Plugin        PluginConfig    `yaml:"Plugin"`
 	Administrator struct {
 		Email    string `yaml:"Email" default:"admin@ppanel.dev"`
 		Password string `yaml:"Password" default:"password"`
@@ -40,6 +43,10 @@ type RedisConfig struct {
 	Host string `yaml:"Host" default:"localhost:6379"`
 	Pass string `yaml:"Pass" default:""`
 	DB   int    `yaml:"DB" default:"0"`
+}
+
+type TransportConfig struct {
+	Driver string `yaml:"Driver" default:"hertz"`
 }
 
 type JwtAuth struct {
@@ -62,6 +69,7 @@ type SubscribeConfig struct {
 	PanDomain       bool   `yaml:"PanDomain" default:"false"`
 	UserAgentLimit  bool   `yaml:"UserAgentLimit" default:"false"`
 	UserAgentList   string `yaml:"UserAgentList" default:""`
+	ShowTutorial    bool   `yaml:"ShowTutorial" default:"true"`
 }
 
 type RegisterConfig struct {
@@ -172,12 +180,35 @@ func (n *NodeDNS) Unmarshal(data []byte) error {
 }
 
 type NodeOutbound struct {
-	Name     string   `json:"name"`
-	Protocol string   `json:"protocol"`
-	Address  string   `json:"address"`
-	Port     int64    `json:"port"`
-	Password string   `json:"password"`
-	Rules    []string `json:"rules"`
+	Name                 string   `json:"name"`
+	Protocol             string   `json:"protocol"`
+	Address              string   `json:"address"`
+	Port                 int64    `json:"port"`
+	User                 string   `json:"user,omitempty"`
+	Password             string   `json:"password"`
+	UUID                 string   `json:"uuid,omitempty"`
+	Cipher               string   `json:"cipher,omitempty"`
+	Security             string   `json:"security,omitempty"`
+	SNI                  string   `json:"sni,omitempty"`
+	AllowInsecure        bool     `json:"allow_insecure,omitempty"`
+	Fingerprint          string   `json:"fingerprint,omitempty"`
+	Transport            string   `json:"transport,omitempty"`
+	Host                 string   `json:"host,omitempty"`
+	Path                 string   `json:"path,omitempty"`
+	ServiceName          string   `json:"service_name,omitempty"`
+	Flow                 string   `json:"flow,omitempty"`
+	UoT                  bool     `json:"uot,omitempty"`
+	UoTVersion           int      `json:"uot_version,omitempty"`
+	CongestionController string   `json:"congestion_controller,omitempty"`
+	UDPStream            bool     `json:"udp_stream,omitempty"`
+	ReduceRtt            bool     `json:"reduce_rtt,omitempty"`
+	Heartbeat            int      `json:"heartbeat,omitempty"`
+	RealityPublicKey     string   `json:"reality_public_key,omitempty"`
+	RealityShortId       string   `json:"reality_short_id,omitempty"`
+	SpiderX              string   `json:"spider_x,omitempty"`
+	Settings             string   `json:"settings,omitempty"`
+	StreamSettings       string   `json:"stream_settings,omitempty"`
+	Rules                []string `json:"rules"`
 }
 
 func (n *NodeOutbound) Marshal() ([]byte, error) {
@@ -190,14 +221,50 @@ func (n *NodeOutbound) Marshal() ([]byte, error) {
 }
 
 type File struct {
-	Host    string         `yaml:"Host" default:"0.0.0.0"`
-	Port    int            `yaml:"Port" default:"8080"`
-	TLS     TLS            `yaml:"TLS"`
-	Debug   bool           `yaml:"Debug" default:"true"`
-	JwtAuth JwtAuth        `yaml:"JwtAuth"`
-	Logger  logger.LogConf `yaml:"Logger"`
-	MySQL   orm.Config     `yaml:"MySQL"`
-	Redis   RedisConfig    `yaml:"Redis"`
+	Host      string          `yaml:"Host" default:"0.0.0.0"`
+	Port      int             `yaml:"Port" default:"8080"`
+	Transport TransportConfig `yaml:"Transport"`
+	TLS       TLS             `yaml:"TLS"`
+	Debug     bool            `yaml:"Debug" default:"true"`
+	JwtAuth   JwtAuth         `yaml:"JwtAuth"`
+	Logger    logger.LogConf  `yaml:"Logger"`
+	Database  orm.Config      `yaml:"Database"`
+	MySQL     *orm.Config     `yaml:"MySQL,omitempty"` // Deprecated: use Database.
+	Redis     RedisConfig     `yaml:"Redis"`
+}
+
+func (c Config) DatabaseConfig() orm.Config {
+	if hasDatabaseConfig(c.Database) {
+		return c.Database
+	}
+	if c.MySQL != nil {
+		return *c.MySQL
+	}
+	return c.Database
+}
+
+func (c *Config) SetDatabaseConfig(cfg orm.Config) {
+	c.Database = cfg
+	c.MySQL = nil
+}
+
+func (f File) DatabaseConfig() orm.Config {
+	if hasDatabaseConfig(f.Database) {
+		return f.Database
+	}
+	if f.MySQL != nil {
+		return *f.MySQL
+	}
+	return f.Database
+}
+
+func (f *File) SetDatabaseConfig(cfg orm.Config) {
+	f.Database = cfg
+	f.MySQL = nil
+}
+
+func hasDatabaseConfig(cfg orm.Config) bool {
+	return cfg.Addr != "" || cfg.Dbname != "" || cfg.Username != "" || cfg.Password != ""
 }
 
 type InviteConfig struct {
@@ -247,4 +314,13 @@ type Currency struct {
 	Unit      string `yaml:"Unit" default:"CNY"`
 	Symbol    string `yaml:"Symbol" default:"USD"`
 	AccessKey string `yaml:"AccessKey" default:""`
+}
+
+type PluginConfig struct {
+	Enabled     bool     `yaml:"Enabled" default:"true"`
+	Directory   string   `yaml:"Directory" default:"plugins"`
+	MaxMemoryMB int64    `yaml:"MaxMemoryMB" default:"64"`
+	TimeoutSec  int64    `yaml:"TimeoutSec" default:"30"`
+	AllowList   []string `yaml:"AllowList"` // 允许加载的插件名列表（空=全部允许）
+	BlockList   []string `yaml:"BlockList"` // 禁止加载的插件名列表
 }

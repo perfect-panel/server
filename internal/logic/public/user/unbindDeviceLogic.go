@@ -6,13 +6,13 @@ import (
 
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type UnbindDeviceLogic struct {
@@ -32,7 +32,7 @@ func NewUnbindDeviceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Unbi
 
 func (l *UnbindDeviceLogic) UnbindDevice(req *types.UnbindDeviceRequest) error {
 	userInfo := l.ctx.Value(constant.CtxKeyUser).(*user.User)
-	device, err := l.svcCtx.UserModel.FindOneDevice(l.ctx, req.Id)
+	device, err := l.svcCtx.Store.User().FindOneDevice(l.ctx, req.Id)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DeviceNotExist), "find device")
 	}
@@ -41,28 +41,13 @@ func (l *UnbindDeviceLogic) UnbindDevice(req *types.UnbindDeviceRequest) error {
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "device not belong to user")
 	}
 
-	return l.svcCtx.DB.Transaction(func(tx *gorm.DB) error {
-		var deleteDevice user.Device
-		err = tx.Model(&deleteDevice).Where("id = ?", req.Id).First(&deleteDevice).Error
-		if err != nil {
-			return errors.Wrapf(xerr.NewErrCode(xerr.QueueEnqueueError), "find device err: %v", err)
-		}
-		err = tx.Delete(deleteDevice).Error
-		if err != nil {
+	return l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+		if err = store.User().DeleteDevice(l.ctx, req.Id); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete device err: %v", err)
 		}
-		var userAuth user.AuthMethods
-		err = tx.Model(&userAuth).Where("auth_identifier = ? and auth_type = ?", deleteDevice.Identifier, "device").First(&userAuth).Error
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil
-			}
-			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find device online record err: %v", err)
-		}
 
-		err = tx.Delete(&userAuth).Error
-		if err != nil {
-			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete device online record err: %v", err)
+		if err = store.User().DeleteUserAuthMethodByIdentifier(l.ctx, "device", device.Identifier); err != nil {
+			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find device online record err: %v", err)
 		}
 		sessionId := l.ctx.Value(constant.CtxKeySessionID)
 		sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)

@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/hibiken/asynq"
-	taskModel "github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/email"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -43,9 +42,8 @@ func (l *BatchEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) err
 		)
 		return asynq.SkipRetry
 	}
-	tx := l.svcCtx.DB.WithContext(ctx)
-	var taskInfo taskModel.Task
-	if err = tx.Model(&taskModel.Task{}).Where("id = ?", taskID).First(&taskInfo).Error; err != nil {
+	taskInfo, err := l.svcCtx.Store.Task().FindOne(ctx, taskID)
+	if err != nil {
 		logger.WithContext(ctx).Error("[BatchEmailLogic] ProcessTask failed",
 			logger.Field("error", err.Error()),
 			logger.Field("taskID", taskID),
@@ -66,7 +64,7 @@ func (l *BatchEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) err
 		logger.WithContext(ctx).Error("[BatchEmailLogic] NewSender failed", logger.Field("error", err.Error()))
 		return nil
 	}
-	manager := email.NewWorkerManager(l.svcCtx.DB, sender)
+	manager := email.NewWorkerManager(l.svcCtx.Store.Task(), sender)
 	if manager == nil {
 		logger.WithContext(ctx).Error("[BatchEmailLogic] ProcessTask failed: worker manager is nil")
 		return asynq.SkipRetry

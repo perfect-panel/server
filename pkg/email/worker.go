@@ -8,7 +8,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/task"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
-	"gorm.io/gorm"
 )
 
 type ErrorInfo struct {
@@ -19,16 +18,16 @@ type ErrorInfo struct {
 
 type Worker struct {
 	id     int64           // 任务ID
-	db     *gorm.DB        // 数据库连接
+	tasks  task.Model      // task repository
 	ctx    context.Context // 上下文
 	sender Sender          // 邮件发送器接口
 	status uint8           // 任务状态，0 表示未运行，1 表示运行中 2 表示已完成
 }
 
-func NewWorker(ctx context.Context, id int64, db *gorm.DB, sender Sender) *Worker {
+func NewWorker(ctx context.Context, id int64, tasks task.Model, sender Sender) *Worker {
 	return &Worker{
 		id:     id,
-		db:     db,
+		tasks:  tasks,
 		ctx:    ctx,
 		sender: sender,
 	}
@@ -49,9 +48,8 @@ func (w *Worker) Start() {
 	// 检查并发限制
 	limit.Lock()
 	defer limit.Unlock()
-	tx := w.db.WithContext(w.ctx)
-	var taskInfo task.Task
-	if err := tx.Model(&task.Task{}).Where("id = ?", w.id).First(&taskInfo).Error; err != nil {
+	taskInfo, err := w.tasks.FindOne(w.ctx, w.id)
+	if err != nil {
 		logger.Error("Batch Send Email",
 			logger.Field("message", "Failed to find task"),
 			logger.Field("error", err.Error()),
@@ -158,7 +156,7 @@ func (w *Worker) Start() {
 		}
 		count++
 		taskInfo.Current = count
-		if err := tx.Model(&task.Task{}).Where("`id` = ?", taskInfo.Id).Save(&taskInfo).Error; err != nil {
+		if err := w.tasks.Update(w.ctx, taskInfo); err != nil {
 			logger.Error("Batch Send Email",
 				logger.Field("message", "Failed to update task progress"),
 				logger.Field("error", err.Error()),
@@ -176,7 +174,7 @@ func (w *Worker) Start() {
 	taskInfo.Status = 2 // 2 表示任务已完成
 	w.status = 2        // 设置状态为已完成
 
-	if err := tx.Model(&task.Task{}).Where("`id` = ?", taskInfo.Id).Save(&taskInfo).Error; err != nil {
+	if err := w.tasks.Update(w.ctx, taskInfo); err != nil {
 		logger.Error("Batch Send Email",
 			logger.Field("message", "Failed to finalize task"),
 			logger.Field("error", err.Error()),

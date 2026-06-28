@@ -30,7 +30,8 @@ func NewUpdateServerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Upda
 }
 
 func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
-	data, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.Id)
+	nodeStore := l.svcCtx.Store.Node()
+	data, err := nodeStore.FindOneServer(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("[UpdateServer] FindOneServer Error: %v", err.Error())
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server error: %v", err.Error())
@@ -104,13 +105,13 @@ func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
 		return errors.Wrapf(xerr.NewErrCodeMsg(xerr.InvalidParams, "protocols marshal error"), "protocols marshal error: %v", err)
 	}
 
-	err = l.svcCtx.NodeModel.UpdateServer(l.ctx, data)
+	err = nodeStore.UpdateServer(l.ctx, data)
 	if err != nil {
 		l.Errorf("[UpdateServer] UpdateServer Error: %v", err.Error())
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update server error: %v", err.Error())
 	}
 
-	return l.svcCtx.NodeModel.ClearNodeCache(l.ctx, &node.FilterNodeParams{
+	return nodeStore.ClearNodeCache(l.ctx, &node.FilterNodeParams{
 		Page:     1,
 		Size:     1000,
 		ServerId: []int64{req.Id},

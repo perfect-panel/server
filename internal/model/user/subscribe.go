@@ -21,7 +21,7 @@ func (m *defaultUserModel) QueryActiveSubscriptions(ctx context.Context, subscri
 	var result []SubscriptionCount
 	err := m.QueryNoCacheCtx(ctx, &result, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Subscribe{}).
-			Where("subscribe_id IN ? AND `status` IN ?", subscribeId, []int64{1, 0}).
+			Where("subscribe_id IN ? AND status IN ?", subscribeId, []int64{1, 0}).
 			Select("subscribe_id, COUNT(id) as total").
 			Group("subscribe_id").
 			Scan(&result).
@@ -60,15 +60,62 @@ func (m *defaultUserModel) FindOneSubscribe(ctx context.Context, id int64) (*Sub
 func (m *defaultUserModel) FindUsersSubscribeBySubscribeId(ctx context.Context, subscribeId int64) ([]*Subscribe, error) {
 	var data []*Subscribe
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		err := conn.Model(&Subscribe{}).Where("subscribe_id = ? AND `status` IN ?", subscribeId, []int64{1, 0}).Find(v).Error
-
-		if err != nil {
-			return err
-		}
-		// update user subscribe status
-		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND `status` = ?", subscribeId, 0).Update("status", 1).Error
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status IN ?", subscribeId, []int64{1, 0}).Find(v).Error
 	})
 	return data, err
+}
+
+func (m *defaultUserModel) FindUserSubscribesByStatus(ctx context.Context, status ...int64) ([]*Subscribe, error) {
+	var data []*Subscribe
+	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
+		conn = conn.Model(&Subscribe{})
+		if len(status) > 0 {
+			conn = conn.Where("status IN ?", status)
+		}
+		return conn.Find(v).Error
+	})
+	return data, err
+}
+
+func (m *defaultUserModel) ActivatePendingSubscribesBySubscribeId(ctx context.Context, subscribeId int64) error {
+	var pending []*Subscribe
+	err := m.QueryNoCacheCtx(ctx, &pending, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status = ?", subscribeId, 0).Find(v).Error
+	})
+	if err != nil || len(pending) == 0 {
+		return err
+	}
+
+	cacheKeys := make([]string, 0)
+	for _, sub := range pending {
+		cacheKeys = append(cacheKeys, sub.GetCacheKeys()...)
+	}
+
+	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		return conn.Model(&Subscribe{}).Where("subscribe_id = ? AND status = ?", subscribeId, 0).Update("status", 1).Error
+	}, cacheKeys...)
+}
+
+func (m *defaultUserModel) CountUserSubscribesBySubscribeIdAndStatus(ctx context.Context, subscribeId int64, status ...int64) (int64, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		conn = conn.Model(&Subscribe{}).Where("subscribe_id = ?", subscribeId)
+		if len(status) > 0 {
+			conn = conn.Where("status IN ?", status)
+		}
+		return conn.Count(&total).Error
+	})
+	return total, err
+}
+
+func (m *defaultUserModel) CountUserSubscribesByUserAndSubscribe(ctx context.Context, userId, subscribeId int64) (int64, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Subscribe{}).
+			Where("user_id = ? AND subscribe_id = ?", userId, subscribeId).
+			Count(&total).Error
+	})
+	return total, err
 }
 
 // QueryUserSubscribe returns a list of records that meet the conditions.
@@ -81,12 +128,12 @@ func (m *defaultUserModel) QueryUserSubscribe(ctx context.Context, userId int64,
 		// 获取当前时间向前推 7 天
 		sevenDaysAgo := time.Now().Add(-7 * 24 * time.Hour)
 		// 基础条件查询
-		conn = conn.Model(&Subscribe{}).Where("`user_id` = ?", userId)
+		conn = conn.Model(&Subscribe{}).Where("user_id = ?", userId)
 		if len(status) > 0 {
-			conn = conn.Where("`status` IN ?", status)
+			conn = conn.Where("status IN ?", status)
 		}
 		// 订阅过期时间大于当前时间或者订阅结束时间大于当前时间
-		return conn.Where("`expire_time` > ? OR `finished_at` >= ? OR `expire_time` = ?", now, sevenDaysAgo, time.UnixMilli(0)).
+		return conn.Where("expire_time > ? OR finished_at >= ? OR expire_time = ?", now, sevenDaysAgo, time.UnixMilli(0)).
 			Preload("Subscribe").
 			Find(&list).Error
 	})
@@ -97,8 +144,9 @@ func (m *defaultUserModel) QueryUserSubscribe(ctx context.Context, userId int64,
 func (m *defaultUserModel) FindOneUserSubscribe(ctx context.Context, id int64) (subscribeDetails *SubscribeDetails, err error) {
 	//TODO cache
 	//key := fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, userId)
+	subscribeDetails = new(SubscribeDetails)
 	err = m.QueryNoCacheCtx(ctx, subscribeDetails, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Subscribe{}).Preload("Subscribe").Where("id = ?", id).First(&subscribeDetails).Error
+		return conn.Model(&Subscribe{}).Preload("Subscribe").Where("id = ?", id).First(v).Error
 	})
 	return
 }

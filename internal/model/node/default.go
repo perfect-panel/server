@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"errors"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -22,6 +23,9 @@ type (
 		FindOneServer(ctx context.Context, id int64) (*Server, error)
 		UpdateServer(ctx context.Context, data *Server, tx ...*gorm.DB) error
 		DeleteServer(ctx context.Context, id int64, tx ...*gorm.DB) error
+		FindServerConfigOverride(ctx context.Context, serverId int64) (*ServerConfigOverride, error)
+		SaveServerConfigOverride(ctx context.Context, data *ServerConfigOverride, tx ...*gorm.DB) error
+		DeleteServerConfigOverride(ctx context.Context, serverId int64, tx ...*gorm.DB) error
 		Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 		QueryServerList(ctx context.Context, ids []int64) (servers []*Server, err error)
 	}
@@ -80,7 +84,7 @@ func (m *defaultServerModel) UpdateServer(ctx context.Context, data *Server, tx 
 	if len(tx) > 0 {
 		db = tx[0]
 	}
-	return db.WithContext(ctx).Where("`id` = ?", data.Id).Save(data).Error
+	return db.WithContext(ctx).Where("id = ?", data.Id).Save(data).Error
 
 }
 
@@ -89,7 +93,49 @@ func (m *defaultServerModel) DeleteServer(ctx context.Context, id int64, tx ...*
 	if len(tx) > 0 {
 		db = tx[0]
 	}
-	return db.WithContext(ctx).Where("`id` = ?", id).Delete(&Server{}).Error
+	return db.WithContext(ctx).Where("id = ?", id).Delete(&Server{}).Error
+}
+
+func (m *defaultServerModel) FindServerConfigOverride(ctx context.Context, serverId int64) (*ServerConfigOverride, error) {
+	var data []ServerConfigOverride
+
+	err := m.WithContext(ctx).Model(&ServerConfigOverride{}).Where("server_id = ?", serverId).Limit(1).Find(&data).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	return &data[0], nil
+}
+
+func (m *defaultServerModel) SaveServerConfigOverride(ctx context.Context, data *ServerConfigOverride, tx ...*gorm.DB) error {
+	db := m.DB
+	if len(tx) > 0 {
+		db = tx[0]
+	}
+
+	var old ServerConfigOverride
+	err := db.WithContext(ctx).Model(&ServerConfigOverride{}).Where("server_id = ?", data.ServerId).First(&old).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	if err == nil {
+		data.Id = old.Id
+		data.CreatedAt = old.CreatedAt
+	}
+
+	return db.WithContext(ctx).Save(data).Error
+}
+
+func (m *defaultServerModel) DeleteServerConfigOverride(ctx context.Context, serverId int64, tx ...*gorm.DB) error {
+	db := m.DB
+	if len(tx) > 0 {
+		db = tx[0]
+	}
+	return db.WithContext(ctx).Where("server_id = ?", serverId).Delete(&ServerConfigOverride{}).Error
 }
 
 func (m *defaultServerModel) InsertNode(ctx context.Context, data *Node, tx ...*gorm.DB) error {
@@ -116,7 +162,7 @@ func (m *defaultServerModel) UpdateNode(ctx context.Context, data *Node, tx ...*
 	if len(tx) > 0 {
 		db = tx[0]
 	}
-	return db.WithContext(ctx).Where("`id` = ?", data.Id).Save(data).Error
+	return db.WithContext(ctx).Where("id = ?", data.Id).Save(data).Error
 }
 
 func (m *defaultServerModel) DeleteNode(ctx context.Context, id int64, tx ...*gorm.DB) error {
@@ -124,7 +170,7 @@ func (m *defaultServerModel) DeleteNode(ctx context.Context, id int64, tx ...*go
 	if len(tx) > 0 {
 		db = tx[0]
 	}
-	return db.WithContext(ctx).Where("`id` = ?", id).Delete(&Node{}).Error
+	return db.WithContext(ctx).Where("id = ?", id).Delete(&Node{}).Error
 }
 
 func (m *defaultServerModel) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {

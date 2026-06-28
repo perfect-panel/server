@@ -33,7 +33,7 @@ func (l *GetSubscriptionLogic) GetSubscription(req *types.GetSubscriptionRequest
 		List: make([]types.Subscribe, 0),
 	}
 	// Get the subscription list
-	_, data, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+	_, data, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
 		Page:            1,
 		Size:            9999,
 		Show:            true,

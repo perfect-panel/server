@@ -27,7 +27,7 @@ func NewGetAvailablePaymentMethodsLogic(ctx context.Context, svcCtx *svc.Service
 }
 
 func (l *GetAvailablePaymentMethodsLogic) GetAvailablePaymentMethods() (resp *types.GetAvailablePaymentMethodsResponse, err error) {
-	data, err := l.svcCtx.PaymentModel.FindAvailableMethods(l.ctx)
+	data, err := l.svcCtx.Store.Payment().FindAvailableMethods(l.ctx)
 	if err != nil {
 		l.Errorw("[GetAvailablePaymentMethods] database error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetAvailablePaymentMethods: %v", err.Error())

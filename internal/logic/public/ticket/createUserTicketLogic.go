@@ -36,7 +36,7 @@ func (l *CreateUserTicketLogic) CreateUserTicket(req *types.CreateUserTicketRequ
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	err := l.svcCtx.TicketModel.Insert(l.ctx, &ticket.Ticket{
+	err := l.svcCtx.Store.Ticket().Insert(l.ctx, &ticket.Ticket{
 		Title:       req.Title,
 		Description: req.Description,
 		UserId:      u.Id,

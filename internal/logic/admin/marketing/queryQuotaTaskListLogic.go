@@ -25,9 +25,6 @@ func NewQueryQuotaTaskListLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskListRequest) (resp *types.QueryQuotaTaskListResponse, err error) {
-	var data []*task.Task
-	var count int64
-	query := l.svcCtx.DB.Model(&task.Task{}).Where("`type` = ?", task.TypeQuota)
 	if req.Page == 0 {
 		req.Page = 1
 	}
@@ -35,10 +32,12 @@ func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskLi
 		req.Size = 20
 	}
 
-	if req.Status != nil {
-		query = query.Where("`status` = ?", *req.Status)
-	}
-	err = query.Count(&count).Offset((req.Page - 1) * req.Size).Limit(req.Size).Order("created_at DESC").Find(&data).Error
+	count, data, err := l.svcCtx.Store.Task().QueryTaskList(l.ctx, &task.Filter{
+		Type:   task.TypeQuota,
+		Page:   req.Page,
+		Size:   req.Size,
+		Status: req.Status,
+	})
 	if err != nil {
 		l.Errorf("[QueryQuotaTaskList] failed to get quota tasks: %v", err)
 		return nil, err

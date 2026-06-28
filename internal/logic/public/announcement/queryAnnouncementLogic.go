@@ -30,7 +30,7 @@ func NewQueryAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 
 func (l *QueryAnnouncementLogic) QueryAnnouncement(req *types.QueryAnnouncementRequest) (resp *types.QueryAnnouncementResponse, err error) {
 	enable := true
-	total, list, err := l.svcCtx.AnnouncementModel.GetAnnouncementListByPage(l.ctx, req.Page, req.Size, announcement.Filter{
+	total, list, err := l.svcCtx.Store.Announcement().GetAnnouncementListByPage(l.ctx, req.Page, req.Size, announcement.Filter{
 		Show:   &enable,
 		Pinned: req.Pinned,
 		Popup:  req.Popup,

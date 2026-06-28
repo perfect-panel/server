@@ -4,7 +4,6 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	adminAds "github.com/perfect-panel/server/internal/handler/admin/ads"
 	adminAnnouncement "github.com/perfect-panel/server/internal/handler/admin/announcement"
 	adminApplication "github.com/perfect-panel/server/internal/handler/admin/application"
@@ -33,12 +32,12 @@ import (
 	publicSubscribe "github.com/perfect-panel/server/internal/handler/public/subscribe"
 	publicTicket "github.com/perfect-panel/server/internal/handler/public/ticket"
 	publicUser "github.com/perfect-panel/server/internal/handler/public/user"
-	server "github.com/perfect-panel/server/internal/handler/server"
 	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
-func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
+func RegisterHandlers(router *hertzx.Engine, serverCtx *svc.ServiceContext) {
 	adminAdsGroupRouter := router.Group("/v1/admin/ads")
 	adminAdsGroupRouter.Use(middleware.AuthMiddleware(serverCtx))
 
@@ -328,6 +327,12 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 
 		// Query all node tags
 		adminServerGroupRouter.GET("/node/tags", adminServer.QueryNodeTagHandler(serverCtx))
+
+		// Get Server Node Config
+		adminServerGroupRouter.GET("/node_config", adminServer.GetServerNodeConfigHandler(serverCtx))
+
+		// Update Server Node Config
+		adminServerGroupRouter.POST("/node_config/update", adminServer.UpdateServerNodeConfigHandler(serverCtx))
 
 		// Update Node
 		adminServerGroupRouter.POST("/node/update", adminServer.UpdateNodeHandler(serverCtx))
@@ -868,30 +873,4 @@ func RegisterHandlers(router *gin.Engine, serverCtx *svc.ServiceContext) {
 		publicUserGroupRouter.GET("/withdrawal_log", publicUser.QueryWithdrawalLogHandler(serverCtx))
 	}
 
-	serverGroupRouter := router.Group("/v1/server")
-	serverGroupRouter.Use(middleware.ServerMiddleware(serverCtx))
-
-	{
-		// Get server config
-		serverGroupRouter.GET("/config", server.GetServerConfigHandler(serverCtx))
-
-		// Push online users
-		serverGroupRouter.POST("/online", server.PushOnlineUsersHandler(serverCtx))
-
-		// Push user Traffic
-		serverGroupRouter.POST("/push", server.ServerPushUserTrafficHandler(serverCtx))
-
-		// Push server status
-		serverGroupRouter.POST("/status", server.ServerPushStatusHandler(serverCtx))
-
-		// Get user list
-		serverGroupRouter.GET("/user", server.GetServerUserListHandler(serverCtx))
-	}
-
-	serverV2GroupRouter := router.Group("/v2/server")
-
-	{
-		// Get Server Protocol Config
-		serverV2GroupRouter.GET("/:server_id", server.QueryServerProtocolConfigHandler(serverCtx))
-	}
 }

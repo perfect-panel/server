@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -23,8 +24,7 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 
 func (m *customPaymentModel) FindOneByPaymentToken(ctx context.Context, token string) (*Payment, error) {
 	var resp *Payment
-	key := cachePaymentTokenPrefix + token
-	err := m.QueryCtx(ctx, &resp, key, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Payment{}).Where("token = ?", token).First(v).Error
 	})
 	return resp, err
@@ -33,7 +33,7 @@ func (m *customPaymentModel) FindOneByPaymentToken(ctx context.Context, token st
 func (m *customPaymentModel) FindAll(ctx context.Context) ([]*Payment, error) {
 	var resp []*Payment
 	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Payment{}).Find(v).Error
+		return conn.Model(&Payment{}).Order("sort ASC, id ASC").Find(v).Error
 	})
 	return resp, err
 }
@@ -41,7 +41,7 @@ func (m *customPaymentModel) FindAll(ctx context.Context) ([]*Payment, error) {
 func (m *customPaymentModel) FindAvailableMethods(ctx context.Context) ([]*Payment, error) {
 	var resp []*Payment
 	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Payment{}).Where("enable = ?", true).Find(v).Error
+		return conn.Model(&Payment{}).Where("enable = ?", true).Order("sort ASC, id ASC").Find(v).Error
 	})
 	return resp, err
 }
@@ -53,17 +53,17 @@ func (m *customPaymentModel) FindListByPage(ctx context.Context, page, size int,
 		conn = conn.Model(&Payment{})
 		if req != nil {
 			if req.Enable != nil {
-				conn = conn.Where("`enable` = ?", *req.Enable)
+				conn = conn.Where("enable = ?", *req.Enable)
 			}
 			if req.Mark != "" {
-				conn = conn.Where("`mark` = ?", req.Mark)
+				conn = conn.Where("platform = ?", req.Mark)
 			}
 			if req.Search != "" {
-				conn = conn.Where("`name` LIKE ?", "%"+req.Search+"%")
+				conn = conn.Scopes(orm.PrefixLike([]string{"name"}, req.Search))
 			}
 		}
 
-		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
+		return conn.Count(&total).Order("sort ASC, id ASC").Offset((page - 1) * size).Limit(size).Find(v).Error
 	})
 	return total, resp, err
 }

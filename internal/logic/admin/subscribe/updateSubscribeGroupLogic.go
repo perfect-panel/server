@@ -27,11 +27,11 @@ func NewUpdateSubscribeGroupLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *UpdateSubscribeGroupLogic) UpdateSubscribeGroup(req *types.UpdateSubscribeGroupRequest) error {
-	err := l.svcCtx.DB.Model(&subscribe.Group{}).Where("id = ?", req.Id).Save(&subscribe.Group{
+	err := l.svcCtx.Store.Subscribe().UpdateGroup(l.ctx, &subscribe.Group{
 		Id:          req.Id,
 		Name:        req.Name,
 		Description: req.Description,
-	}).Error
+	})
 	if err != nil {
 		l.Logger.Error("[UpdateSubscribeGroup] update subscribe group failed", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update subscribe group failed: %v", err.Error())

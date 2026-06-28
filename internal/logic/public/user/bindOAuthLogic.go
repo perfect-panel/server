@@ -7,6 +7,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/pkg/oauth/google"
+	"github.com/perfect-panel/server/pkg/oauth/telegram"
 	"github.com/perfect-panel/server/pkg/random"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -39,6 +40,8 @@ func (l *BindOAuthLogic) BindOAuth(req *types.BindOAuthRequest) (resp *types.Bin
 		uri, err = l.google(req)
 	case "apple":
 		uri, err = l.apple(req)
+	case "telegram":
+		uri, err = l.telegram(req)
 	case "github":
 		uri, err = l.github()
 	case "facebook":
@@ -57,7 +60,7 @@ func (l *BindOAuthLogic) BindOAuth(req *types.BindOAuthRequest) (resp *types.Bin
 }
 
 func (l *BindOAuthLogic) google(req *types.BindOAuthRequest) (string, error) {
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "google")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "google")
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +90,7 @@ func (l *BindOAuthLogic) facebook() (string, error) {
 	return "", nil
 }
 func (l *BindOAuthLogic) apple(req *types.BindOAuthRequest) (string, error) {
-	authMethod, err := l.svcCtx.AuthModel.FindOneByMethod(l.ctx, "apple")
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "apple")
 	if err != nil {
 		return "", err
 	}
@@ -109,4 +112,19 @@ func (l *BindOAuthLogic) apple(req *types.BindOAuthRequest) (string, error) {
 }
 func (l *BindOAuthLogic) github() (string, error) {
 	return "", nil
+}
+
+func (l *BindOAuthLogic) telegram(req *types.BindOAuthRequest) (string, error) {
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "telegram")
+	if err != nil {
+		return "", err
+	}
+	var cfg auth.TelegramAuthConfig
+	err = cfg.Unmarshal(authMethod.Config)
+	if err != nil {
+		l.Errorw("error unmarshal telegram config", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		return "", err
+	}
+	code := random.KeyNew(8, 1)
+	return telegram.GenerateTelegramOAuthURL(cfg.BotToken, code, req.Redirect), nil
 }

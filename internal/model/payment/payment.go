@@ -18,12 +18,24 @@ type Payment struct {
 	FeeMode     uint   `gorm:"type:tinyint(1);not null;default:0;comment:Fee Mode: 0: No Fee 1: Percentage 2: Fixed Amount 3: Percentage + Fixed Amount"`
 	FeePercent  int64  `gorm:"type:int;default:0;comment:Fee Percentage"`
 	FeeAmount   int64  `gorm:"type:int;default:0;comment:Fixed Fee Amount"`
+	Sort        int64  `gorm:"type:int;not null;default:0;comment:Sort"`
 	Enable      *bool  `gorm:"type:tinyint(1);not null;default:0;comment:Is Enabled"`
 	Token       string `gorm:"type:varchar(255);unique;not null;default:'';comment:Payment Token"`
 }
 
 func (*Payment) TableName() string {
 	return "payment"
+}
+
+func (l *Payment) BeforeCreate(tx *gorm.DB) error {
+	if l.Sort == 0 {
+		var maxSort int64
+		if err := tx.Model(&Payment{}).Select("COALESCE(MAX(sort), 0)").Scan(&maxSort).Error; err != nil {
+			return err
+		}
+		l.Sort = maxSort + 1
+	}
+	return nil
 }
 
 func (l *Payment) BeforeDelete(_ *gorm.DB) (err error) {
@@ -79,10 +91,31 @@ func (l *AlipayF2FConfig) Marshal() ([]byte, error) {
 }
 
 func (l *AlipayF2FConfig) Unmarshal(data []byte) error {
+	// First try to unmarshal into a map to handle string "true"/"false" for sandbox
+	var rawMap map[string]interface{}
+	if err := json.Unmarshal(data, &rawMap); err != nil {
+		return err
+	}
+	
+	// Convert sandbox field if it's a string
+	if sandboxVal, ok := rawMap["sandbox"]; ok {
+		switch v := sandboxVal.(type) {
+		case string:
+			rawMap["sandbox"] = v == "true" || v == "1"
+		case bool:
+			// Already a bool, no conversion needed
+		}
+	}
+	
+	// Re-marshal and unmarshal into the struct
+	convertedData, err := json.Marshal(rawMap)
+	if err != nil {
+		return err
+	}
 	type Alias AlipayF2FConfig
-	aux := (*Alias)(l)
-	return json.Unmarshal(data, &aux)
+	return json.Unmarshal(convertedData, (*Alias)(l))
 }
+
 
 type EPayConfig struct {
 	Pid  string `json:"pid"`

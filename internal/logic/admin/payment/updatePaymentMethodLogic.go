@@ -33,15 +33,19 @@ func (l *UpdatePaymentMethodLogic) UpdatePaymentMethod(req *types.UpdatePaymentM
 		l.Errorw("unsupported payment platform", logger.Field("mark", req.Platform))
 		return nil, errors.Wrapf(xerr.NewErrCodeMsg(400, "UNSUPPORTED_PAYMENT_PLATFORM"), "unsupported payment platform: %s", req.Platform)
 	}
-	method, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Id)
+	paymentStore := l.svcCtx.Store.Payment()
+	method, err := paymentStore.FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("find payment method error", logger.Field("id", req.Id), logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %s", err.Error())
 	}
+	if req.Sort == 0 {
+		req.Sort = method.Sort
+	}
 	config := parsePaymentPlatformConfig(l.ctx, payment.ParsePlatform(req.Platform), req.Config)
-	tool.DeepCopy(method, req, tool.CopyWithIgnoreEmpty(false))
+	tool.DeepCopy(method, req)
 	method.Config = config
-	if err := l.svcCtx.PaymentModel.Update(l.ctx, method); err != nil {
+	if err := paymentStore.Update(l.ctx, method); err != nil {
 		l.Errorw("update payment method error", logger.Field("id", req.Id), logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update payment method error: %s", err.Error())
 	}

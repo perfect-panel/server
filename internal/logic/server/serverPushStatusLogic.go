@@ -28,12 +28,12 @@ func NewServerPushStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 
 func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequest) error {
 	// Find server info
-	serverInfo, err := l.svcCtx.NodeModel.FindOneServer(l.ctx, req.ServerId)
+	serverInfo, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil || serverInfo.Id <= 0 {
 		l.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
 		return errors.New("server not found")
 	}
-	err = l.svcCtx.NodeModel.UpdateStatusCache(l.ctx, req.ServerId, &node.Status{
+	err = l.svcCtx.Store.Node().UpdateStatusCache(l.ctx, req.ServerId, &node.Status{
 		Cpu:       req.Cpu,
 		Mem:       req.Mem,
 		Disk:      req.Disk,
@@ -46,7 +46,7 @@ func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequ
 	now := time.Now()
 	serverInfo.LastReportedAt = &now
 
-	err = l.svcCtx.NodeModel.UpdateServer(l.ctx, serverInfo)
+	err = l.svcCtx.Store.Node().UpdateServer(l.ctx, serverInfo)
 	if err != nil {
 		l.Errorw("[ServerPushStatus] UpdateServer error", logger.Field("error", err))
 		return nil

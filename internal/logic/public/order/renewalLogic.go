@@ -8,11 +8,10 @@ import (
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"gorm.io/gorm"
-
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -20,6 +19,7 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type RenewalLogic struct {
@@ -40,6 +40,7 @@ func NewRenewalLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RenewalLo
 // Renewal processes subscription renewal orders including discount calculation,
 // coupon validation, gift amount deduction, fee calculation, and order creation
 func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.RenewalOrderResponse, err error) {
+	store := l.svcCtx.Store
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -58,12 +59,12 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 
 	orderNo := tool.GenerateTradeNo()
 	// find user subscribe
-	userSubscribe, err := l.svcCtx.UserModel.FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
+	userSubscribe, err := store.User().FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user subscribe error: %v", err.Error())
 	}
 	// find subscription
-	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, userSubscribe.SubscribeId)
+	sub, err := store.Subscribe().FindOne(l.ctx, userSubscribe.SubscribeId)
 	if err != nil {
 		l.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", userSubscribe.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
@@ -94,12 +95,15 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 
 	var coupon int64 = 0
 	if req.Coupon != "" {
-		couponInfo, err := l.svcCtx.CouponModel.FindOneByCode(l.ctx, req.Coupon)
+		couponInfo, err := store.Coupon().FindOneByCode(l.ctx, req.Coupon)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotExist), "coupon not found")
 			}
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
+		}
+		if err := ensureCouponEnabled(couponInfo); err != nil {
+			return nil, err
 		}
 		if couponInfo.Count != 0 && couponInfo.Count <= couponInfo.UsedCount {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon used")
@@ -109,10 +113,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 		if len(couponSub) > 0 && !tool.Contains(couponSub, sub.Id) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotApplicable), "coupon not match")
 		}
-		var count int64
-		err = l.svcCtx.DB.Transaction(func(tx *gorm.DB) error {
-			return tx.Model(&order.Order{}).Where("user_id = ? and coupon = ?", u.Id, req.Coupon).Count(&count).Error
-		})
+		count, err := store.Order().CountUserCouponUsage(l.ctx, u.Id, req.Coupon)
 		if err != nil {
 			l.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
@@ -122,7 +123,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 		}
 		coupon = calculateCoupon(amount, couponInfo)
 	}
-	payment, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
+	payment, err := store.Payment().FindOne(l.ctx, req.Payment)
 	if err != nil {
 		l.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment error: %v", err.Error())
@@ -181,11 +182,11 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 		SubscribeToken: userSubscribe.Token,
 	}
 	// Database transaction
-	err = l.svcCtx.DB.Transaction(func(db *gorm.DB) error {
+	err = store.InTx(l.ctx, func(txStore repository.Store) error {
 		// update user deduction && Pre deduction ,Return after canceling the order
 		if orderInfo.GiftAmount > 0 {
 			// update user deduction && Pre deduction ,Return after canceling the order
-			if err := l.svcCtx.UserModel.Update(l.ctx, u, db); err != nil {
+			if err := txStore.User().Update(l.ctx, u); err != nil {
 				l.Errorw("[Renewal] Database update error", logger.Field("error", err.Error()), logger.Field("user", u))
 				return err
 			}
@@ -201,18 +202,18 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 			}
 			content, _ := giftLog.Marshal()
 
-			if err := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			if err := txStore.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				Date:     time.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
-			}).Error; err != nil {
+			}); err != nil {
 				l.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", giftLog))
 				return err
 			}
 		}
 		// insert order
-		return db.Model(&order.Order{}).Create(&orderInfo).Error
+		return txStore.Order().Insert(l.ctx, &orderInfo)
 	})
 	if err != nil {
 		l.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))

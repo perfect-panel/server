@@ -11,6 +11,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
@@ -46,6 +47,7 @@ func NewPurchaseLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Purchase
 // coupon processing, gift amount deduction, fee calculation, and order creation with database transaction.
 // It handles the complete purchase workflow from user validation to order creation and task scheduling.
 func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.PurchaseOrderResponse, err error) {
+	store := l.svcCtx.Store
 
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
@@ -65,7 +67,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	}
 
 	// find user subscription
-	userSub, err := l.svcCtx.UserModel.QueryUserSubscribe(l.ctx, u.Id)
+	userSub, err := store.User().QueryUserSubscribe(l.ctx, u.Id)
 	if err != nil {
 		l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user subscription error: %v", err.Error())
@@ -77,7 +79,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	}
 
 	// find subscribe plan
-	sub, err := l.svcCtx.SubscribeModel.FindOne(l.ctx, req.SubscribeId)
+	sub, err := store.Subscribe().FindOne(l.ctx, req.SubscribeId)
 
 	if err != nil {
 		l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
@@ -130,12 +132,15 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 	var coupon int64 = 0
 	// Calculate the coupon deduction
 	if req.Coupon != "" {
-		couponInfo, err := l.svcCtx.CouponModel.FindOneByCode(l.ctx, req.Coupon)
+		couponInfo, err := store.Coupon().FindOneByCode(l.ctx, req.Coupon)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotExist), "coupon not found")
 			}
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
+		}
+		if err := ensureCouponEnabled(couponInfo); err != nil {
+			return nil, err
 		}
 		if couponInfo.Count != 0 && couponInfo.Count <= couponInfo.UsedCount {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon used")
@@ -144,37 +149,20 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		if len(couponSub) > 0 && !tool.Contains(couponSub, req.SubscribeId) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotApplicable), "coupon not match")
 		}
-		var count int64
-		err = l.svcCtx.DB.Transaction(func(tx *gorm.DB) error {
-			return tx.Model(&order.Order{}).Where("user_id = ? and coupon = ?", u.Id, req.Coupon).Count(&count).Error
-		})
-
+		count, err := store.Order().CountUserCouponUsage(l.ctx, u.Id, req.Coupon)
 		if err != nil {
 			l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
 		}
-		if count >= couponInfo.UserLimit {
+		if couponInfo.UserLimit > 0 && count >= couponInfo.UserLimit {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon limit exceeded")
 		}
 		coupon = calculateCoupon(amount, couponInfo)
 	}
 	// Calculate the handling fee
 	amount -= coupon
-	var deductionAmount int64
-	// Check user deduction amount
-	if u.GiftAmount > 0 {
-		if u.GiftAmount >= amount {
-			deductionAmount = amount
-			amount = 0
-			u.GiftAmount -= deductionAmount
-		} else {
-			deductionAmount = u.GiftAmount
-			amount -= u.GiftAmount
-			u.GiftAmount = 0
-		}
-	}
 	// find payment method
-	payment, err := l.svcCtx.PaymentModel.FindOne(l.ctx, req.Payment)
+	payment, err := store.Payment().FindOne(l.ctx, req.Payment)
 	if err != nil {
 		l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %v", err.Error())
@@ -194,8 +182,21 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "order amount exceeds maximum limit")
 		}
 	}
+
+	var deductionAmount int64
+	// Gift amount is deducted after payment fee, because the fee is based on the payable cash amount.
+	if u.GiftAmount > 0 && amount > 0 {
+		if u.GiftAmount >= amount {
+			deductionAmount = amount
+			amount = 0
+		} else {
+			deductionAmount = u.GiftAmount
+			amount -= u.GiftAmount
+		}
+	}
+
 	// query user is new purchase or renewal
-	isNew, err := l.svcCtx.OrderModel.IsUserEligibleForNewOrder(l.ctx, u.Id)
+	isNew, err := store.Order().IsUserEligibleForNewOrder(l.ctx, u.Id)
 	if err != nil {
 		l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user order error: %v", err.Error())
@@ -220,11 +221,23 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		SubscribeId:    req.SubscribeId,
 	}
 	// Database transaction
-	err = l.svcCtx.DB.Transaction(func(db *gorm.DB) error {
+	err = store.InTx(l.ctx, func(txStore repository.Store) error {
+		if sub.Quota > 0 {
+			count, e := txStore.User().CountUserSubscribesByUserAndSubscribe(l.ctx, u.Id, req.SubscribeId)
+			if e != nil {
+				l.Errorw("[Purchase] Database query error", logger.Field("error", e.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
+				return e
+			}
+			if count >= sub.Quota {
+				return errors.Wrapf(xerr.NewErrCode(xerr.SubscribeQuotaLimit), "quota limit")
+			}
+		}
+
 		// update user deduction && Pre deduction ,Return after canceling the order
 		if orderInfo.GiftAmount > 0 {
 			// update user deduction && Pre deduction ,Return after canceling the order
-			if e := l.svcCtx.UserModel.Update(l.ctx, u, db); e != nil {
+			u.GiftAmount -= orderInfo.GiftAmount
+			if e := txStore.User().Update(l.ctx, u); e != nil {
 				l.Errorw("[Purchase] Database update error", logger.Field("error", e.Error()), logger.Field("user", u))
 				return e
 			}
@@ -240,12 +253,12 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 			}
 			content, _ := giftLog.Marshal()
 
-			if e := db.Model(&log.SystemLog{}).Create(&log.SystemLog{
+			if e := txStore.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				Date:     time.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
-			}).Error; e != nil {
+			}); e != nil {
 				l.Errorw("[Purchase] Database insert error",
 					logger.Field("error", e.Error()),
 					logger.Field("deductionLog", giftLog),
@@ -258,18 +271,21 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 			// decrease subscribe plan stock
 			sub.Inventory -= 1
 			// update subscribe plan stock
-			if err = l.svcCtx.SubscribeModel.Update(l.ctx, sub, db); err != nil {
+			if err = txStore.Subscribe().Update(l.ctx, sub); err != nil {
 				l.Errorw("[Purchase] Database update error", logger.Field("error", err.Error()), logger.Field("subscribe", sub))
 				return err
 			}
 		}
 
 		// insert order
-		return db.WithContext(l.ctx).Model(&order.Order{}).Create(&orderInfo).Error
+		return txStore.Order().Insert(l.ctx, orderInfo)
 	})
 	if err != nil {
 		l.Errorw("[Purchase] Database insert error", logger.Field("error", err.Error()), logger.Field("orderInfo", orderInfo))
-
+		var codeErr *xerr.CodeError
+		if errors.As(err, &codeErr) {
+			return nil, err
+		}
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert order error: %v", err.Error())
 	}
 	// Deferred task

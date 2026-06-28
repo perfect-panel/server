@@ -1,16 +1,16 @@
 package application
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/logic/admin/application"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Delete subscribe application
-func DeleteSubscribeApplicationHandler(svcCtx *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func DeleteSubscribeApplicationHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
 		var req types.DeleteSubscribeApplicationRequest
 		_ = c.ShouldBind(&req)
 		validateErr := svcCtx.Validate(&req)

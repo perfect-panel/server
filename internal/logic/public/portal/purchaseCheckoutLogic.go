@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/report"
+	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/exchangeRate"
 
@@ -16,7 +18,6 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/user"
 	queueType "github.com/perfect-panel/server/queue/types"
-	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
@@ -53,7 +54,7 @@ func NewPurchaseCheckoutLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest) (resp *types.CheckoutOrderResponse, err error) {
 
 	// Validate and retrieve order information
-	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, req.OrderNo)
+	orderInfo, err := l.svcCtx.Store.Order().FindOneByOrderNo(l.ctx, req.OrderNo)
 	if err != nil {
 		l.Logger.Error("[PurchaseCheckout] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OrderNo))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", req.OrderNo)
@@ -66,7 +67,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 	}
 
 	// Retrieve payment method configuration
-	paymentConfig, err := l.svcCtx.PaymentModel.FindOne(l.ctx, orderInfo.PaymentId)
+	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, orderInfo.PaymentId)
 	if err != nil {
 		l.Logger.Error("[PurchaseCheckout] Database query error", logger.Field("error", err.Error()), logger.Field("payment", orderInfo.Method))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %v", err.Error())
@@ -127,7 +128,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 		}
 
 		// Retrieve user information for balance validation
-		userInfo, err := l.svcCtx.UserModel.FindOne(l.ctx, orderInfo.UserId)
+		userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, orderInfo.UserId)
 		if err != nil {
 			l.Errorw("[PurchaseCheckout] FindOne User error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOne error: %s", err.Error())
@@ -162,13 +163,13 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if pay.Domain != "" {
-		notifyUrl = pay.Domain + "/v1/notify/" + pay.Platform + "/" + pay.Token
+		notifyUrl = strings.TrimSuffix(pay.Domain, "/") + "/v1/notify/" + pay.Platform + "/" + pay.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
-		notifyUrl = "https://" + host + "/v1/notify/" + pay.Platform + "/" + pay.Token
+		notifyUrl = "https://" + strings.TrimSuffix(host, "/") + "/v1/notify/" + pay.Platform + "/" + pay.Token
 	}
 
 	// Initialize Alipay client with configuration
@@ -178,6 +179,7 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 		PublicKey:   f2FConfig.PublicKey,
 		InvoiceName: f2FConfig.InvoiceName,
 		NotifyURL:   notifyUrl,
+		Sandbox:     f2FConfig.Sandbox,
 	})
 
 	// Convert order amount to CNY using current exchange rate
@@ -218,20 +220,12 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 		WebhookSecret: stripeConfig.WebhookSecret,
 	})
 
-	// Convert order amount to CNY using current exchange rate
-	amount, err := l.queryExchangeRate("CNY", info.Amount)
-	if err != nil {
-		l.Errorw("[PurchaseCheckout] queryExchangeRate error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "queryExchangeRate error: %s", err.Error())
-	}
-	convertAmount := int64(amount * 100) // Convert to cents for Stripe API
-
 	// Create Stripe payment sheet for client-side processing
 	result, err := client.CreatePaymentSheet(&stripe.Order{
 		OrderNo:   info.OrderNo,
 		Subscribe: strconv.FormatInt(info.SubscribeId, 10),
-		Amount:    convertAmount,
-		Currency:  "cny",
+		Amount:    info.Amount,
+		Currency:  strings.ToLower(l.svcCtx.Config.Currency.Unit),
 		Payment:   stripeConfig.Payment,
 	},
 		&stripe.User{
@@ -251,7 +245,7 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 
 	// Save Stripe trade number to order for tracking
 	info.TradeNo = result.TradeNo
-	err = l.svcCtx.OrderModel.Update(l.ctx, info)
+	err = l.svcCtx.Store.Order().Update(l.ctx, info)
 	if err != nil {
 		l.Errorw("[PurchaseCheckout] Update order error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Update error: %s", err.Error())
@@ -289,21 +283,21 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if config.Domain != "" {
-		notifyUrl = config.Domain
+		notifyUrl = strings.TrimSuffix(config.Domain, "/")
 		if isGatewayMod {
 			notifyUrl += "/api/"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
-		notifyUrl = "https://" + host
+		notifyUrl = "https://" + strings.TrimSuffix(host, "/")
 		if isGatewayMod {
 			notifyUrl += "/api"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	}
 
 	// Create payment URL for user redirection
@@ -349,22 +343,22 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 	// Build notification URL for payment status callbacks
 	notifyUrl := ""
 	if config.Domain != "" {
-		notifyUrl = config.Domain
+		notifyUrl = strings.TrimSuffix(config.Domain, "/")
 		if isGatewayMod {
 			notifyUrl += "/api/"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	} else {
 		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
 		if !ok {
 			host = l.svcCtx.Config.Host
 		}
 
-		notifyUrl = "https://" + host
+		notifyUrl = "https://" + strings.TrimSuffix(host, "/")
 		if isGatewayMod {
 			notifyUrl += "/api"
 		}
-		notifyUrl = notifyUrl + "/v1/notify/" + config.Platform + "/" + config.Token
+		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	}
 	// Create payment URL for user redirection
 	url := client.CreatePayUrl(epay.Order{
@@ -412,7 +406,6 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 // balancePayment processes balance payment with gift amount priority logic
 // It prioritizes using gift amount first, then regular balance, and creates proper audit logs
 func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) error {
-	var userInfo user.User
 	var err error
 	if o.Amount == 0 {
 		// No payment required for zero-amount orders
@@ -421,7 +414,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			logger.Field("orderNo", o.OrderNo),
 			logger.Field("userId", u.Id),
 		)
-		err = l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2)
+		err = l.svcCtx.Store.Order().UpdateOrderStatus(l.ctx, o.OrderNo, 2)
 		if err != nil {
 			l.Errorw("[PurchaseCheckout] Update order status error",
 				logger.Field("error", err.Error()),
@@ -432,9 +425,9 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		goto activation
 	}
 
-	err = l.svcCtx.UserModel.Transaction(l.ctx, func(db *gorm.DB) error {
-		// Retrieve latest user information with row-level locking
-		err := db.Model(&user.User{}).Where("id = ?", u.Id).First(&userInfo).Error
+	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+		// Retrieve latest user information inside the transaction.
+		userInfo, err := store.User().FindOne(l.ctx, u.Id)
 		if err != nil {
 			return err
 		}
@@ -465,7 +458,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		userInfo.Balance -= balanceUsed
 
 		// Save updated user information
-		err = l.svcCtx.UserModel.Update(l.ctx, &userInfo)
+		err = store.User().Update(l.ctx, userInfo)
 		if err != nil {
 			return err
 		}
@@ -481,12 +474,12 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			}
 			content, _ := giftLog.Marshal()
 
-			err = db.Create(&log.SystemLog{
+			err = store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				ObjectID: userInfo.Id,
 				Date:     time.Now().Format(time.DateOnly),
 				Content:  string(content),
-			}).Error
+			})
 			if err != nil {
 				return err
 			}
@@ -502,12 +495,12 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 				Timestamp: time.Now().UnixMilli(),
 			}
 			content, _ := balanceLog.Marshal()
-			err = db.Create(&log.SystemLog{
+			err = store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeBalance.Uint8(),
 				ObjectID: userInfo.Id,
 				Date:     time.Now().Format(time.DateOnly),
 				Content:  string(content),
-			}).Error
+			})
 			if err != nil {
 				return err
 			}
@@ -515,13 +508,13 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 
 		// Store gift amount used in order for potential refund tracking
 		o.GiftAmount = giftUsed
-		err = l.svcCtx.OrderModel.Update(l.ctx, o, db)
+		err = store.Order().Update(l.ctx, o)
 		if err != nil {
 			return err
 		}
 
 		// Mark order as paid (status = 2)
-		return l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, o.OrderNo, 2, db)
+		return store.Order().UpdateOrderStatus(l.ctx, o.OrderNo, 2)
 	})
 
 	if err != nil {
@@ -543,7 +536,7 @@ activation:
 		return err
 	}
 
-	task := asynq.NewTask(queueType.ForthwithActivateOrder, bytes)
+	task := asynq.NewTask(queueType.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
 	_, err = l.svcCtx.Queue.EnqueueContext(l.ctx, task)
 	if err != nil {
 		l.Errorw("[PurchaseCheckout] Enqueue activation task error", logger.Field("error", err.Error()))

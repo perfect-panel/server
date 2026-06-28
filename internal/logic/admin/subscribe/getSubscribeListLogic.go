@@ -30,7 +30,7 @@ func NewGetSubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequest) (resp *types.GetSubscribeListResponse, err error) {
-	total, list, err := l.svcCtx.SubscribeModel.FilterList(l.ctx, &subscribe.FilterParams{
+	total, list, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
 		Page:     int(req.Page),
 		Size:     int(req.Size),
 		Language: req.Language,
@@ -54,12 +54,12 @@ func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequ
 				l.Logger.Error("[GetSubscribeListLogic] JSON unmarshal failed: ", logger.Field("error", err.Error()), logger.Field("discount", item.Discount))
 			}
 		}
-		sub.Nodes = tool.StringToInt64Slice(item.Nodes)
+		sub.Nodes = types.StringInt64Slice(tool.StringToInt64Slice(item.Nodes))
 		sub.NodeTags = strings.Split(item.NodeTags, ",")
 		resultList = append(resultList, sub)
 	}
 
-	subscribeMaps, err := l.svcCtx.UserModel.QueryActiveSubscriptions(l.ctx, subscribeIdList...)
+	subscribeMaps, err := l.svcCtx.Store.User().QueryActiveSubscriptions(l.ctx, subscribeIdList...)
 	if err != nil {
 		l.Logger.Error("[GetSubscribeListLogic] get user subscribe failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get user subscribe failed: %v", err.Error())

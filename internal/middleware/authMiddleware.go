@@ -5,87 +5,82 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/perfect-panel/server/pkg/constant"
-
-	"github.com/perfect-panel/server/pkg/logger"
-
-	"github.com/gin-gonic/gin"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/jwt"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/result"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
-func AuthMiddleware(svc *svc.ServiceContext) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		jwtConfig := svc.Config.JwtAuth
-		// get token from header
-		token := c.GetHeader("Authorization")
-		if token == "" {
-			logger.WithContext(c.Request.Context()).Debug("[AuthMiddleware] Token Empty")
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.ErrorTokenEmpty), "Token Empty"))
-			c.Abort()
-			return
-		}
-		// parse token
-		claims, err := jwt.ParseJwtToken(token, jwtConfig.AccessSecret)
+func AuthMiddleware(svc *svc.ServiceContext) func(c *hertzx.Context) {
+	return func(c *hertzx.Context) {
+		ctx, err := AuthenticateRequest(c.Request.Context(), svc, c.GetHeader("Authorization"), c.Request.URL.Path)
 		if err != nil {
-			logger.WithContext(c.Request.Context()).Debug("[AuthMiddleware] ParseJwtToken", logger.Field("error", err.Error()), logger.Field("token", token))
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.ErrorTokenExpire), "Token Invalid"))
+			result.HttpResult(c, nil, err)
 			c.Abort()
 			return
 		}
-
-		loginType := ""
-		if claims["LoginType"] != nil {
-			loginType = claims["LoginType"].(string)
-		}
-		// get user id from token
-		userId := int64(claims["UserId"].(float64))
-		// get session id from token
-		sessionId := claims["SessionId"].(string)
-		// get session id from redis
-		sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
-		value, err := svc.Redis.Get(c, sessionIdCacheKey).Result()
-		if err != nil {
-			logger.WithContext(c.Request.Context()).Debug("[AuthMiddleware] Redis Get", logger.Field("error", err.Error()), logger.Field("sessionId", sessionId))
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access"))
-			c.Abort()
-			return
-		}
-
-		//verify user id
-		if value != fmt.Sprintf("%v", userId) {
-			logger.WithContext(c.Request.Context()).Debug("[AuthMiddleware] Invalid Access", logger.Field("userId", userId), logger.Field("sessionId", sessionId))
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access"))
-			c.Abort()
-			return
-		}
-
-		userInfo, err := svc.UserModel.FindOne(c, userId)
-		if err != nil {
-			logger.WithContext(c.Request.Context()).Debug("[AuthMiddleware] UserModel FindOne", logger.Field("error", err.Error()), logger.Field("userId", userId))
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Database Query Error"))
-			c.Abort()
-			return
-		}
-		// admin verify
-		paths := strings.Split(c.Request.URL.Path, "/")
-		if tool.StringSliceContains(paths, "admin") && !*userInfo.IsAdmin {
-			logger.WithContext(c.Request.Context()).Debug("[AuthMiddleware] Not Admin User", logger.Field("userId", userId), logger.Field("sessionId", sessionId))
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access"))
-			c.Abort()
-			return
-		}
-		ctx = context.WithValue(ctx, constant.LoginType, loginType)
-		ctx = context.WithValue(ctx, constant.CtxKeyUser, userInfo)
-		ctx = context.WithValue(ctx, constant.CtxKeySessionID, sessionId)
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
+}
+
+func AuthenticateRequest(ctx context.Context, svc *svc.ServiceContext, token string, path string) (context.Context, error) {
+	jwtConfig := svc.Config.JwtAuth
+	if token == "" {
+		logger.WithContext(ctx).Debug("[AuthMiddleware] Token Empty")
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.ErrorTokenEmpty), "Token Empty")
+	}
+
+	claims, err := jwt.ParseJwtToken(token, jwtConfig.AccessSecret)
+	if err != nil {
+		logger.WithContext(ctx).Debug("[AuthMiddleware] ParseJwtToken", logger.Field("error", err.Error()), logger.Field("token", token))
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.ErrorTokenExpire), "Token Invalid")
+	}
+
+	loginType := ""
+	if claims["LoginType"] != nil {
+		loginType = claims["LoginType"].(string)
+	}
+
+	userId := int64(claims["UserId"].(float64))
+	sessionId := claims["SessionId"].(string)
+	sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
+	value, err := svc.Redis.Get(ctx, sessionIdCacheKey).Result()
+	if err != nil {
+		logger.WithContext(ctx).Debug("[AuthMiddleware] Redis Get", logger.Field("error", err.Error()), logger.Field("sessionId", sessionId))
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
+	}
+
+	if value != fmt.Sprintf("%v", userId) {
+		logger.WithContext(ctx).Debug("[AuthMiddleware] Invalid Access", logger.Field("userId", userId), logger.Field("sessionId", sessionId))
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
+	}
+
+	userInfo, err := svc.Store.User().FindOne(ctx, userId)
+	if err != nil {
+		logger.WithContext(ctx).Debug("[AuthMiddleware] UserModel FindOne", logger.Field("error", err.Error()), logger.Field("userId", userId))
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Database Query Error")
+	}
+
+	// Check if user is enabled
+	if !*userInfo.Enable {
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "User Disabled")
+	}
+
+	paths := strings.Split(path, "/")
+	if tool.StringSliceContains(paths, "admin") && !*userInfo.IsAdmin {
+		logger.WithContext(ctx).Debug("[AuthMiddleware] Not Admin User", logger.Field("userId", userId), logger.Field("sessionId", sessionId))
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
+	}
+
+	ctx = context.WithValue(ctx, constant.LoginType, loginType)
+	ctx = context.WithValue(ctx, constant.CtxKeyUser, userInfo)
+	ctx = context.WithValue(ctx, constant.CtxKeySessionID, sessionId)
+	return ctx, nil
 }

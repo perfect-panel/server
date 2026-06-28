@@ -79,6 +79,34 @@ type (
 	GetServerProtocolsResponse {
 		Protocols []Protocol `json:"protocols"`
 	}
+	ServerNodeConfigValues {
+		IPStrategy string         `json:"ip_strategy"`
+		DNS        []NodeDNS      `json:"dns"`
+		Block      []string       `json:"block"`
+		Outbound   []NodeOutbound `json:"outbound"`
+	}
+	ServerNodeConfigOverride {
+		InheritIPStrategy bool           `json:"inherit_ip_strategy"`
+		IPStrategy        string         `json:"ip_strategy"`
+		InheritDNS        bool           `json:"inherit_dns"`
+		DNS               []NodeDNS      `json:"dns"`
+		InheritBlock      bool           `json:"inherit_block"`
+		Block             []string       `json:"block"`
+		InheritOutbound   bool           `json:"inherit_outbound"`
+		Outbound          []NodeOutbound `json:"outbound"`
+	}
+	GetServerNodeConfigRequest {
+		ServerID int64 `form:"server_id" validate:"required"`
+	}
+	GetServerNodeConfigResponse {
+		Global    ServerNodeConfigValues   `json:"global"`
+		Override  ServerNodeConfigOverride `json:"override"`
+		Effective ServerNodeConfigValues   `json:"effective"`
+	}
+	UpdateServerNodeConfigRequest {
+		ServerID int64 `json:"server_id" validate:"required"`
+		ServerNodeConfigOverride
+	}
 	Node {
 		Id        int64    `json:"id"`
 		Name      string   `json:"name"`
@@ -169,6 +197,14 @@ service ppanel {
 	@handler GetServerProtocols
 	get /protocols (GetServerProtocolsRequest) returns (GetServerProtocolsResponse)
 
+	@doc "Get Server Node Config"
+	@handler GetServerNodeConfig
+	get /node_config (GetServerNodeConfigRequest) returns (GetServerNodeConfigResponse)
+
+	@doc "Update Server Node Config"
+	@handler UpdateServerNodeConfig
+	post /node_config/update (UpdateServerNodeConfigRequest)
+
 	@doc "Create Node"
 	@handler CreateNode
 	post /node/create (CreateNodeRequest)
@@ -201,4 +237,3 @@ service ppanel {
 	@handler QueryNodeTag
 	get /node/tags returns (QueryNodeTagResponse)
 }
-

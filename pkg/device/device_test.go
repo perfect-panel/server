@@ -35,8 +35,8 @@ func TestDevice(t *testing.T) {
 		deviceManager.OnMessage = func(userID int64, deviceID, session string, message string) {
 			log.Printf("✅收到消息:  设备 %s (用户 %d) 内容: %s,sesion: %s\n", deviceID, userID, message, session)
 		}
-		engine := gin.Default()
-		engine.GET("/ws/:userid/:device_number", func(c *gin.Context) {
+		engine := hertzx.Default()
+		engine.GET("/ws/:userid/:device_number", func(c *hertzx.Context) {
 			//根据Authorization获取session
 			authorization := c.GetHeader("Authorization")
 			userid, err := strconv.ParseInt(c.Param("userid"), 10, 64)

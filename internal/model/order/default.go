@@ -42,7 +42,7 @@ type (
 func newOrderModel(db *gorm.DB, c *redis.Client) *defaultOrderModel {
 	return &defaultOrderModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`order`",
+		table:      "order",
 	}
 }
 
@@ -79,10 +79,9 @@ func (m *defaultOrderModel) Insert(ctx context.Context, data *Order, tx ...*gorm
 }
 
 func (m *defaultOrderModel) FindOne(ctx context.Context, id int64) (*Order, error) {
-	OrderIdKey := fmt.Sprintf("%s%v", cacheOrderIdPrefix, id)
 	var resp Order
-	err := m.QueryCtx(ctx, &resp, OrderIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Order{}).Where("`id` = ?", id).First(&resp).Error
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Order{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:
@@ -93,10 +92,9 @@ func (m *defaultOrderModel) FindOne(ctx context.Context, id int64) (*Order, erro
 }
 
 func (m *defaultOrderModel) FindOneByOrderNo(ctx context.Context, orderNo string) (*Order, error) {
-	OrderNoKey := fmt.Sprintf("%s%v", cacheOrderNoPrefix, orderNo)
 	var resp Order
-	err := m.QueryCtx(ctx, &resp, OrderNoKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Order{}).Where("`order_no` = ?", orderNo).First(&resp).Error
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Order{}).Where("order_no = ?", orderNo).First(&resp).Error
 	})
 	switch {
 	case err == nil:

@@ -27,7 +27,7 @@ func NewQueryDocumentListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *QueryDocumentListLogic) QueryDocumentList() (resp *types.QueryDocumentListResponse, err error) {
-	total, data, err := l.svcCtx.DocumentModel.GetDocumentListByAll(l.ctx)
+	total, data, err := l.svcCtx.Store.Document().GetDocumentListByAll(l.ctx)
 	if err != nil {
 		l.Errorw("[QueryDocumentList] error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryDocumentList error: %v", err.Error())

@@ -4,20 +4,20 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
 func TestOAuth(t *testing.T) {
 	t.Skipf("Skip TestOAuth test")
-	router := gin.Default()
+	router := hertzx.Default()
 	router.LoadHTMLGlob("./*")
-	router.GET("/telegram", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "telegram.html", gin.H{
-			"title":   "Gin HTML Example",
-			"message": "Hello, Gin!",
+	router.GET("/telegram", func(c *hertzx.Context) {
+		c.HTML(http.StatusOK, "telegram.html", hertzx.H{
+			"title":   "Hertz HTML Example",
+			"message": "Hello, Hertz!",
 		})
 	})
-	router.GET("/auth/telegram/callback", func(c *gin.Context) {
+	router.GET("/auth/telegram/callback", func(c *hertzx.Context) {
 
 	})
 	_ = router.RunTLS(":443", "server.crt", "server.key")

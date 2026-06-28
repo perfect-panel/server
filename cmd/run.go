@@ -11,12 +11,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/perfect-panel/server/pkg/hertzx"
 
 	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal"
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/plugin"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/conf"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -82,7 +83,7 @@ func getServers() *service.Group {
 	}
 	conf.MustLoad(startConfigPath, &c)
 	if !c.Debug {
-		gin.SetMode(gin.ReleaseMode)
+		hertzx.SetMode(hertzx.ReleaseMode)
 	}
 	// init logger
 	if err := logger.SetUp(c.Logger); err != nil {
@@ -91,10 +92,23 @@ func getServers() *service.Group {
 
 	// init service context
 	ctx := svc.NewServiceContext(c)
+
+	// init plugin manager
+	pluginHostEnv := &plugin.HostEnv{
+		Config: c,
+		Redis:  plugin.NewRedisAdapter(ctx.Redis),
+		Store:  plugin.NewStoreAdapter(ctx.Store.DB()),
+		Queue:  plugin.NewQueueAdapter(ctx.Queue),
+	}
+	pluginMgr := plugin.NewManager(pluginHostEnv)
+	ctx.PluginReady = pluginMgr
+	ctx.PluginMgr = pluginMgr
+
 	services := service.NewServiceGroup()
 	services.Add(internal.NewService(ctx))
 	services.Add(queue.NewService(ctx))
 	services.Add(scheduler.NewService(ctx))
+	services.Add(pluginMgr)
 	return services
 }
 
@@ -102,7 +116,7 @@ func initConfig(c *config.Config) bool {
 	// load config
 	conf.MustLoad(startConfigPath, c)
 	//  check custom config
-	if startConfigPath != "etc/ppanel.yaml" && c.MySQL.Addr == "" {
+	if startConfigPath != "etc/ppanel.yaml" && c.DatabaseConfig().Addr == "" {
 		return true
 	}
 	// check access secret
@@ -117,7 +131,7 @@ func initConfig(c *config.Config) bool {
 		if cfg == nil {
 			return true
 		} else {
-			c.MySQL = *cfg
+			c.SetDatabaseConfig(*cfg)
 		}
 
 		// Get environment variables
@@ -135,13 +149,13 @@ func initConfig(c *config.Config) bool {
 		}
 		// save yaml file
 		newConfig := config.File{
-			Host:    c.Host,
-			Port:    c.Port,
-			Debug:   c.Debug,
-			JwtAuth: c.JwtAuth,
-			Logger:  c.Logger,
-			MySQL:   c.MySQL,
-			Redis:   c.Redis,
+			Host:     c.Host,
+			Port:     c.Port,
+			Debug:    c.Debug,
+			JwtAuth:  c.JwtAuth,
+			Logger:   c.Logger,
+			Database: c.DatabaseConfig(),
+			Redis:    c.Redis,
 		}
 		fileData, err := yaml.Marshal(newConfig)
 		if err != nil {

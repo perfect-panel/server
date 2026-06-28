@@ -50,7 +50,7 @@ func (s *Subscribe) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (s *Subscribe) BeforeDelete(tx *gorm.DB) error {
-	if err := tx.Exec("UPDATE `subscribe` SET sort = sort - 1 WHERE sort > ?", s.Sort).Error; err != nil {
+	if err := tx.Exec("UPDATE subscribe SET sort = sort - 1 WHERE sort > ?", s.Sort).Error; err != nil {
 		return err
 	}
 	return nil

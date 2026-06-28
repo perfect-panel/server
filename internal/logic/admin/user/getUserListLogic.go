@@ -27,7 +27,7 @@ func NewGetUserListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUs
 	}
 }
 func (l *GetUserListLogic) GetUserList(req *types.GetUserListRequest) (*types.GetUserListResponse, error) {
-	list, total, err := l.svcCtx.UserModel.QueryPageList(l.ctx, req.Page, req.Size, &user.UserFilterParams{
+	list, total, err := l.svcCtx.Store.User().QueryPageList(l.ctx, req.Page, req.Size, &user.UserFilterParams{
 		UserId:          req.UserId,
 		Search:          req.Search,
 		Unscoped:        req.Unscoped,

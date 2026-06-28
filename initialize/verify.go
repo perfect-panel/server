@@ -20,7 +20,7 @@ type verifyConfig struct {
 
 func Verify(svc *svc.ServiceContext) {
 	logger.Debug("Verify config initialization")
-	configs, err := svc.SystemModel.GetVerifyConfig(context.Background())
+	configs, err := svc.Store.System().GetVerifyConfig(context.Background())
 	if err != nil {
 		logger.Error("[Init Verify Config] Get Verify Config Error: ", logger.Field("error", err.Error()))
 		return
@@ -38,7 +38,7 @@ func Verify(svc *svc.ServiceContext) {
 	logger.Debug("Verify code config initialization")
 
 	var verifyCodeConfig config.VerifyCode
-	cfg, err := svc.SystemModel.GetVerifyCodeConfig(context.Background())
+	cfg, err := svc.Store.System().GetVerifyCodeConfig(context.Background())
 	if err != nil {
 		logger.Errorf("[Init Verify Config] Get Verify Code Config Error: %s", err.Error())
 		return

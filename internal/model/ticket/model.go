@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -38,9 +39,8 @@ func NewModel(conn *gorm.DB, c *redis.Client) Model {
 
 // QueryTicketDetail returns the ticket details.
 func (m *customTicketModel) QueryTicketDetail(ctx context.Context, id int64) (*Details, error) {
-	key := fmt.Sprintf("%s%v", cacheTicketDetailPrefix, id)
 	var data *Details
-	err := m.QueryCtx(ctx, &data, key, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&Ticket{}).Where("id = ?", id).Preload("Follows").First(v).Error
 	})
 	return data, err
@@ -69,7 +69,7 @@ func (m *customTicketModel) QueryTicketList(ctx context.Context, page, size int,
 			query = query.Where("status != ?", 4)
 		}
 		if search != "" {
-			query = query.Where("title like ? or description like ?", "%"+search+"%", "%"+search+"%")
+			query = query.Scopes(orm.ContainsLike([]string{"title", "description"}, search))
 		}
 		return query.Count(&total).Order("id desc").Limit(size).Offset((page - 1) * size).Find(v).Error
 	})

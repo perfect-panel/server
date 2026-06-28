@@ -3,8 +3,10 @@ package node
 import (
 	"context"
 	"fmt"
-	"strings"
+	"strconv"
+	"time"
 
+	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
 	"gorm.io/gorm"
 )
@@ -12,10 +14,22 @@ import (
 type customServerLogicModel interface {
 	FilterServerList(ctx context.Context, params *FilterParams) (int64, []*Server, error)
 	FilterNodeList(ctx context.Context, params *FilterNodeParams) (int64, []*Node, error)
+	QueryNodeSorts(ctx context.Context) ([]SortItem, error)
+	QueryServerSorts(ctx context.Context) ([]SortItem, error)
+	UpdateNodeSort(ctx context.Context, id int64, sort int64) error
+	UpdateServerSort(ctx context.Context, id int64, sort int64) error
+	QueryNodeTags(ctx context.Context) ([]string, error)
+	CountEnabledNodes(ctx context.Context) (int64, error)
+	CountServersByReportStatus(ctx context.Context, cutoff time.Time) (int64, int64, error)
+	QueryServerAddresses(ctx context.Context) ([]string, error)
+	QueryEnabledNodeProtocols(ctx context.Context) ([]string, error)
 	ClearNodeCache(ctx context.Context, params *FilterNodeParams) error
 }
 
 const (
+	// ServerCacheTTL TTL for node hot-path server caches (server config and user list)
+	ServerCacheTTL = 5 * time.Minute
+
 	// ServerUserListCacheKey Server User List Cache Key
 	ServerUserListCacheKey = "server:user:"
 
@@ -43,6 +57,11 @@ type FilterNodeParams struct {
 	Enabled  *bool    // Enabled
 }
 
+type SortItem struct {
+	Id   int64
+	Sort int64
+}
+
 // FilterServerList Filter Server List
 func (m *customServerModel) FilterServerList(ctx context.Context, params *FilterParams) (int64, []*Server, error) {
 	var servers []*Server
@@ -55,8 +74,7 @@ func (m *customServerModel) FilterServerList(ctx context.Context, params *Filter
 		}
 	}
 	if params.Search != "" {
-		s := "%" + params.Search + "%"
-		query = query.Where("`name` LIKE ? OR `address` LIKE ?", s, s)
+		query = query.Scopes(orm.PrefixLike([]string{"name", "address"}, params.Search))
 	}
 	if len(params.Ids) > 0 {
 		query = query.Where("id IN ?", params.Ids)
@@ -71,6 +89,21 @@ func (m *customServerModel) QueryServerList(ctx context.Context, ids []int64) (s
 	return
 }
 
+func (m *customServerModel) QueryServerSorts(ctx context.Context) ([]SortItem, error) {
+	var items []SortItem
+	err := m.WithContext(ctx).Model(&Server{}).Select("id", "sort").Order("sort ASC").Find(&items).Error
+	return items, err
+}
+
+func (m *customServerModel) UpdateServerSort(ctx context.Context, id int64, sort int64) error {
+	server, err := m.FindOneServer(ctx, id)
+	if err != nil {
+		return err
+	}
+	server.Sort = int(sort)
+	return m.UpdateServer(ctx, server)
+}
+
 // FilterNodeList Filter Node List
 func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNodeParams) (int64, []*Node, error) {
 	var nodes []*Node
@@ -83,8 +116,15 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 		}
 	}
 	if params.Search != "" {
-		s := "%" + params.Search + "%"
-		query = query.Where("`name` LIKE ? OR `address` LIKE ? OR `tags` LIKE ? OR `port` LIKE ? ", s, s, s, s)
+		pattern := orm.LikePrefixPattern(params.Search)
+		condition := "(name LIKE ?" + orm.LikeEscapeClause() + " OR address LIKE ?" + orm.LikeEscapeClause() + " OR tags LIKE ?" + orm.LikeEscapeClause()
+		args := []interface{}{pattern, pattern, pattern}
+		if port, err := strconv.ParseUint(params.Search, 10, 16); err == nil {
+			condition += " OR port = ?"
+			args = append(args, uint16(port))
+		}
+		condition += ")"
+		query = query.Where(condition, args...)
 	}
 	if len(params.NodeId) > 0 {
 		query = query.Where("id IN ?", params.NodeId)
@@ -111,6 +151,59 @@ func (m *customServerModel) FilterNodeList(ctx context.Context, params *FilterNo
 	return total, nodes, err
 }
 
+func (m *customServerModel) QueryNodeSorts(ctx context.Context) ([]SortItem, error) {
+	var items []SortItem
+	err := m.WithContext(ctx).Model(&Node{}).Select("id", "sort").Order("sort ASC").Find(&items).Error
+	return items, err
+}
+
+func (m *customServerModel) UpdateNodeSort(ctx context.Context, id int64, sort int64) error {
+	node, err := m.FindOneNode(ctx, id)
+	if err != nil {
+		return err
+	}
+	node.Sort = int(sort)
+	return m.UpdateNode(ctx, node)
+}
+
+func (m *customServerModel) QueryNodeTags(ctx context.Context) ([]string, error) {
+	var tags []string
+	err := m.WithContext(ctx).Model(&Node{}).Pluck("tags", &tags).Error
+	return tags, err
+}
+
+func (m *customServerModel) CountEnabledNodes(ctx context.Context) (int64, error) {
+	var total int64
+	err := m.WithContext(ctx).Model(&Node{}).Where("enabled = ?", true).Count(&total).Error
+	return total, err
+}
+
+func (m *customServerModel) CountServersByReportStatus(ctx context.Context, cutoff time.Time) (int64, int64, error) {
+	var online int64
+	if err := m.WithContext(ctx).Model(&Server{}).Where("last_reported_at > ?", cutoff).Count(&online).Error; err != nil {
+		return 0, 0, err
+	}
+
+	var offline int64
+	if err := m.WithContext(ctx).Model(&Server{}).Where("last_reported_at <= ? OR last_reported_at IS NULL", cutoff).Count(&offline).Error; err != nil {
+		return 0, 0, err
+	}
+
+	return online, offline, nil
+}
+
+func (m *customServerModel) QueryServerAddresses(ctx context.Context) ([]string, error) {
+	var addresses []string
+	err := m.WithContext(ctx).Model(&Server{}).Pluck("address", &addresses).Error
+	return addresses, err
+}
+
+func (m *customServerModel) QueryEnabledNodeProtocols(ctx context.Context) ([]string, error) {
+	var protocols []string
+	err := m.WithContext(ctx).Model(&Node{}).Where("enabled = ?", true).Pluck("protocol", &protocols).Error
+	return protocols, err
+}
+
 // ClearNodeCache Clear Node Cache
 func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNodeParams) error {
 	_, nodes, err := m.FilterNodeList(ctx, params)
@@ -119,16 +212,22 @@ func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNo
 	}
 	var cacheKeys []string
 	for _, node := range nodes {
+		// Scan all protocol variants of user list and config cache
+		patterns := []string{
+			fmt.Sprintf("%s%d:*", ServerUserListCacheKey, node.ServerId),
+			fmt.Sprintf("%s%d:*", ServerConfigCacheKey, node.ServerId),
+		}
+		// Also delete legacy user-list key written before protocol was added to the key.
 		cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, node.ServerId))
-		if node.Protocol != "" {
+		for _, pattern := range patterns {
 			var cursor uint64
 			for {
-				keys, newCursor, err := m.Cache.Scan(ctx, cursor, fmt.Sprintf("%s%d*", ServerConfigCacheKey, node.ServerId), 100).Result()
+				keys, newCursor, err := m.Cache.Scan(ctx, cursor, pattern, 100).Result()
 				if err != nil {
 					return err
 				}
 				if len(keys) > 0 {
-					cacheKeys = append(keys, keys...)
+					cacheKeys = append(cacheKeys, keys...)
 				}
 				cursor = newCursor
 				if cursor == 0 {
@@ -148,19 +247,27 @@ func (m *customServerModel) ClearNodeCache(ctx context.Context, params *FilterNo
 // ClearServerCache Clear Server Cache
 func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64) error {
 	var cacheKeys []string
+	// Scan all protocol variants of both user list and config cache
+	patterns := []string{
+		fmt.Sprintf("%s%d:*", ServerUserListCacheKey, serverId),
+		fmt.Sprintf("%s%d:*", ServerConfigCacheKey, serverId),
+	}
+	// Also delete legacy user-list key written before protocol was added to the key.
 	cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", ServerUserListCacheKey, serverId))
-	var cursor uint64
-	for {
-		keys, newCursor, err := m.Cache.Scan(ctx, 0, fmt.Sprintf("%s%d*", ServerConfigCacheKey, serverId), 100).Result()
-		if err != nil {
-			return err
-		}
-		if len(keys) > 0 {
-			cacheKeys = append(cacheKeys, keys...)
-		}
-		cursor = newCursor
-		if cursor == 0 {
-			break
+	for _, pattern := range patterns {
+		var cursor uint64
+		for {
+			keys, newCursor, err := m.Cache.Scan(ctx, cursor, pattern, 100).Result()
+			if err != nil {
+				return err
+			}
+			if len(keys) > 0 {
+				cacheKeys = append(cacheKeys, keys...)
+			}
+			cursor = newCursor
+			if cursor == 0 {
+				break
+			}
 		}
 	}
 
@@ -173,19 +280,5 @@ func (m *customServerModel) ClearServerCache(ctx context.Context, serverId int64
 
 // InSet 支持多值 OR 查询
 func InSet(field string, values []string) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if len(values) == 0 {
-			return db
-		}
-
-		conds := make([]string, len(values))
-		args := make([]interface{}, len(values))
-		for i, v := range values {
-			conds[i] = "FIND_IN_SET(?, " + field + ")"
-			args[i] = v
-		}
-
-		// 用括号包裹 OR 条件，保证外层 AND 不受影响
-		return db.Where("("+strings.Join(conds, " OR ")+")", args...)
-	}
+	return orm.CommaSeparatedContains(field, values)
 }

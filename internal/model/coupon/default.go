@@ -42,7 +42,7 @@ type (
 func newCouponModel(db *gorm.DB, c *redis.Client) *defaultCouponModel {
 	return &defaultCouponModel{
 		CachedConn: cache.NewConn(db, c),
-		table:      "`coupon`",
+		table:      "coupon",
 	}
 }
 
@@ -76,10 +76,9 @@ func (m *defaultCouponModel) Insert(ctx context.Context, data *Coupon) error {
 }
 
 func (m *defaultCouponModel) FindOne(ctx context.Context, id int64) (*Coupon, error) {
-	CouponIdKey := fmt.Sprintf("%s%v", cacheCouponIdPrefix, id)
 	var resp Coupon
-	err := m.QueryCtx(ctx, &resp, CouponIdKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Coupon{}).Where("`id` = ?", id).First(&resp).Error
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Coupon{}).Where("id = ?", id).First(&resp).Error
 	})
 	switch {
 	case err == nil:
@@ -90,10 +89,9 @@ func (m *defaultCouponModel) FindOne(ctx context.Context, id int64) (*Coupon, er
 }
 
 func (m *defaultCouponModel) FindOneByCode(ctx context.Context, code string) (*Coupon, error) {
-	CouponCodeKey := fmt.Sprintf("%s%v", cacheCouponCodePrefix, code)
 	var resp Coupon
-	err := m.QueryCtx(ctx, &resp, CouponCodeKey, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&Coupon{}).Where("`code` = ?", code).First(&resp).Error
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&Coupon{}).Where("code = ?", code).First(&resp).Error
 	})
 	switch {
 	case err == nil:

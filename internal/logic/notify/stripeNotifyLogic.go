@@ -35,6 +35,7 @@ func NewStripeNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Stri
 }
 
 func (l *StripeNotifyLogic) StripeNotify(r *http.Request, w http.ResponseWriter) error {
+	store := l.svcCtx.Store
 	const MaxBodyBytes = int64(65536)
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 	payload, err := io.ReadAll(r.Body)
@@ -62,7 +63,7 @@ func (l *StripeNotifyLogic) StripeNotify(r *http.Request, w http.ResponseWriter)
 		l.Errorw("[StripeNotify] error", logger.Field("errors", err.Error()))
 		return err
 	}
-	orderInfo, err := l.svcCtx.OrderModel.FindOneByOrderNo(l.ctx, notify.OrderNo)
+	orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, notify.OrderNo)
 	if err != nil {
 		l.Logger.Error("[StripeNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
 		return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", notify.OrderNo)
@@ -72,7 +73,7 @@ func (l *StripeNotifyLogic) StripeNotify(r *http.Request, w http.ResponseWriter)
 			return nil
 		}
 		// update order status
-		err = l.svcCtx.OrderModel.UpdateOrderStatus(l.ctx, notify.OrderNo, 2)
+		err = store.Order().UpdateOrderStatus(l.ctx, notify.OrderNo, 2)
 		if err != nil {
 			return err
 		}
@@ -85,7 +86,7 @@ func (l *StripeNotifyLogic) StripeNotify(r *http.Request, w http.ResponseWriter)
 			l.Errorw("[StripeNotify] Marshal error", logger.Field("errors", err.Error()), logger.Field("payload", payload))
 			return err
 		}
-		task := asynq.NewTask(types.ForthwithActivateOrder, bytes)
+		task := asynq.NewTask(types.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
 		_, err = l.svcCtx.Queue.Enqueue(task)
 		if err != nil {
 			l.Errorw("[StripeNotify] Enqueue error", logger.Field("errors", err.Error()))

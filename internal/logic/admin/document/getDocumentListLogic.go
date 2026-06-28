@@ -27,7 +27,7 @@ func NewGetDocumentListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 }
 
 func (l *GetDocumentListLogic) GetDocumentList(req *types.GetDocumentListRequest) (resp *types.GetDocumentListResponse, err error) {
-	total, data, err := l.svcCtx.DocumentModel.QueryDocumentList(l.ctx, int(req.Page), int(req.Size), req.Tag, req.Search)
+	total, data, err := l.svcCtx.Store.Document().QueryDocumentList(l.ctx, int(req.Page), int(req.Size), req.Tag, req.Search)
 	if err != nil {
 		l.Errorw("[GetDocumentList] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryDocumentList error: %v", err.Error())
