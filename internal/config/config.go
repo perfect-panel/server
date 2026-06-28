@@ -32,6 +32,7 @@ type Config struct {
 	Telegram      Telegram        `yaml:"Telegram"`
 	Log           Log             `yaml:"Log"`
 	Currency      Currency        `yaml:"Currency"`
+	Plugin        PluginConfig    `yaml:"Plugin"`
 	Administrator struct {
 		Email    string `yaml:"Email" default:"admin@ppanel.dev"`
 		Password string `yaml:"Password" default:"password"`
@@ -313,4 +314,13 @@ type Currency struct {
 	Unit      string `yaml:"Unit" default:"CNY"`
 	Symbol    string `yaml:"Symbol" default:"USD"`
 	AccessKey string `yaml:"AccessKey" default:""`
+}
+
+type PluginConfig struct {
+	Enabled     bool     `yaml:"Enabled" default:"true"`
+	Directory   string   `yaml:"Directory" default:"plugins"`
+	MaxMemoryMB int64    `yaml:"MaxMemoryMB" default:"64"`
+	TimeoutSec  int64    `yaml:"TimeoutSec" default:"30"`
+	AllowList   []string `yaml:"AllowList"` // 允许加载的插件名列表（空=全部允许）
+	BlockList   []string `yaml:"BlockList"` // 禁止加载的插件名列表
 }
