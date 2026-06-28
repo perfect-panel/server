@@ -43,7 +43,7 @@ func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigRes
 	}
 
 	tool.DeepCopy(&resp.Site, l.svcCtx.Config.Site)
-	tool.DeepCopy(&resp.Subscribe, l.svcCtx.Config.Subscribe)
+	tool.DeepCopy(&resp.Subscribe, l.svcCtx.Config.Subscribe, tool.CopyWithIgnoreEmpty(false))
 	tool.DeepCopy(&resp.Auth.Email, l.svcCtx.Config.Email)
 	tool.DeepCopy(&resp.Auth.Mobile, l.svcCtx.Config.Mobile)
 	tool.DeepCopy(&resp.Auth.Register, l.svcCtx.Config.Register)
