@@ -9,7 +9,7 @@ require (
 	github.com/alibabacloud-go/tea v1.5.3
 	github.com/alibabacloud-go/tea-utils v1.4.5
 	github.com/alicebob/miniredis/v2 v2.39.0
-	github.com/andybalholm/brotli v1.2.5
+	github.com/andybalholm/brotli v1.2.6
 	github.com/cloudwego/hertz v0.10.6
 	github.com/fatih/color v1.19.0
 	github.com/go-playground/locales v0.14.2
