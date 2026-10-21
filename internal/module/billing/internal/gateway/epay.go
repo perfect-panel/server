@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -20,8 +21,9 @@ import (
 const epayCurrency = "CNY"
 
 type epayGateway struct {
-	config paymentEntity.EPayConfig
-	client *epay.Client
+	config       paymentEntity.EPayConfig
+	client       *epay.Client
+	siteRelative bool
 }
 
 func openEPay(r *Registry, method *paymentEntity.Payment) (Gateway, error) {
@@ -32,10 +34,27 @@ func openEPay(r *Registry, method *paymentEntity.Payment) (Gateway, error) {
 	if config.Pid == "" || config.Url == "" || config.Key == "" {
 		return nil, errors.New("incomplete payment configuration")
 	}
+	endpoint, siteRelative, err := epayEndpoint(config.Url, method.Domain)
+	if err != nil {
+		return nil, err
+	}
 	return &epayGateway{
-		config: config,
-		client: epay.NewClient(config.Pid, config.Url, config.Key, config.Type, epay.WithHTTPClient(r.httpClient)),
+		config:       config,
+		client:       epay.NewClient(config.Pid, endpoint, config.Key, config.Type, epay.WithHTTPClient(r.httpClient)),
+		siteRelative: siteRelative,
 	}, nil
+}
+
+func epayEndpoint(raw, domain string) (string, bool, error) {
+	raw = strings.TrimSpace(raw)
+	if !strings.HasPrefix(raw, "/") || strings.HasPrefix(raw, "//") {
+		return raw, false, nil
+	}
+	base := strings.TrimSuffix(strings.TrimSpace(domain), "/")
+	if base == "" {
+		return "", false, errors.New("a site-relative EPay URL requires the payment method domain")
+	}
+	return base + raw, true, nil
 }
 
 func normalizeEPay(raw []byte) (string, error) {
@@ -65,6 +84,13 @@ func (g *epayGateway) StartPayment(_ context.Context, c Checkout) (*dto.Checkout
 	})
 	if err != nil {
 		return nil, err
+	}
+	if g.siteRelative {
+		parsed, err := url.Parse(payURL)
+		if err != nil {
+			return nil, err
+		}
+		payURL = parsed.RequestURI()
 	}
 	return &dto.CheckoutOrderResponse{Type: "url", CheckoutUrl: payURL}, nil
 }
